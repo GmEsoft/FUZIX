@@ -194,6 +194,12 @@ _hd_xfer_out:
 	   call nz, map_process_a
 	   ld bc, #0xC8			; 256 bytes to 0xC8
 	   otir
+xfer_out_wait:
+	   ex (sp),hl
+	   ex (sp),hl
+	   in a,(0cfh)
+	   rlca
+	   jr c, xfer_out_wait
 	   call map_kernel
 	   ret
 
