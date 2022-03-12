@@ -230,132 +230,53 @@ CLASS char word1[WORDSIZE];
 CLASS char word2[WORDSIZE];
 
 /*
-        Play variables
-*/
-CLASS short turns INIT(0);
-CLASS short loc INIT(1);
-CLASS short oldloc INIT(1);
-CLASS short oldloc2 INIT(1);
-CLASS short newloc INIT(3);
-CLASS short cond[MAXLOC]	/* location status    */
-#ifdef DRIVER
-    = {
-	0, 5, 1, 5, 5, 1, 1, 5, 17, 1,	/*   0 -   9 */
-	1, 0, 0, 32, 0, 0, 2, 0, 0, 64,	/*  10 -  19 */
-	2, 2, 2, 0, 6, 0, 2, 0, 0, 0,	/*  20 -  29 */
-	0, 2, 2, 0, 0, 0, 0, 0, 4, 0,	/*  30 -  39 */
-	2, 0, 128, 128, 128, 128, 136, 136, 136, 128,	/*  40 -  49 */
-	128, 128, 128, 136, 128, 136, 0, 8, 0, 2,	/*  50 -  59 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  60 -  69 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 2,	/*  70 -  79 */
-	128, 128, 136, 0, 0, 8, 136, 128, 0, 2,	/*  80 -  89 */
-	2, 0, 0, 0, 0, 4, 0, 0, 0, 0,	/*  90 -  99 */
-	1, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 100 - 109 */
-	0, 0, 0, 4, 0, 1, 1, 0, 0, 0,	/* 110 - 119 */
-	0, 0, 8, 8, 8, 8, 8, 8, 8, 8,	/* 120 - 129 */
-	8, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 130 - 139 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 140 - 149 */
+ *	Game state as a structure so we can save/restore it easily
+ */
+
+/* Game variables that are in the save state */
+
+struct state {
+    short turns;
+    short loc;
+    short oldloc;
+    short oldloc2;
+    short newloc;
+    short cond[MAXLOC];
+    short place[MAXOBJ];
+    short fixed[MAXOBJ];
+    short visited[MAXLOC];
+    short prop[MAXOBJ];
+    short tally;
+    short tally2;
+    short limit;
+    short lmwarn;
+    uint8_t wzdark;
+    uint8_t closing;
+    uint8_t closed;
+    short holding;
+    short detail;
+    short knfloc;
+    short clock1;
+    short clock2;
+    short panic;
+    short dloc[DWARFMAX];
+    short dflag;
+    short dseen[DWARFMAX];
+    short odloc[DWARFMAX];
+    short daltloc;
+    short dkill;
+    short chloc;
+    short chloc2;
+    short bonus;
+    short numdie;
+    short object1;
+    uint8_t gaveup;
+    short foobar;
+    uint8_t saveflg;
+    short dbgflg;
 };
-#else
-;
-#endif
 
-CLASS short place[MAXOBJ]	/* object location    */
-#ifdef DRIVER
-    = {
-	0, 3, 3, 8, 10, 11, 0, 14, 13, 94,	/*  0 -  9 */
-	96, 19, 17, 101, 103, 0, 106, 0, 0, 3,	/* 10 - 19 */
-	3, 0, 0, 109, 25, 23, 111, 35, 0, 97,	/* 20 - 29 */
-	0, 119, 117, 117, 0, 130, 0, 126, 140, 0,	/* 30 - 39 */
-	96, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 40 - 49 */
-	18, 27, 28, 29, 30, 0, 92, 95, 97, 100,	/* 50 - 59 */
-	101, 0, 119, 127, 130, 0, 0, 0, 0, 0,	/* 60 - 69 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 70 - 79 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 80 - 89 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 90 - 99 */
-};
-#else
-;
-#endif
-
-CLASS short fixed[MAXOBJ]	/* second object loc  */
-#ifdef DRIVER
-    = {
-	0, 0, 0, 9, 0, 0, 0, 15, 0, -1,	/*  0 -  9 */
-	0, -1, 27, -1, 0, 0, 0, -1, 0, 0,	/* 10 - 19 */
-	0, 0, 0, -1, -1, 67, -1, 110, 0, -1,	/* 20 - 29 */
-	-1, 121, 122, 122, 0, -1, -1, -1, -1, 0,	/* 30 - 39 */
-	-1, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 40 - 49 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 50 - 59 */
-	0, 0, 121, 0, -1, 0, 0, 0, 0, 0,	/* 60 - 69 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 70 - 79 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 80 - 89 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 90 - 99 */
-};
-#else
-;
-#endif
-
-CLASS short visited[MAXLOC];	/* >0 if has been here */
-CLASS short prop[MAXOBJ]	/* status of object   */
-#ifdef DRIVER
-    = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  0 -  9 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 10 - 19 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 20 - 29 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 30 - 39 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 40 - 49 */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 50 - 59 */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 60 - 69 */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 70 - 79 */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 80 - 89 */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 90 - 99 */
-};
-#else
-;
-#endif
-
-CLASS short tally INIT(15);	/* item counts        */
-CLASS short tally2 INIT(0);
-CLASS short limit INIT(100);	/* time limit         */
-CLASS short lmwarn INIT(0);	/* lamp warning flag  */
-CLASS uint8_t wzdark INIT(FALSE);
-CLASS uint8_t closing INIT(FALSE);
-CLASS uint8_t closed INIT(FALSE);
-CLASS short holding INIT(0);	/* count of held items */
-CLASS short detail INIT(0);	/* LOOK count         */
-CLASS short knfloc INIT(0);	/* knife location     */
-CLASS short clock1 INIT(30);	/* timing variables   */
-CLASS short clock2 INIT(50);
-CLASS short panic INIT(0);
-CLASS short dloc[DWARFMAX]	/* dwarf locations    */
-#ifdef DRIVER
-    = {
-	0, 19, 27, 33, 44, 64, 0	/*  0 - 6  */
-};
-#else
-;
-#endif
-
-CLASS short dflag INIT(0);	/* dwarf flag         */
-CLASS short dseen[DWARFMAX];	/* dwarf seen flag    */
-CLASS short odloc[DWARFMAX];	/* dwarf old locs     */
-CLASS short daltloc INIT(18);	/* alt appearance     */
-CLASS short dkill INIT(0);	/* dwarves killed     */
-CLASS short chloc INIT(114);	/* chest locations    */
-CLASS short chloc2 INIT(140);
-CLASS short bonus INIT(0);	/* to pass to end     */
-CLASS short numdie INIT(0);	/* number of deaths   */
-CLASS short object1;		/* to help intrans.   */
-CLASS uint8_t gaveup INIT(FALSE);
-CLASS short foobar INIT(0);	/* fie fie foe foo... */
-CLASS uint8_t saveflg INIT(FALSE);	/* game being saved?  */
-CLASS short dbgflg;		/* game in restart?   */
-
-
-CLASS char lastglob;		/* to get space req.  */
-
-/*  endglobal  */
+extern struct state game;
 
 /*  function prototypes 						    */
 

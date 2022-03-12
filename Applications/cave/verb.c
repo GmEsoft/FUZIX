@@ -120,13 +120,13 @@ void vtake(void)
 
 	/* special case objects and fixed objects */
 	msg = 25;
-	if (object == PLANT && prop[PLANT] <= 0)
+	if (object == PLANT && game.prop[PLANT] <= 0)
 		msg = 115;
-	if (object == BEAR && prop[BEAR] == 1)
+	if (object == BEAR && game.prop[BEAR] == 1)
 		msg = 169;
-	if (object == CHAIN && prop[BEAR] != 0)
+	if (object == CHAIN && game.prop[BEAR] != 0)
 		msg = 170;
-	if (fixed[object]) {
+	if (game.fixed[object]) {
 		rspeak(msg);
 		return;
 	}
@@ -135,11 +135,11 @@ void vtake(void)
 	if (object == WATER || object == OIL) {
 		if (!here(BOTTLE) || liq() != object) {
 			object = BOTTLE;
-			if (toting(BOTTLE) && prop[BOTTLE] == 1) {
+			if (toting(BOTTLE) && game.prop[BOTTLE] == 1) {
 				vfill();
 				return;
 			}
-			if (prop[BOTTLE] != 1)
+			if (game.prop[BOTTLE] != 1)
 				msg = 105;
 			if (!toting(BOTTLE))
 				msg = 104;
@@ -148,13 +148,13 @@ void vtake(void)
 		}
 		object = BOTTLE;
 	}
-	if (holding >= 7) {
+	if (game.holding >= 7) {
 		rspeak(92);
 		return;
 	}
 
 	/* special case for bird. */
-	if (object == BIRD && prop[BIRD] == 0) {
+	if (object == BIRD && game.prop[BIRD] == 0) {
 		if (toting(ROD)) {
 			rspeak(26);
 			return;
@@ -163,16 +163,16 @@ void vtake(void)
 			rspeak(27);
 			return;
 		}
-		prop[BIRD] = 1;
+		game.prop[BIRD] = 1;
 	}
-	if ((object == BIRD || object == CAGE) && prop[BIRD] != 0)
-		carry((BIRD + CAGE) - object, loc);
-	carry(object, loc);
+	if ((object == BIRD || object == CAGE) && game.prop[BIRD] != 0)
+		carry((BIRD + CAGE) - object, game.loc);
+	carry(object, game.loc);
 
 	/* handle liquid in bottle */
 	i = liq();
 	if (object == BOTTLE && i != 0)
-		place[i] = -1;
+		game.place[i] = -1;
 	rspeak(54);
 	return;
 }
@@ -196,29 +196,29 @@ void vdrop(void)
 	/* snake and bird */
 	if (object == BIRD && here(SNAKE)) {
 		rspeak(30);
-		if (closed)
+		if (game.closed)
 			dwarfend();
 		dstroy(SNAKE);
-		prop[SNAKE] = -1;
+		game.prop[SNAKE] = -1;
 	}
 
 	else {			/* coins and vending machine */
 
 		if (object == COINS && here(VEND)) {
 			dstroy(COINS);
-			drop(BATTERIES, loc);
+			drop(BATTERIES, game.loc);
 			pspeak(BATTERIES, 0);
 			return;
 		}
 
 		else {		/* bird and dragon (ouch!!) */
 
-			if (object == BIRD && at(DRAGON) && prop[DRAGON] == 0) {
+			if (object == BIRD && at(DRAGON) && game.prop[DRAGON] == 0) {
 				rspeak(154);
 				dstroy(BIRD);
-				prop[BIRD] = 0;
-				if (place[SNAKE] != 0)
-					++tally2;
+				game.prop[BIRD] = 0;
+				if (game.place[SNAKE] != 0)
+					++game.tally2;
 				return;
 			}
 		}
@@ -232,20 +232,20 @@ void vdrop(void)
 		move(TROLL2, 117);
 		move((TROLL2 + MAXOBJ), 122);
 		juggle(CHASM);
-		prop[TROLL] = 2;
+		game.prop[TROLL] = 2;
 	}
 
 	else {			/* vase */
 
 		if (object == VASE) {
-			if (loc == 96)
+			if (game.loc == 96)
 				rspeak(54);
 
 			else {
-				prop[VASE] = at(PILLOW) ? 0 : 2;
-				pspeak(VASE, prop[VASE] + 1);
-				if (prop[VASE] != 0)
-					fixed[VASE] = -1;
+				game.prop[VASE] = at(PILLOW) ? 0 : 2;
+				pspeak(VASE, game.prop[VASE] + 1);
+				if (game.prop[VASE] != 0)
+					game.fixed[VASE] = -1;
 			}
 		}
 	}
@@ -255,14 +255,14 @@ void vdrop(void)
 	if (i == object)
 		object = BOTTLE;
 	if (object == BOTTLE && i != 0)
-		place[i] = 0;
+		game.place[i] = 0;
 
 	/* handle bird and cage */
-	if (object == CAGE && prop[BIRD] != 0)
-		drop(BIRD, loc);
+	if (object == CAGE && game.prop[BIRD] != 0)
+		drop(BIRD, game.loc);
 	if (object == BIRD)
-		prop[BIRD] = 0;
-	drop(object, loc);
+		game.prop[BIRD] = 0;
+	drop(object, game.loc);
 	return;
 }
 
@@ -291,14 +291,14 @@ void vopen(void)
 				else {
 					msg = 124 + oyclam;
 					dstroy(CLAM);
-					drop(OYSTER, loc);
+					drop(OYSTER, game.loc);
 					drop(PEARL, 105);
 				}
 			}
 		}
 		break;
 	case DOOR:
-		msg = (prop[DOOR] == 1 ? 54 : 111);
+		msg = (game.prop[DOOR] == 1 ? 54 : 111);
 		break;
 	case CAGE:
 		msg = 32;
@@ -312,35 +312,35 @@ void vopen(void)
 
 		else {
 			if (verb == LOCK) {
-				if (prop[CHAIN] != 0)
+				if (game.prop[CHAIN] != 0)
 					msg = 34;
 
-				else if (loc != 130)
+				else if (game.loc != 130)
 					msg = 173;
 
 				else {
-					prop[CHAIN] = 2;
+					game.prop[CHAIN] = 2;
 					if (toting(CHAIN))
-						drop(CHAIN, loc);
-					fixed[CHAIN] = -1;
+						drop(CHAIN, game.loc);
+					game.fixed[CHAIN] = -1;
 					msg = 172;
 				}
 			}
 
 			else {
-				if (prop[BEAR] == 0)
+				if (game.prop[BEAR] == 0)
 					msg = 41;
 
 				else {
-					if (prop[CHAIN] == 0)
+					if (game.prop[CHAIN] == 0)
 						msg = 37;
 
 					else {
-						prop[CHAIN] = 0;
-						fixed[CHAIN] = 0;
-						if (prop[BEAR] != 3)
-							prop[BEAR] = 2;
-						fixed[BEAR] = 2 - prop[BEAR];
+						game.prop[CHAIN] = 0;
+						game.fixed[CHAIN] = 0;
+						if (game.prop[BEAR] != 3)
+							game.prop[BEAR] = 2;
+						game.fixed[BEAR] = 2 - game.prop[BEAR];
 						msg = 171;
 					}
 				}
@@ -352,18 +352,18 @@ void vopen(void)
 			msg = 31;
 
 		else {
-			if (closing) {
-				if (!panic) {
-					clock2 = 15;
-					++panic;
+			if (game.closing) {
+				if (!game.panic) {
+					game.clock2 = 15;
+					++game.panic;
 				}
 				msg = 130;
 			}
 
 			else {
-				msg = 34 + prop[GRATE];
-				prop[GRATE] = (verb == LOCK ? 0 : 1);
-				msg += 2 * prop[GRATE];
+				msg = 34 + game.prop[GRATE];
+				game.prop[GRATE] = (verb == LOCK ? 0 : 1);
+				msg += 2 * game.prop[GRATE];
 			}
 		}
 		break;
@@ -398,14 +398,14 @@ void von(void)
 		actspk(verb);
 
 	else {
-		if (limit < 0)
+		if (game.limit < 0)
 			rspeak(184);
 
 		else {
-			prop[LAMP] = 1;
+			game.prop[LAMP] = 1;
 			rspeak(39);
-			if (wzdark) {
-				wzdark = 0;
+			if (game.wzdark) {
+				game.wzdark = 0;
 				describe();
 				descitem();
 			}
@@ -424,7 +424,7 @@ void voff(void)
 		actspk(verb);
 
 	else {
-		prop[LAMP] = 0;
+		game.prop[LAMP] = 0;
 		rspeak(40);
 	}
 	return;
@@ -440,12 +440,12 @@ void vwave(void)
 		rspeak(29);
 
 	else {
-		if (object != ROD || !at(FISSURE) || !toting(object) || closing)
+		if (object != ROD || !at(FISSURE) || !toting(object) || game.closing)
 			actspk(verb);
 
 		else {
-			prop[FISSURE] = 1 - prop[FISSURE];
-			pspeak(FISSURE, 2 - prop[FISSURE]);
+			game.prop[FISSURE] = 1 - game.prop[FISSURE];
+			pspeak(FISSURE, 2 - game.prop[FISSURE]);
 		}
 	}
 }
@@ -460,14 +460,14 @@ void vkill(void)
 	auto short i;
 	switch (object) {
 	case BIRD:
-		if (closed)
+		if (game.closed)
 			msg = 137;
 
 		else {
 			dstroy(BIRD);
-			prop[BIRD] = 0;
-			if (place[SNAKE] == 19)
-				++tally2;
+			game.prop[BIRD] = 0;
+			if (game.place[SNAKE] == 19)
+				++game.tally2;
 			msg = 45;
 		}
 		break;
@@ -482,7 +482,7 @@ void vkill(void)
 		msg = 46;
 		break;
 	case DWARF:
-		if (closed)
+		if (game.closed)
 			dwarfend();
 		msg = 49;
 		break;
@@ -490,26 +490,26 @@ void vkill(void)
 		msg = 157;
 		break;
 	case BEAR:
-		msg = 165 + (prop[BEAR] + 1) / 2;
+		msg = 165 + (game.prop[BEAR] + 1) / 2;
 		break;
 	case DRAGON:
-		if (prop[DRAGON] != 0) {
+		if (game.prop[DRAGON] != 0) {
 			msg = 167;
 			break;
 		}
 		if (!yes(49, 0, 0))
 			break;
 		pspeak(DRAGON, 1);
-		prop[DRAGON] = 2;
-		prop[RUG] = 0;
+		game.prop[DRAGON] = 2;
+		game.prop[RUG] = 0;
 		move((DRAGON + MAXOBJ), -1);
 		move((RUG + MAXOBJ), 0);
 		move(DRAGON, 120);
 		move(RUG, 120);
 		for (i = 1; i < MAXOBJ; ++i)
-			if (place[i] == 119 || place[i] == 121)
+			if (game.place[i] == 119 || game.place[i] == 121)
 				move(i, 120);
-		newloc = 120;
+		game.newloc = 120;
 		return;
 	default:
 		actspk(verb);
@@ -538,24 +538,24 @@ void vpour(void)
 		rspeak(78);
 		return;
 	}
-	prop[BOTTLE] = 1;
-	place[object] = 0;
+	game.prop[BOTTLE] = 1;
+	game.place[object] = 0;
 	if (at(PLANT)) {
 		if (object != WATER)
 			rspeak(112);
 
 		else {
-			pspeak(PLANT, prop[PLANT] + 1);
-			prop[PLANT] = (prop[PLANT] + 2) % 6;
-			prop[PLANT2] = prop[PLANT] / 2;
+			pspeak(PLANT, game.prop[PLANT] + 1);
+			game.prop[PLANT] = (game.prop[PLANT] + 2) % 6;
+			game.prop[PLANT2] = game.prop[PLANT] / 2;
 			describe();
 		}
 	}
 
 	else {
 		if (at(DOOR)) {
-			prop[DOOR] = (object == OIL ? 1 : 0);
-			rspeak(113 + prop[DOOR]);
+			game.prop[DOOR] = (object == OIL ? 1 : 0);
+			rspeak(113 + game.prop[DOOR]);
 		}
 
 		else
@@ -608,8 +608,8 @@ void vdrink(void)
 			actspk(verb);
 
 		else {
-			prop[BOTTLE] = 1;
-			place[WATER] = 0;
+			game.prop[BOTTLE] = 1;
+			game.place[WATER] = 0;
 			rspeak(74);
 		}
 	}
@@ -661,17 +661,17 @@ void vthrow(void)
 	if (i = dcheck()) {
 		msg = 48;
 		if (pct(33)) {
-			dseen[i] = dloc[i] = 0;
+			game.dseen[i] = game.dloc[i] = 0;
 			msg = 47;
-			++dkill;
-			if (dkill == 1)
+			++game.dkill;
+			if (game.dkill == 1)
 				msg = 149;
 		}
 	}
 
 	else {			/* at a dragon... */
 
-		if (at(DRAGON) && prop[DRAGON] == 0)
+		if (at(DRAGON) && game.prop[DRAGON] == 0)
 			msg = 152;
 
 		else {		/* at the troll... */
@@ -681,11 +681,11 @@ void vthrow(void)
 
 			else {	/* at the bear... */
 
-				if (here(BEAR) && prop[BEAR] == 0) {
+				if (here(BEAR) && game.prop[BEAR] == 0) {
 					rspeak(164);
-					drop(AXE, loc);
-					fixed[AXE] = -1;
-					prop[AXE] = 1;
+					drop(AXE, game.loc);
+					game.fixed[AXE] = -1;
+					game.prop[AXE] = 1;
 					juggle(BEAR);
 					return;
 				}
@@ -703,7 +703,7 @@ void vthrow(void)
 
 	/* handle the left over axe... */
 	rspeak(msg);
-	drop(AXE, loc);
+	drop(AXE, game.loc);
 	describe();
 	return;
 }
@@ -719,15 +719,15 @@ void vfind(void)
 		msg = 24;
 
 	else {
-		if (closed)
+		if (game.closed)
 			msg = 138;
 
 		else {
-			if (dcheck() && dflag >= 2 && object == DWARF)
+			if (dcheck() && game.dflag >= 2 && object == DWARF)
 				msg = 94;
 
 			else {
-				if (at(object) || (liq() == object && here(BOTTLE)) || object == liqloc(loc))
+				if (at(object) || (liq() == object && here(BOTTLE)) || object == liqloc(game.loc))
 					msg = 94;
 
 				else {
@@ -755,20 +755,20 @@ void vfill(void)
 			msg = 105;
 
 		else {
-			if (liqloc(loc) == 0)
+			if (liqloc(game.loc) == 0)
 				msg = 106;
 
 			else {
-				prop[BOTTLE] = cond[loc] & WATOIL;
+				game.prop[BOTTLE] = game.cond[game.loc] & WATOIL;
 				i = liq();
 				if (toting(BOTTLE))
-					place[i] = -1;
+					game.place[i] = -1;
 				msg = (i == OIL ? 108 : 107);
 			}
 		}
 		break;
 	case VASE:
-		if (liqloc(loc) == 0) {
+		if (liqloc(game.loc) == 0) {
 			msg = 144;
 			break;
 		}
@@ -801,16 +801,16 @@ void vfeed(void)
 			actspk(verb);
 			return;
 		}
-		++dflag;
+		++game.dflag;
 		msg = 103;
 		break;
 	case BEAR:
 		if (!here(FOOD)) {
-			if (prop[BEAR] == 0)
+			if (game.prop[BEAR] == 0)
 				msg = 102;
 
 			else {
-				if (prop[BEAR] == 3)
+				if (game.prop[BEAR] == 3)
 					msg = 110;
 
 				else {
@@ -821,26 +821,26 @@ void vfeed(void)
 			break;
 		}
 		dstroy(FOOD);
-		prop[BEAR] = 1;
-		fixed[AXE] = 0;
-		prop[AXE] = 0;
+		game.prop[BEAR] = 1;
+		game.fixed[AXE] = 0;
+		game.prop[AXE] = 0;
 		msg = 168;
 		break;
 	case DRAGON:
-		msg = (prop[DRAGON] != 0 ? 110 : 102);
+		msg = (game.prop[DRAGON] != 0 ? 110 : 102);
 		break;
 	case TROLL:
 		msg = 182;
 		break;
 	case SNAKE:
-		if (closed || !here(BIRD)) {
+		if (game.closed || !here(BIRD)) {
 			msg = 102;
 			break;
 		}
 		msg = 101;
 		dstroy(BIRD);
-		prop[BIRD] = 0;
-		++tally2;
+		game.prop[BIRD] = 0;
+		++game.tally2;
 		break;
 	default:
 		msg = 14;
@@ -873,7 +873,7 @@ void vread(void)
 		msg = 191;
 		break;
 	case OYSTER:
-		if (!toting(OYSTER) || !closed)
+		if (!toting(OYSTER) || !game.closed)
 			break;
 		yes(192, 193, 54);
 		return;
@@ -894,16 +894,16 @@ void vread(void)
 */
 void vblast(void)
 {
-	if (prop[ROD2] < 0 || !closed)
+	if (game.prop[ROD2] < 0 || !game.closed)
 		actspk(verb);
 
 	else {
-		bonus = 133;
-		if (loc == 115)
-			bonus = 134;
+		game.bonus = 133;
+		if (game.loc == 115)
+			game.bonus = 134;
 		if (here(ROD2))
-			bonus = 135;
-		rspeak(bonus);
+			game.bonus = 135;
+		rspeak(game.bonus);
 		normend();
 	}
 	return;
@@ -918,19 +918,19 @@ void vbreak(void)
 	auto short msg;
 	if (object == MIRROR) {
 		msg = 148;
-		if (closed) {
+		if (game.closed) {
 			rspeak(197);
 			dwarfend();
 		}
 	}
 
 	else {
-		if (object == VASE && prop[VASE] == 0) {
+		if (object == VASE && game.prop[VASE] == 0) {
 			msg = 198;
 			if (toting(VASE))
-				drop(VASE, loc);
-			prop[VASE] = 2;
-			fixed[VASE] = -1;
+				drop(VASE, game.loc);
+			game.prop[VASE] = 2;
+			game.fixed[VASE] = -1;
 		}
 
 		else {
@@ -948,7 +948,7 @@ void vbreak(void)
 */
 void vwake(void)
 {
-	if (object != DWARF || !closed)
+	if (object != DWARF || !game.closed)
 		actspk(verb);
 
 	else {

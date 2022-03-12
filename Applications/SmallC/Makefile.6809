@@ -1,16 +1,4 @@
-PLATFORM = 6809
-CC = m6809-unknown-gcc
-ASM = m6809-unknown-as
-AR = m6809-unknown-ar
-LINKER = m6809-unknown-ld
-CFLAGS =  -I../../Library/include -I../../Library/include/6809 -Wall -pedantic -fno-strict-aliasing
-COPT = -Os
-LINKER_OPT = --oformat=raw -L../../Library/libs -lc6809
-LIBGCCDIR = $(dir $(shell $(CC) -print-libgcc-file-name))
-CRT0 = ../../Library/libs/crt0_6809.o
-LINKER_OPT += -L$(LIBGCCDIR) -lgcc -Map=ld09.map 
-LINKER_OPT += --script=../util/$(TARGET).link $(CRT0)
-ASM_OPT = -o
+include $(FUZIX_ROOT)/Applications/rules.6809
 
 LIBDIR	=/usr/bin
 LDFLAGS	=
@@ -33,19 +21,19 @@ OBJS_ALL = $(OBJS) $(OBJ_Z80) $(OBJ_8080)
 all:    scc6801 scc6809 scc8080 sccz80 copt
 
 sccz80: $(OBJS) $(OBJ_Z80)
-	$(LINKER) $(LINKER_OPT) -o sccz80 $(OBJS) $(OBJ_Z80)
+	$(LINKER) $(LINKER_OPT) -o sccz80 $(CRT0) $(OBJS) $(OBJ_Z80)
 
 scc8080: $(OBJS) $(OBJ_8080)
-	$(LINKER) $(LINKER_OPT) -o scc8080 $(OBJS) $(OBJ_8080)
+	$(LINKER) $(LINKER_OPT) -o scc8080 $(CRT0) $(OBJS) $(OBJ_8080)
 
 scc6801: $(OBJS) $(OBJ_6801)
-	$(LINKER) $(LINKER_OPT) -o scc6801 $(OBJS) $(OBJ_6801)
+	$(LINKER) $(LINKER_OPT) -o scc6801 $(CRT0) $(OBJS) $(OBJ_6801)
 
 scc6809: $(OBJS) $(OBJ_6809)
-	$(LINKER) $(LINKER_OPT) -o scc6809 $(OBJS) $(OBJ_6809)
+	$(LINKER) $(LINKER_OPT) -o scc6809 $(CRT0) $(OBJS) $(OBJ_6809)
 
 copt:	$(OBJ_COPT)
-	$(LINKER) $(LINKER_OPT) -o copt $(OBJ_COPT)
+	$(LINKER) $(LINKER_OPT) -o copt $(CRT0) $(OBJ_COPT)
 
 
 .c.o:

@@ -8,7 +8,7 @@ static struct trav db_trav[16];	/* Trav for last location fetched */
 static uint8_t db_ntrav;
 static int db_lastloc;
 static int db_fd;
-static struct gameheader game;
+static struct gameheader game_db;
 
 static void dbstring(uint16_t * off)
 {
@@ -31,7 +31,7 @@ void db_init(void)
 		perror("advent.db");
 		exit(1);
 	}
-	if (read(db_fd, &game, sizeof(game)) != sizeof(game)) {
+	if (read(db_fd, &game_db, sizeof(game_db)) != sizeof(game_db)) {
 		perror("read");
 		exit(1);
 	}
@@ -41,7 +41,7 @@ void travcache(short loc)
 {
 	char *p;
 	if (loc != db_lastloc) {
-		dbstring(game.lshort + loc - 1);
+		dbstring(game_db.lshort + loc - 1);
 		db_lastloc = loc;
 		p = db_buf + strlen(db_buf) + 1;
 		db_ntrav = *p++;
@@ -81,14 +81,14 @@ short yes(short msg1, short msg2, short msg3)
 /*  Print a random message from database 6				    */
 void rspeak(short msg)
 {
-	dbstring(game.msg + msg - 1);
+	dbstring(game_db.msg + msg - 1);
 
 #ifdef DEBUG
-	if (dbgflg)
+	if (game.dbgflg)
 		fprintf(stderr, "** rspeak(%d) ** ", msg);
 
 #endif				/*  */
-	DisplayText(game.msg);
+	DisplayText(game_db.msg);
 	return;
 }
 
@@ -100,11 +100,11 @@ void pspeak(short item, short state)
 	char *s;
 
 #ifdef DEBUG
-	if (dbgflg)
+	if (game.dbgflg)
 		fprintf(stderr, "** pspeak(%d,%d) ** ", item, state);
 
 #endif				/*  */
-	dbstring(game.odesc + item - 1);
+	dbstring(game_db.odesc + item - 1);
 	p = db_buf;
 	while (state > -1) {
 		while (*p && '/' != *p)
@@ -130,14 +130,14 @@ void pspeak(short item, short state)
 /*  Print the long description of a location				    */
 void desclg(short loc)
 {
-	dbstring(game.loclong + loc - 1);
+	dbstring(game_db.loclong + loc - 1);
 
 #ifdef DEBUG
-	if (dbgflg)
+	if (game.dbgflg)
 		fprintf(stderr, "** desclg(%d) ** ", loc);
 
 #endif				/*  */
-	DisplayText(game.loclong);
+	DisplayText(game_db.loclong);
 	nl();
 }
 
@@ -147,11 +147,11 @@ void descsh(short loc)
 {
 	travcache(loc);
 #ifdef DEBUG
-	if (dbgflg)
+	if (game.dbgflg)
 		fprintf(stderr, "** descsh(%d) ** ", loc);
 
 #endif				/*  */
-	DisplayText(game.lshort);
+	DisplayText(game_db.lshort);
 	nl();
 }
 
@@ -225,7 +225,7 @@ short vocab(char *word, short val)
 */
 uint8_t dark(void)
 {
-	return (!(cond[loc] & LIGHT) && (!prop[LAMP] || !here(LAMP)));
+	return (!(game.cond[game.loc] & LIGHT) && (!game.prop[LAMP] || !here(LAMP)));
 }
 
 
@@ -234,7 +234,7 @@ uint8_t dark(void)
 */
 uint8_t here(short item)
 {
-	return (place[item] == loc || toting(item));
+	return (game.place[item] == game.loc || toting(item));
 }
 
 
@@ -243,7 +243,7 @@ uint8_t here(short item)
 */
 uint8_t toting(short item)
 {
-	return (place[item] == -1);
+	return (game.place[item] == -1);
 }
 
 
@@ -253,7 +253,7 @@ uint8_t toting(short item)
 */
 uint8_t forced(short atloc)
 {
-	return (cond[atloc] == 2);
+	return (game.cond[atloc] == 2);
 }
 
 
@@ -272,7 +272,7 @@ uint8_t pct(short x)
 */
 uint8_t at(short item)
 {
-	return (place[item] == loc || fixed[item] == loc);
+	return (game.place[item] == game.loc || game.fixed[item] == game.loc);
 }
 
 
@@ -292,7 +292,7 @@ void dstroy(short obj)
 void move(short obj, short where)
 {
 	auto short from;
-	from = (obj < MAXOBJ) ? place[obj] : fixed[obj];
+	from = (obj < MAXOBJ) ? game.place[obj] : game.fixed[obj];
 	if (from > 0 && from <= 300)
 		carry(obj, from);
 	drop(obj, where);
@@ -318,10 +318,10 @@ void carry(short obj, short where)
 {
 	where = where;		/* eliminate compiler warning */
 	if (obj < MAXOBJ) {
-		if (place[obj] == -1)
+		if (game.place[obj] == -1)
 			return;
-		place[obj] = -1;
-		++holding;
+		game.place[obj] = -1;
+		++game.holding;
 	}
 	return;
 }
@@ -333,13 +333,13 @@ void carry(short obj, short where)
 void drop(short obj, short where)
 {
 	if (obj < MAXOBJ) {
-		if (place[obj] == -1)
-			--holding;
-		place[obj] = where;
+		if (game.place[obj] == -1)
+			--game.holding;
+		game.place[obj] = where;
 	}
 
 	else
-		fixed[obj - MAXOBJ] = where;
+		game.fixed[obj - MAXOBJ] = where;
 	return;
 }
 
@@ -364,7 +364,7 @@ short dcheck(void)
 {
 	register short i;
 	for (i = 1; i < (DWARFMAX - 1); ++i) {
-		if (dloc[i] == loc)
+		if (game.dloc[i] == game.loc)
 			return (i);
 	}
 	return (0);
@@ -377,7 +377,7 @@ short dcheck(void)
 short liq(void)
 {
 	auto short i, j;
-	i = prop[BOTTLE];
+	i = game.prop[BOTTLE];
 	j = (-1) - i;
 	return (liq2(i > j ? i : j));
 }
@@ -388,8 +388,8 @@ short liq(void)
 */
 short liqloc(short loc)
 {
-	if (cond[loc] & LIQUID)
-		return (liq2(cond[loc] & WATOIL));
+	if (game.cond[loc] & LIQUID)
+		return (liq2(game.cond[loc] & WATOIL));
 	return (liq2(1));
 }
 

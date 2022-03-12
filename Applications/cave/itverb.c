@@ -72,7 +72,7 @@ void itverb(void)
 		ivfoo();
 		break;
 	case SUSPEND:
-		saveflg = 1;
+		game.saveflg = 1;
 		break;
 	case INVENTORY:
 		inventory();
@@ -107,7 +107,7 @@ void ivtake(void)
 	auto short anobj, item;
 	anobj = 0;
 	for (item = 1; item < MAXOBJ; ++item) {
-		if (place[item] == loc) {
+		if (game.place[item] == game.loc) {
 			if (anobj != 0) {
 				needobj();
 				return;
@@ -115,7 +115,7 @@ void ivtake(void)
 			anobj = item;
 		}
 	}
-	if (anobj == 0 || (dcheck() && dflag >= 2)) {
+	if (anobj == 0 || (dcheck() && game.dflag >= 2)) {
 		needobj();
 		return;
 	}
@@ -159,18 +159,18 @@ void ivopen(void)
 */
 void ivkill(void)
 {
-	object1 = 0;
-	if (dcheck() && dflag >= 2)
+	game.object1 = 0;
+	if (dcheck() && game.dflag >= 2)
 		object = DWARF;
 	if (here(SNAKE))
 		addobj(SNAKE);
-	if (at(DRAGON) && prop[DRAGON] == 0)
+	if (at(DRAGON) && game.prop[DRAGON] == 0)
 		addobj(DRAGON);
 	if (at(TROLL))
 		addobj(TROLL);
-	if (here(BEAR) && prop[BEAR] == 0)
+	if (here(BEAR) && game.prop[BEAR] == 0)
 		addobj(BEAR);
-	if (object1 != 0) {
+	if (game.object1 != 0) {
 		needobj();
 		return;
 	}
@@ -182,7 +182,7 @@ void ivkill(void)
 		object = BIRD;
 	if (here(CLAM) || here(OYSTER))
 		addobj(CLAM);
-	if (object1 != 0) {
+	if (game.object1 != 0) {
 		needobj();
 		return;
 	}
@@ -212,7 +212,7 @@ void iveat(void)
 */
 void ivdrink(void)
 {
-	if (liqloc(loc) != WATER && (liq() != WATER || !here(BOTTLE)))
+	if (liqloc(game.loc) != WATER && (liq() != WATER || !here(BOTTLE)))
 		needobj();
 
 	else {
@@ -228,7 +228,7 @@ void ivdrink(void)
 */
 void ivquit(void)
 {
-	if (gaveup = yes(22, 54, 54))
+	if (game.gaveup = yes(22, 54, 54))
 		normend();
 	return;
 }
@@ -258,27 +258,27 @@ void ivfoo(void)
 	auto short k, msg;
 	k = vocab(word1, 3000);
 	msg = 42;
-	if (foobar != 1 - k) {
-		if (foobar != 0)
+	if (game.foobar != 1 - k) {
+		if (game.foobar != 0)
 			msg = 151;
 		rspeak(msg);
 		return;
 	}
-	foobar = k;
+	game.foobar = k;
 	if (k != 4)
 		return;
-	foobar = 0;
-	if (place[EGGS] == 92 || (toting(EGGS) && loc == 92)) {
+	game.foobar = 0;
+	if (game.place[EGGS] == 92 || (toting(EGGS) && game.loc == 92)) {
 		rspeak(msg);
 		return;
 	}
-	if (place[EGGS] == 0 && place[TROLL] == 0 && prop[TROLL] == 0)
-		prop[TROLL] = 1;
+	if (game.place[EGGS] == 0 && game.place[TROLL] == 0 && game.prop[TROLL] == 0)
+		game.prop[TROLL] = 1;
 	if (here(EGGS))
 		k = 1;
 
 	else {
-		if (loc == 92)
+		if (game.loc == 92)
 			k = 0;
 
 		else
@@ -340,10 +340,10 @@ void inventory(void)
 */
 void addobj(short obj)
 {
-	if (object1 != 0)
+	if (game.object1 != 0)
 		return;
 	if (object != 0) {
-		object1 = -1;
+		game.object1 = -1;
 		return;
 	}
 	object = obj;

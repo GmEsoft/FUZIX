@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 {
 	short rflag;		/* user restore request option */
 	short dflag;		/* user restore request option */
-	brief_sw = dbgflg = rflag = 0;
+	brief_sw = game.dbgflg = rflag = 0;
 	signal(SIGINT, SIG_IGN);
 	while (--argc > 0) {
 		if ((argv[argc])[0] == '-' || (argv[argc])[0] == '/') {
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 				++rflag;
 				continue;
 			case 'd':
-				++dbgflg;
+				++game.dbgflg;
 				writes("Debug enabled.\n");
 				continue;
 			case 'b':
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-	dflag = dbgflg;
+	dflag = game.dbgflg;
 	db_init();
 	init();
 	if (!rflag) {
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 	}
 	if (rflag)
 		restore();
-	dbgflg = dflag;
+	game.dbgflg = dflag;
 	eadvent();
 	return (0);
 }
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 /*  Initialization							*/
 static void init(void)
 {
-	dloc[DWARFMAX - 1] = chloc;
+	game.dloc[DWARFMAX - 1] = game.chloc;
 	return;
 }
 
@@ -103,28 +103,27 @@ void restore(void)
 		exit(1);
 	}
 
-	/* THis is naughty and will want fixing to use a struct! */
-	if (read(restfd, &turns, (char *) &turns - (char *) &lastglob) != (char *) &turns - (char *) &lastglob) {
+	if (read(restfd, &game, sizeof(game)) != sizeof(game)) {
 		writes("Can't read save file...\n");
 		exit(1);
 	}
 	if (close(restfd) == -1)
 		writes("warning -- can't close save file...\n");
 	nl();
-	saveflg = 0;
+	game.saveflg = 0;
 }
 
 static void eadvent(void)
 {
 	srand(511);
 	if (yes(65, 1, 0))
-		limit = 1000;
+		game.limit = 1000;
 
 	else
-		limit = 330;
-	while (!saveflg)
+		game.limit = 330;
+	while (!game.saveflg)
 		turn();
-	if (saveflg)
+	if (game.saveflg)
 		saveadv();
 	return;
 }
