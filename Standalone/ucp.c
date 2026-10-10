@@ -128,7 +128,6 @@ int main(int argc, char *argval[])
 				nextline++;
 			}
 		}
-		printf("%s\n", line);
 		cmd[0] = '\0';
 		*arg1 = '\0';
 		arg2[0] = '\0';
