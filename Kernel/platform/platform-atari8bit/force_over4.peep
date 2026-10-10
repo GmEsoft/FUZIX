@@ -1,0 +1,5 @@
+#	Force the font into overlay4
+	.data
+=
+	.overlay4
+

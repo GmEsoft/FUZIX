@@ -64,6 +64,30 @@ reg4:	.word	0
 
 usp:	.word	0
 
+	.overlay4
+
+	; Starts after the font block
+
+	; Probably want to bank buffers here  (0x4800) if we can get
+	; all of execve / user access and buffers here we can
+	; do conventional rargs/wargs very very carefully.
+
+	.export bufdata
+bufdata:
+	.ds	512 * NBUFS
+	; We are now at about 4E00 once we allow for buffers
+	; We now need all user copiers, block dev helpers, video
+	; and execve/rargs/wargs stuffed into this bank
+
+	; Hack to stop banking code turning this into a stub
+	; reference
+	.export _bufdata
+
+	.abs
+	.org	0x4800
+_bufdata:
+
+
 	.common
 
 _plt_monitor:

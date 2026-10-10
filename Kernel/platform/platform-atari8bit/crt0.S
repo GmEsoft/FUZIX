@@ -1,7 +1,7 @@
 #include "kernel.def"
 #include "../../cpu-6502/kernel02.def"
 
-#define	CARTPORT	0xD571
+#define	CARTPORT	0xD500
 #define PORTB		0xD301
 #define EXT0		0x12
 #define EXT1		0x16
@@ -15,41 +15,71 @@
 	.discard
 ;
 ;	We loaded the low 8K block from cartridge and ran it. NMI is off
-;	nothing else is really defined
+;	stack is sane, interrupts are off, not much else is defined.
 ;
 go:
-	sei			; interrupts off
-	cld			; decimal off
-	ldx	#$FF
-	txs			; Stack (6502 not C)
+	lda	#0x80
+	sta	0x8002
 
-	lda	#1
-	sta	CARTPORT
+	lda	#0x00
+	sta	0xD400
+	lda	#<dlist8
+	sta	0xD402
+	lda	#>dlist8
+	sta	0xD403
+	lda	#0x22
+	sta	0xD400
+
+	ldx	#0xF6
+	sta	CARTPORT,x	; select bank 1
 	lda	#0x20
 	sta	@tmp2+1		; Copy 2000-3FFF out of bank 1
+
 	jsr	romtobank
 
+	lda	#MAIN
+	sta	PORTB
+
+	lda	#0x80
+	sta	0x8003
 	;	Copy from cartridge bank 2 and 3 into 4000-7FFF main RAM
-	lda	#2
+	ldx	#0xF5
 	jsr	copy16k
+
+
+	lda	#0x80
+	sta	0x8004
 
 	;	Copy from cartridge bank 4 and 5 into 4000-7FFF ext bank 0
 	lda	#EXT0
 	sta	PORTB		; bank in at 4000-7FFF
-	lda	#4		; cart bank
+
+
+	ldx	#0xF3		; cart bank
 	jsr	copy16k
+
+
+	lda	#0x80
+	sta	0x8005
 
 	;	Copy from cartridge bank 6 and 7 into 4000-7FFF ext bank 1
 	lda	#EXT1
 	sta	PORTB		; bank in at 4000-7FFF
-	lda	#6		; cart bank
+	ldx	#0xF1		; cart bank
 	jsr	copy16k
+
+	lda	#0x80
+	sta	0x8006
 
 	;	Copy from cartridge bank 8 and 9 into 4000-7FFF ext bank 2
 	lda	#EXT2
 	sta	PORTB		; bank in at 4000-7FFF
-	lda	#8		; cart bank
+	lda	#0xE7		; cart bank
 	jsr	copy16k
+
+
+	lda	#0x80
+	sta	0x8007
 
 	; 	Ext bank 3 is user space so we don't need to worry
 	;	We now have all the 4000-7FFF including the extra banks
@@ -58,24 +88,58 @@ go:
 	lda	#MAIN
 	sta	PORTB
 
+
+	.export mark
+mark:
+	;	Switch to final display
+	;	Use absolutes here as we don't want magic relocations
+	;	being done for us.
+	lda	#0x00
+	sta	0xD400
+	;	And our fonts
+	lda	#0x44
+	sta	0xD409
+	lda	#0xC0
+	sta	0xD402
+	lda	#0x43
+	sta	0xD403
+	lda	#0x22
+	sta	0xD400
+
+
 	;	Now we do the upper memory (10 and 11)
-	lda	#10
-	sta	CARTPORT
+	sta	CARTPORT+0xE5
 	lda	#0xC0
 	sta	@tmp2+1
 	ldx	#16		; C000-CFFF (4K)
 	jsr	romtosect
+
+	lda	#0x80
+	sta	0x4027
+
+
 	lda	#0xD8		; Skip the I/O (2K)
 	sta	@tmp2+1
 	lda	#0xB8
 	sta	@tmp+1
 	ldx	#8		; Places us at E000
 	jsr	romblock
-	lda	#11
-	sta	CARTPORT	; Final 8K from bank 11
+
+	lda	#0x80
+	sta	0x4026
+
+	lda	CARTPORT+0xE4	; Final 8K from bank 11
 	lda	#0xE0
 	sta	@tmp2+1
 	jsr	romtobank
+
+	lda	#0x80
+	sta	0x4025
+
+	lda	CARTPORT+0xFF	; ROMs off IDE still accessible
+	; A000-BFFF is now RAM and our memory map is set up as
+	; RAM from 0000-CFFF and D800-FFFF with the I/O window
+	; non removable.
 
 	; Everything should now be in place
 
@@ -133,13 +197,14 @@ gogogo:
 stop:	jmp	stop
 
 copy16k:
+	txa
 	pha
-	sta	CARTPORT
+	sta	CARTPORT,x
 	jsr	romtoext
 	pla
-	clc
-	adc	#1
-	sta	CARTPORT
+	tax
+	dex
+	sta	CARTPORT,x
 	bne	romtobank
 ;	set @tmp2 to the address to copy
 romtoext:
@@ -148,7 +213,7 @@ romtoext:
 romtobank:
 	ldx	#32
 romtosect:
-	lda	#>0xA0		; ROM start
+	lda	#0xA0		; ROM start
 	sta	@tmp+1
 romblock:
 	lda	#0
@@ -172,6 +237,20 @@ vectors:
 	.word	_plt_reboot		; does it matter ???
 	.word	nmi_handler
 
+	; scratch dlist as we will map out the cart version
+	; wasteful but we have tons of discard space so who cares
+dlist8:
+	.byte	0x70,0x70,0x70,0x70
+	.byte	0x42
+	.word	0x8000
+	; Render 24 lines
+	.byte	0x02,0x02,0x02,0x02,0x02,0x02,0x02,0x02
+	.byte	0x02,0x02,0x02,0x02,0x02,0x02,0x02,0x02
+	.byte	0x02,0x02,0x02,0x02,0x02,0x02,0x02,0x02
+	; Wait for vblank and return
+	.byte	0x41
+	.word	dlist8
+
 	.common
 
 ; We may want to move some common across the top of each bank but we need
@@ -191,6 +270,7 @@ stub_end:
 	.overlay3
 	.overlay4		; Will use for video and buffers
 
+	; This is in the main bank
 screen:
 	.ds	40 * 24
 dlist:	.byte	0x70,0x70,0x70
@@ -209,24 +289,5 @@ dlist:	.byte	0x70,0x70,0x70
 	.ds	32
 
 	; We are now at 0x4400
-	; Font will go here
-	.ds	1024	; (or can we page before and lose 32)
+	; Font will link here via font.o, then buffers via atari.o
 
-	; Probably want to bank buffers here  (0x4800) if we can get
-	; all of execve / user access and buffers here we can
-	; do conventional rargs/wargs very very carefully.
-
-	.export bufdata
-bufdata:
-	.ds	512 * NBUFS
-	; We are now at about 4E00 once we allow for buffers
-	; We now need all user copiers, block dev helpers, video
-	; and execve/rargs/wargs stuffed into this bank
-
-	; Hack to stop banking code turning this into a stub
-	; reference
-	.export _bufdata
-
-	.abs
-	.org	0x4800
-_bufdata:

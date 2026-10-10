@@ -56,6 +56,8 @@
 #define VT_BASE	((uint8_t *)0x4000)
 #define VT_MAP_CHAR(x)	((x) & 127)
 #define VT_CURSOR	'_'
+#define CONFIG_FONT8X8
+#define CONFIG_FONT8X8SMALL
 
 /* Vt definitions */
 #define VT_WIDTH	64
