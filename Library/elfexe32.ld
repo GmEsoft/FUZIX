@@ -21,7 +21,8 @@ SECTIONS {
 
 	.got ALIGN(4) : { *(.got*) } : text
 	.plt ALIGN(4) : { *(.plt*) } : text
-	.ARM.exidx ALIGN(4) : { *(.ARM.exidx) } : text
+	.ARM.extab ALIGN(4) : { *(.ARM.extab .ARM.extab.*) } : text
+	.ARM.exidx ALIGN(4) : { *(.ARM.exidx .ARM.exidx.*) } : text
 
 	.data ALIGN(4) : {
 		__data_start = .;
@@ -49,6 +50,7 @@ SECTIONS {
 	.dynsym : { *(.dynsym) } :info
 	.rel.dyn : { *(.rel*) } :info
 	.hash : { *(.hash*) } :info
+	.dynstr : { *(.dynstr) } :info
 
 	/DISCARD/ : { *(.comment .note) }
 }
