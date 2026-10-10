@@ -4,9 +4,7 @@ export PICO_SDK_FETCH_FROM_GIT = yes
 
 # Set 'SUBTARGET' to one of pico-sdk compatible boards
 # valid values: pico or pico2
-ifndef SUBTARGET
-SUBTARGET=pico # set default subtarget
-endif
+SUBTARGET ?= pico
 
 ifeq ($(SUBTARGET),pico)
 TOTALMEM=160
@@ -22,6 +20,8 @@ TOTALMEM=320
 endif
 
 PROCMEM ?= 64
+FLASH_FIRMWARE_KIB ?= 96
+FLASH_XIP_KIB ?= 0
 
 PICOTOOLFLAGS= --family rp2040
 ifeq (${SUBTARGET}, pico2)
@@ -45,15 +45,20 @@ build/fuzix.elf: ../../version.c build/Makefile
 # Reconfigure even when only a command-line memory/board setting changed.
 build/Makefile: CMakeLists.txt $(wildcard ../../*.[chS]) $(wildcard ../../*/*.[chS]) FORCE
 	mkdir -p build
-	(cd build && cmake -DPICO_BOARD=${SUBTARGET} -DTOTALMEM=${TOTALMEM} -DPROCMEM=${PROCMEM} ..)
+	(cd build && cmake -DPICO_BOARD=${SUBTARGET} -DTOTALMEM=${TOTALMEM} -DPROCMEM=${PROCMEM} -DFLASH_FIRMWARE_KIB=${FLASH_FIRMWARE_KIB} -DFLASH_XIP_KIB=${FLASH_XIP_KIB} ..)
 
 .PHONY: FORCE
 FORCE:
 
 image:: world
-	./update-flash.sh
-	../../../Standalone/mkftl -s 1952 -e 0x1000 -g 10 filesystem.img -o filesystem.ftl
-	${PICOTOOL} uf2 convert filesystem.ftl -t bin filesystem.uf2 -o 0x10018000 ${PICOTOOLFLAGS}
+	@set -e; . ./build/flash-layout.env; \
+	capacity=$$(../../../Standalone/mkftl -c -s $$FTL_SIZE_KIB -e $$FLASH_ERASE_BYTES -g $$FLASH_GC_RATIO); \
+	if [ $$capacity -lt 128 ]; then echo "Flash filesystem region is too small" >&2; exit 1; fi; \
+	fs_size=$$((capacity * 9 / 10)); \
+	if [ $$fs_size -gt 2547 ]; then fs_size=2547; fi; \
+	FSSIZE=$$fs_size ./update-flash.sh; \
+	../../../Standalone/mkftl -s $$FTL_SIZE_KIB -e $$FLASH_ERASE_BYTES -g $$FLASH_GC_RATIO -o filesystem.ftl filesystem.img; \
+	${PICOTOOL} uf2 convert filesystem.ftl -t bin filesystem.uf2 -o $$FTL_ADDRESS ${PICOTOOLFLAGS}
 
 diskimage:
 

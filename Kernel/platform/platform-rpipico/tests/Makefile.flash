@@ -1,0 +1,5 @@
+.PHONY: check
+check:
+	python3 flash-layout.py
+	python3 boot-bundle.py
+	python3 image-tools.py
