@@ -101,6 +101,17 @@ static struct mapentry* find_free_block(ptptr p)
     }
 #endif
 
+/* Release an allocation suffix, including blocks claimed by a failed grow. */
+static void free_blocks(uint8_t slot, unsigned first)
+{
+    for (int i=0; i<NUM_ALLOCATION_BLOCKS; i++)
+    {
+        struct mapentry* b = &allocation_map[i];
+        if (b->slot == slot && b->block >= first)
+            b->slot = b->block = 0xff;
+    }
+}
+
 void pagemap_free(ptptr p)
 {
     #ifdef DEBUG
@@ -127,6 +138,9 @@ int pagemap_alloc(ptptr p)
 	if (p == udata.u_ptab)
 		return 0;
 
+    uaddr_t size = get_proc_size(p);
+    if (size > PROGSIZE + UDATA_SIZE || size > USERMEM)
+        return ENOMEM;
     int blocks = get_proc_size_blocks(p);
     int slot = get_slot(p);
     #ifdef DEBUG
@@ -138,7 +152,10 @@ int pagemap_alloc(ptptr p)
     {
         struct mapentry* b = find_free_block(p);
         if (!b)
+        {
+            pagemap_free(p);
             return ENOMEM;
+        }
         b->slot = slot;
         b->block = i;
     }
@@ -156,7 +173,10 @@ int pagemap_realloc(struct exec *hdr, usize_t size)
 {
     struct p_tab* p = udata.u_ptab;
 
-    uaddr_t oldblocks = get_proc_size_blocks(p);
+    /* Check before addition/rounding, including the physical pool bound. */
+    if (size > PROGSIZE || size > USERMEM - UDATA_SIZE)
+        return ENOMEM;
+    int oldblocks = get_proc_size_blocks(p);
     int blocks = (int)alignup(size + UDATA_SIZE, BLOCKSIZE) / BLOCKSIZE;
     int slot = get_slot(p);
     #ifdef DEBUG
@@ -182,7 +202,10 @@ int pagemap_realloc(struct exec *hdr, usize_t size)
         {
             struct mapentry* b = find_free_block(p);
             if (!b)
+            {
+                free_blocks(slot, oldblocks);
                 return ENOMEM;
+            }
             b->slot = slot;
             b->block = i;
         }
@@ -374,11 +397,13 @@ void swapin(ptptr p, uint16_t map)
 
 arg_t brk_extend(uaddr_t addr)
 {
-    if (addr < PROGBASE)
+    if (addr < PROGLOAD)
         return EINVAL;
-    if (addr >= brk_limit()) {
+    if (addr > PROGTOP)
+        return ENOMEM;
+    if (addr > brk_limit()) {
         /* Claim more memory for this process. */
-        if (pagemap_realloc(NULL, addr - PROGBASE))
+        if (pagemap_realloc(NULL, addr - PROGLOAD))
 		{
 			kprintf("%d: out of memory by %d\n", udata.u_ptab->p_pid,
 				addr - brk_limit());
@@ -390,4 +415,3 @@ arg_t brk_extend(uaddr_t addr)
 }
 
 // vim: ts=4 sw=4 et
-
