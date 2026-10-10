@@ -782,6 +782,7 @@ typedef struct {
                                            is device dependent */
 #define HDIO_EJECT		0x0105	/* Request a media eject */
 #define HDIO_TRIM       0x0106  /* Issue a TRIM request */
+#define HDIO_TRIM_KERNEL 0x8106 /* Internal TRIM, kernel blkno_t pointer */
 #define BLKGETSIZE      0x0107  /* Use the Linux name */
 
 /*
