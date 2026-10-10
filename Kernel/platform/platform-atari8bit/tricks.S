@@ -1,6 +1,8 @@
 ;
 ;	6502 version
 ;
+;	TODO: convert for single process model
+;
         .export _plt_switchout
         .export _switchin
         .export _dofork
@@ -331,7 +333,7 @@ _create_init_common:
 ;	For now BSS will do but we ought to have a proper high space or
 ;	something.
 ;
-	.bss
+	.commondata
 
 switch_proc_ptr:
 	.word	0

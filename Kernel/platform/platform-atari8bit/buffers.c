@@ -2,32 +2,7 @@
 #include <kdata.h>
 #include <printf.h>
 
-/*
- *	We provide a clone of the usual tmpbuf code as we carefully keep
- *	all the execve code and user copy code in the same bank
- */
-
-/*
- * Allocate a buffer for scratch use by the kernel. This buffer can then
- * be freed with tmpfree. We will be given a buffer where bp->__bf_data
- * points to a page in our bank only accessible in our bank. This requires
- * care we put all users of tmpbuf into this bank (exec16, exec, user copy)
- */
-void *tmpbuf(void)
-{
-	register bufptr bp;
-	extern uint16_t bufclock;
-
-	bp = freebuf();
-	bp->bf_dev = NO_DEVICE;
-	bp->bf_time = ++bufclock;	/* Time stamp it */
-	return bp->__bf_data;
-}
-
-void tmpfree(void *p)
-{
-	brelse(p);
-}
+extern uint8_t bufdata[];
 
 /* We put the helpers in overlay4 specifically so they are safe to use this
    way */
@@ -73,8 +48,6 @@ void blkzero(struct blkbuf *buf)
     memset(buf->__bf_data, 0, BLKSIZE);
 }
 
-extern uint8_t bufdata[];
-
 /* This is called at start up to assign data to the first buffers, and then
    again to assign data to the extra allocated buffers */
 
@@ -90,4 +63,38 @@ void bufsetup(void)
         bdnext += BLKSIZE;
     }
     bnext = bp;
+}
+
+/*
+ *	Scratch buffers for syscall arguments - until we can rework
+ *	execve and realloc to avoid this need
+ */
+
+static uint8_t tmp[2][BLKSIZE];
+static uint8_t tfree = 3;
+
+void tmpfree(void *p)
+{
+  if (p == tmp[0]) {
+      tfree |= 1;
+      return;
+  }
+  if (p == tmp[1]) {
+      tfree |= 2;
+      return;
+  }
+  panic("tmpfree");
+}
+
+void *tmpbuf(void)
+{
+   if (tfree & 1) {
+       tfree &= ~1;
+       return tmp[0];
+   }
+   if (tfree & 2) {
+       tfree &= ~2;
+       return tmp[1];
+   }
+   panic("tmpbuf");
 }

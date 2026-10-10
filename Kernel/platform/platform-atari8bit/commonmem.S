@@ -10,7 +10,7 @@
         .export istack_switched_sp
 	.export CTemp
 
-	.common
+	.commondata
 ;
 ;	In 6502 land these are the C stacks, we will need to handle the
 ;	hardware stack separately, and also to save sp,sp+1 etc on irqs

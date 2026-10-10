@@ -79,4 +79,4 @@
 
 #define BOOTDEVICENAMES "hd#"
 
-#define CONFIG_SMALL
+#undef CONFIG_SMALL

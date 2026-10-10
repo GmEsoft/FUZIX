@@ -31,6 +31,39 @@ theory at some point once we've got something believable we can also
 add more video space to the overlay4 segment if there is room to support
 other video modes
 
+Constraints:
+Read only in CFxx if we want to use RAMBO style expansions (and 0Fxx)
+
+So for XE memory is fine user is 0200-BFFF or with graphics flag we'd
+eventually load about 8K up (2000-BFFF or similar) for 320x192 mode
+
+For RAMBO we can't load data below 1000 and code loading will need care to
+undo any accidental RAMBO switching. RAMBO also means we need to keep video
+at of the bankable zone so we'd put video in the low memory and deal with
+banking carefully.
+
+RAMBO XL is different of course but has the same video low requirement but
+is XL style: Memory is now 6/5/3/2: bank select and 4 is the enable
+(7/1/0 as before). We'd have to put video low for such boards. Confusingly
+banks 0-3 are the main memory. Not clear this is useful as a feature.
+Some variant boards go to 256K because all 16 are not main mem - need to
+detect. Compyshop uses 7/6/3/2 instead and has antic banking. Extreme
+boards use 2/3/5/6/7 which loses lots of other control
+
+Standard Axalon style uses CFC0-CFFF or 0FC0-0FFF so we'd start at 0x1000
+for the binary load and put the video low as they also have random video
+behaviour in 4000-7FFF. CFFF is the official place to write. Optimally spot
+programs where data falls below 0FFF (very few) and move them up
+
+Need to figure out how many banks. Bank 0 is main memory and that may be
+from the 256K or 52K etc or not. Went up to at least 1MB! so can use bigger
+ones as swap.
+
+With a cartridge slot we can bank in and out some types of cartridge
+between A000 and BFFF. That would let us relocate "code" out of the 4000-7FFF
+space and probably literals and the bit of code jammed into common. Probably
+not enough to free data to D000 however as needed for oldest systems.
+
 
 ## Mysteries
 - How to load and boot this lot
