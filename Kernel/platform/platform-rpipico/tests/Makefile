@@ -4,8 +4,8 @@ CASES = break realloc-failure alloc-failure bounds grow-shrink
 LIMITS = 64 128 160
 TESTS = $(addprefix pagemap-test-,$(LIMITS))
 
-.PHONY: check check-config clean
-check: $(TESTS) check-config
+.PHONY: check check-config check-flash-sync clean
+check: $(TESTS) check-config check-flash-sync
 	@set -e; for exe in $(TESTS); do echo $$exe; for test in $(CASES); do ./$$exe $$test; done; done
 
 pagemap-test-%: pagemap.c ../swapper.c $(wildcard include/*.h)
@@ -24,3 +24,6 @@ check-config:
 clean:
 	rm -f pagemap-test $(TESTS)
 	rm -rf pagemap-test.dSYM $(addsuffix .dSYM,$(TESTS))
+
+check-flash-sync:
+	python3 flash-sync.py

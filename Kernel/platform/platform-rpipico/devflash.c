@@ -58,10 +58,23 @@ static uint_fast8_t transfer_cb(void)
 	dhara_error_t err = DHARA_E_NONE;
 	if (blk_op.is_read)
 		dhara_map_read(&dhara, blk_op.lba, blk_op.addr, &err);
-	else
-		dhara_map_write(&dhara, blk_op.lba, blk_op.addr, &err);
-	
+	else {
+		/* A completed block write must survive restart. Dhara can defer
+		 * its checkpoint even after map_write succeeds. */
+		if (dhara_map_write(&dhara, blk_op.lba, blk_op.addr, &err) == 0)
+			dhara_map_sync(&dhara, &err);
+	}
 	return (err == DHARA_E_NONE);
+}
+
+static int flush_cb(void)
+{
+	dhara_error_t err = DHARA_E_NONE;
+	if (dhara_map_sync(&dhara, &err)) {
+		udata.u_error = EIO;
+		return -1;
+	}
+	return 0;
 }
 
 static int trim_cb(void)
@@ -87,6 +100,7 @@ void flash_dev_init(void)
         nand.num_blocks * 4, lba / 2, XIP_NOCACHE_NOALLOC_BASE + FLASH_OFFSET);
 	
 	blk->transfer = transfer_cb;
+	blk->flush = flush_cb;
     #ifdef CONFIG_TRIM
         blk->trim = trim_cb;
     #endif
