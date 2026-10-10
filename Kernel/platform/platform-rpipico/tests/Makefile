@@ -1,14 +1,26 @@
 CC = cc
 CFLAGS = -std=c99 -g -Wall -Wextra -Wno-unused-parameter -fsanitize=address,undefined
 CASES = break realloc-failure alloc-failure bounds grow-shrink
+LIMITS = 64 128 160
+TESTS = $(addprefix pagemap-test-,$(LIMITS))
 
-.PHONY: check clean
-check: pagemap-test
-	@set -e; for test in $(CASES); do ./pagemap-test $$test; done
+.PHONY: check check-config clean
+check: $(TESTS) check-config
+	@set -e; for exe in $(TESTS); do echo $$exe; for test in $(CASES); do ./$$exe $$test; done; done
 
-pagemap-test: pagemap.c ../swapper.c $(wildcard include/*.h)
-	$(CC) $(CFLAGS) -Iinclude pagemap.c ../swapper.c -o $@
+pagemap-test-%: pagemap.c ../swapper.c $(wildcard include/*.h)
+	$(CC) $(CFLAGS) -DTEST_PROCMEM='($* * 1024)' -Iinclude pagemap.c ../swapper.c -o $@
+
+check-config:
+	@set -e; for limit in $(LIMITS); do \
+		$(CC) -std=c99 -fsyntax-only -DTOTALMEM=160 -DPROCMEM=$$limit config.c; \
+	done; \
+	for limit in 0 3 65 164; do \
+		if $(CC) -std=c99 -fsyntax-only -DTOTALMEM=160 -DPROCMEM=$$limit config.c >/dev/null 2>&1; then \
+			echo "invalid limit $$limit accepted"; exit 1; \
+		fi; \
+	done
 
 clean:
-	rm -f pagemap-test
-	rm -rf pagemap-test.dSYM
+	rm -f pagemap-test $(TESTS)
+	rm -rf pagemap-test.dSYM $(addsuffix .dSYM,$(TESTS))

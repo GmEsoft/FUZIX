@@ -21,6 +21,8 @@ ifeq ($(SUBTARGET),pico2_w)
 TOTALMEM=320
 endif
 
+PROCMEM ?= 64
+
 PICOTOOLFLAGS= --family rp2040
 ifeq (${SUBTARGET}, pico2)
 PICOTOOLFLAGS= --family data
@@ -40,9 +42,13 @@ build/fuzix.elf: ../../version.c build/Makefile
 ../../version.c:
 	$(MAKE) -C ../.. TARGET=rpipico version.c
 
-build/Makefile: CMakeLists.txt $(wildcard ../../*.[chS]) $(wildcard ../../*/*.[chS])
+# Reconfigure even when only a command-line memory/board setting changed.
+build/Makefile: CMakeLists.txt $(wildcard ../../*.[chS]) $(wildcard ../../*/*.[chS]) FORCE
 	mkdir -p build
-	(cd build && cmake -DPICO_BOARD=${SUBTARGET} -DTOTALMEM=${TOTALMEM} ..)
+	(cd build && cmake -DPICO_BOARD=${SUBTARGET} -DTOTALMEM=${TOTALMEM} -DPROCMEM=${PROCMEM} ..)
+
+.PHONY: FORCE
+FORCE:
 
 image:: world
 	./update-flash.sh

@@ -82,7 +82,9 @@
 #define UDATA_BLKS  3
 #define UDATA_SIZE  (UDATA_BLKS << BLKSHIFT)
 
+#ifndef TOTALMEM
 #define TOTALMEM 160
+#endif
 #if TOTALMEM == 0
 #error TOTALMEM should have been defined via cmake
 #endif
@@ -95,7 +97,22 @@
 
 #define USERMEM ((TOTALMEM-NETMEM)*1024)
 
-#define PROGSIZE (65536 - UDATA_SIZE)
+/* Maximum resident process size in KiB, including udata. Swap slots use this
+ * same size, so it must be a whole number of allocation blocks (4 KiB). */
+#ifndef PROCMEM
+#define PROCMEM 64
+#endif
+#if PROCMEM < 4 || (PROCMEM % 4) != 0
+#error PROCMEM must be a positive multiple of 4 KiB
+#endif
+#if PROCMEM > (USERMEM / 1024)
+#error PROCMEM exceeds the user memory pool
+#endif
+#if (USERMEM / 4096) > 255
+#error User memory pool exceeds the allocation map block index range
+#endif
+
+#define PROGSIZE (PROCMEM * 1024 - UDATA_SIZE)
 extern uint8_t progbase[USERMEM];
 #define udata (*(struct u_data*)progbase)
 
@@ -159,4 +176,3 @@ extern uint8_t progbase[USERMEM];
 
 #endif
 // vim: sw=4 ts=4 et
-

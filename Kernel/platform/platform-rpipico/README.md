@@ -143,6 +143,22 @@ would render the binaries non-portable.
 There's a Forth interpreter as `fforth` (use capital letters) and some games are
 in `/usr/games`.
 
+The default per-process limit is 64 KiB, including 1,536 bytes of kernel process
+state. Set `PROCMEM` to raise it, for example `make TARGET=rpipico SUBTARGET=pico
+PROCMEM=128`. The value is in KiB and must be a multiple of four, no larger than
+the user memory pool (`TOTALMEM`, normally 160 KiB on RP2040, less networking
+storage when enabled). The same limit applies to executable loading and heap
+growth. A larger limit does not reserve all that memory for each process.
+
+The Makefile reconfigures CMake when building, so a changed command-line limit
+also applies to an existing build directory. Direct CMake users can set
+`-DPROCMEM=128`. Changing this setting also changes the swap slot size. Boot
+the new kernel and enable swap afresh; do not reuse a running old kernel's swap
+state. SD swap can make room by evicting other processes, but one process must
+still fit in the physical user memory pool. Leave room for other processes or
+enable swap. Larger RAM-loaded programs still need space for code, data, stack
+and heap together.
+
 ## Swap
 
 Out of the box, Fuzix runs in swapless mode. This gives enough memory to run
@@ -183,4 +199,3 @@ There are many, the biggest of which are:
 ## Postscript
 
 dg@cowlark.com
-
