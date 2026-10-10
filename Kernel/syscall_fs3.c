@@ -390,8 +390,9 @@ arg_t _flock(void)
 
 	/* Unlock - drop the locks, mark us not a lock holder. Doesn't block */
 	if (lockop == LOCK_UN) {
-		o->o_access &= ~O_FLOCK;
+		/* deflock needs the ownership bit to release the inode lock. */
 		deflock(o);
+		o->o_access &= ~O_FLOCK;
 		return 0;
 	}
 
