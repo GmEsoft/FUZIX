@@ -74,7 +74,7 @@ int swapread(uint16_t dev, blkno_t blkno, register usize_t nbytes,
 #ifdef CONFIG_TRIM
 	while (nbytes != 0)
 	{
-		d_ioctl(dev, HDIO_TRIM, (void*)&blkno);
+		d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blkno);
 		blkno++;
 		nbytes -= 1<<BLKSHIFT;
 	}

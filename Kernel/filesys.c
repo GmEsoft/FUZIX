@@ -1043,7 +1043,7 @@ void freeblk(uint16_t dev, blkno_t blk, uint_fast8_t level, uint16_t nblock)
         brelse(buf);
     }
 #ifdef CONFIG_TRIM
-    d_ioctl(dev, HDIO_TRIM, (void*)&blk);
+    d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blk);
 #endif
     blk_free(dev, blk);
 }
@@ -1079,7 +1079,7 @@ void freeblk(uint16_t dev, blkno_t blk, uint_fast8_t level, uint16_t nblock)
         brelse(buf);
     }
 #ifdef CONFIG_TRIM
-    d_ioctl(dev, HDIO_TRIM, (void*)&blk);
+    d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blk);
 #endif
     blk_free(dev, blk);
 }
