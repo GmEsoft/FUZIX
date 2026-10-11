@@ -7,13 +7,20 @@ project(fuzix C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_BUILD_TYPE Debug)
 set(PICO_COPY_TO_RAM 1)
-option(TOTALMEM "specify how much TOTALMEM is present" 0)
+set(TOTALMEM "160" CACHE STRING "User process memory pool in KiB")
+set(PROCMEM "64" CACHE STRING "Maximum resident process size in KiB, including udata")
+foreach(memory_setting TOTALMEM PROCMEM)
+    if(NOT "${${memory_setting}}" MATCHES "^[1-9][0-9]*$")
+        message(FATAL_ERROR "${memory_setting} must be a positive integer in KiB")
+    endif()
+endforeach()
 
 add_compile_definitions(
 		PICO_HEAP_SIZE=0x0
 		PICO_NO_BINARY_INFO=1
 		PICO_TIME_DEFAULT_ALARM_POOL_DISABLED
     TOTALMEM=${TOTALMEM}
+    PROCMEM=${PROCMEM}
 		)
 
 pico_sdk_init()
@@ -93,4 +100,3 @@ target_link_libraries(fuzix
 pico_set_float_implementation(fuzix none)
 pico_set_double_implementation(fuzix none)
 pico_add_extra_outputs(fuzix)
-

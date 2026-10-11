@@ -9,7 +9,7 @@
 
 /* A special swap and pagemap implementation for the Raspberry Pi Pico. Available
  * memory is divided into 4kB chunks; processes can occupy any number of these (up
- * to 64kB). When a process is switched in, memory is rearranged by swapping chunks
+ * to PROCMEM KiB). When a process is switched in, memory is rearranged by swapping chunks
  * until the running process is at the bottom of memory in the right order.
  *
  * p->p_page is 0 if swapped out, 1 is swapped in.
