@@ -74,8 +74,15 @@ The following utils need to be installed:
 ### Building
 
 You do not need to install the [Raspberry Pi Pico
-SDK](https://www.raspberrypi.org/documentation/pico/getting-started/), up to
-date version will be pulled automatically from git.
+SDK](https://www.raspberrypi.org/documentation/pico/getting-started/): release
+2.3.1 will be pulled automatically from git. Set `PICO_SDK_PATH` to use an
+existing SDK checkout instead, or `PICO_SDK_FETCH_FROM_GIT_TAG` to fetch a
+different release. The SDK's submodules, including TinyUSB, must match that
+release (`git submodule update --init` in an existing SDK checkout).
+
+After changing SDK versions, remove the existing
+`Kernel/platform/platform-rpipico/build` directory before rebuilding, or use
+a fresh build directory when invoking CMake directly.
 
 In the **root folder** of the FUZIX repository run:
 

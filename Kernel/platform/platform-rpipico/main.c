@@ -84,7 +84,7 @@ void syscall_handler(struct svc_frame* eh)
 
     unix_syscall();
 
-    udata.u_insys = 1;
+    udata.u_insys = 0;
     eh->r0 = udata.u_retval;
     eh->r1 = udata.u_error;
 }
@@ -118,5 +118,4 @@ int main(void)
 }
 
 /* vim: sw=4 ts=4 et: */
-
 
