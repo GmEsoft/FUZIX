@@ -189,6 +189,7 @@ bget ../../../Applications/util/write
 bget ../../../Applications/util/xargs
 bget ../../../Applications/util/yes
 bget utils/picoctl
+bget utils/picogpio
 
 chmod 0755 banner
 chmod 0755 basename
@@ -278,6 +279,7 @@ chmod 0755 write
 chmod 0755 xargs
 chmod 0755 yes
 chmod 0755 picoctl
+chmod 0755 picogpio
 ln cp mv
 ln cp ln
 ln reboot halt
