@@ -55,6 +55,8 @@
 #define CONFIG_INLINE_IRQ
 /* Trim disk blocks when no longer used */
 #define CONFIG_TRIM
+/* Keep swap images until the platform has read and installed all blocks. */
+#define CONFIG_SWAP_KEEP_IMAGE
 /* Enable single tasking */
 #define CONFIG_SWAP_ONLY
 #define CONFIG_SPLIT_UDATA
@@ -125,7 +127,8 @@ extern uint8_t progbase[USERMEM];
 #define SWAPBASE PROGBASE
 #define SWAPTOP (PROGBASE + (uaddr_t)alignup(udata.u_break - PROGBASE, 1<<BLKSHIFT)) /* never swap in/out data above break */
 #define SWAP_SIZE   ((PROGSIZE >> BLKSHIFT) + UDATA_BLKS)
-#define MAX_SWAPS   (2048*2 / SWAP_SIZE) /* for a 2MB swap partition */
+/* Both generic swap IDs and its free-slot count can be eight-bit. */
+#define MAX_SWAPS   ((2048*2 / SWAP_SIZE) > 255 ? 255 : (2048*2 / SWAP_SIZE))
 
 #define BOOT_TTY (512 + 1)   /* Set this to default device for stdio, stderr */
                           /* In this case, the default is the first TTY device */

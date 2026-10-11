@@ -9,10 +9,13 @@
 
 /* Host fixture for swapper.c; no SDK, interrupts or physical block device. */
 #define CONFIG_H
-/* Allocator tests do not use generated flash geometry. */
 #define GLOBALS_H
+/* The allocator and swap fixture do not use generated flash geometry. */
 #define PTABSIZE 16
 #define BLKSHIFT 9
+#define CONFIG_TRIM
+#define HDIO_TRIM_KERNEL 0x8106
+typedef uint32_t blkno_t;
 #define USERMEM (160 * 1024)
 #define UDATA_SIZE (3 * 512)
 #ifndef TEST_PROCMEM
@@ -36,6 +39,7 @@ typedef struct p_tab *ptptr;
 struct u_data {
     ptptr u_ptab;
     uaddr_t u_top, u_break, u_isp;
+    uint8_t u_error;
 };
 extern struct p_tab ptab[PTABSIZE];
 extern uint8_t progbase[USERMEM];
@@ -51,15 +55,19 @@ void panic(const char *) __attribute__((noreturn));
 void kprintf(const char *, ...);
 ptptr swapneeded(ptptr, int);
 int16_t swapmap_alloc(void);
-void swapread(uint16_t, uint16_t, usize_t, uaddr_t, uint16_t);
-void swapwrite(uint16_t, uint16_t, usize_t, uaddr_t, uint16_t);
+void swapmap_add(uint_fast8_t);
+int d_flush(uint16_t);
+int d_ioctl(uint16_t, unsigned, void *);
+void contextswitch(ptptr);
+int swapout(ptptr);
+int swapread(uint16_t, uint16_t, usize_t, uaddr_t, uint16_t);
+int swapwrite(uint16_t, uint16_t, usize_t, uaddr_t, uint16_t);
 void swap_blocks(void *, void *, size_t);
 void swapin(ptptr, uint16_t);
 int pagemap_alloc(ptptr);
 int pagemap_realloc(struct exec *, usize_t);
 void pagemap_free(ptptr);
 void pagemap_init(void);
-void contextswitch(ptptr);
 usize_t pagemap_mem_used(void);
 arg_t brk_extend(uaddr_t);
 

@@ -19,12 +19,15 @@ ptptr swapneeded(ptptr p, int notself)
     return NULL;
 }
 int16_t swapmap_alloc(void) { return -1; }
-void swapread(uint16_t dev, uint16_t block, usize_t len, uaddr_t buf, uint16_t page)
+void swapmap_add(uint_fast8_t map) { (void)map; abort(); }
+int d_ioctl(uint16_t dev, unsigned cmd, void *data) { (void)dev; (void)cmd; (void)data; abort(); }
+int d_flush(uint16_t dev) { (void)dev; abort(); }
+int swapread(uint16_t dev, uint16_t block, usize_t len, uaddr_t buf, uint16_t page)
 {
     (void)dev; (void)block; (void)len; (void)buf; (void)page;
     abort();
 }
-void swapwrite(uint16_t dev, uint16_t block, usize_t len, uaddr_t buf, uint16_t page)
+int swapwrite(uint16_t dev, uint16_t block, usize_t len, uaddr_t buf, uint16_t page)
 {
     (void)dev; (void)block; (void)len; (void)buf; (void)page;
     abort();
