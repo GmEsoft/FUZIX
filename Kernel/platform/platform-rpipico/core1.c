@@ -76,6 +76,8 @@ static uint8_t console_buf_read(struct console_buf_t *buf)
 int usbconsole_getc(uint8_t usb_num)
 {
 	int c = -1;
+	if (!usb_num || usb_num > NUM_DEV_TTY_USB)
+		return -1;
 	struct console_buf_t *buf = &usb_console_table[usb_num - 1].rbuf;
 	if (buf->len > 0)
 	{
@@ -84,49 +86,71 @@ int usbconsole_getc(uint8_t usb_num)
 	return c;
 }
 
-extern ttyready_t usbconsole_ready(uint8_t usb_num)
+ttyready_t usbconsole_ready(uint8_t usb_num)
 {
-	if (usb_console_table[usb_num - 1].wbuf.len < CONFIG_CONSOLE_BUF_LEN)
-	{
-		return TTY_READY_NOW;
-	}
-	return TTY_READY_SOON;
+    if (!usb_num || usb_num > NUM_DEV_TTY_USB)
+        return TTY_READY_LATER;
+    critical_section_enter_blocking(&critical_section);
+    bool ready = usb_host_connected &&
+        usb_console_table[usb_num - 1].wbuf.len < CONFIG_CONSOLE_BUF_LEN;
+    critical_section_exit(&critical_section);
+    return ready ? TTY_READY_NOW : TTY_READY_LATER;
 }
 
-extern bool usbconsole_is_available(uint8_t usb_num)
+bool usbconsole_is_available(uint8_t usb_num)
 {
-	return usb_host_connected && usb_num != 0 && usb_num <= NUM_DEV_TTY_USB;
+    critical_section_enter_blocking(&critical_section);
+    bool available = usb_host_connected && usb_num && usb_num <= NUM_DEV_TTY_USB;
+    critical_section_exit(&critical_section);
+    return available;
 }
 
-extern void usbconsole_putc(uint8_t usb_num, uint8_t c)
+void usbconsole_putc(uint8_t usb_num, uint8_t c)
 {
-	while(usbconsole_ready(usb_num) != TTY_READY_NOW)
-	{
-		tight_loop_contents();
-	}
-	struct console_buf_t *buf = &usb_console_table[usb_num - 1].wbuf;
-	if (buf->len >= CONFIG_CONSOLE_BUF_LEN)
-	{
-		return;
-	}
-
-	console_buf_write(buf, c);
+    if (!usb_num || usb_num > NUM_DEV_TTY_USB)
+        return;
+    /* The generic TTY writer waits before calling us. Echo/diagnostics can
+     * arrive from an interrupt and must drop a byte if the queue is full. */
+    if (usbconsole_is_available(usb_num))
+        console_buf_write(&usb_console_table[usb_num - 1].wbuf, c);
 }
 
-extern void usbconsole_sleeping(uint8_t usb_num)
+void usbconsole_sleeping(uint8_t usb_num)
 {
-	usb_console_table[usb_num - 1].sleeping = true;
+    if (!usb_num || usb_num > NUM_DEV_TTY_USB)
+        return;
+    critical_section_enter_blocking(&critical_section);
+    usb_console_table[usb_num - 1].sleeping = true;
+    critical_section_exit(&critical_section);
+}
+
+bool usbconsole_wakeup(uint8_t usb_num)
+{
+    if (!usb_num || usb_num > NUM_DEV_TTY_USB)
+        return false;
+    critical_section_enter_blocking(&critical_section);
+    struct console_t *console = &usb_console_table[usb_num - 1];
+    bool wake = console->sleeping && usb_host_connected &&
+        console->wbuf.len < CONFIG_CONSOLE_BUF_LEN;
+    if (wake)
+        console->sleeping = false;
+    critical_section_exit(&critical_section);
+    return wake;
 }
 
 
 void tud_mount_cb(void)
 {
+	critical_section_enter_blocking(&critical_section);
 	usb_host_connected = 1;
+	critical_section_exit(&critical_section);
 }
 
 void tud_umount_cb(void)
 {
+	critical_section_enter_blocking(&critical_section);
 	usb_host_connected = 0;
+	critical_section_exit(&critical_section);
 }
 
 static void core1_main(void)

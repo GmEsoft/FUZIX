@@ -1,0 +1,1 @@
+#define NUM_BANK0_GPIOS 30

@@ -28,6 +28,8 @@
 #define DEV_UART_1_RTS_PIN 0
 #endif
 
+static bool initialized[2];
+
 static uint clocks[] = {
     0,      /* B0 */
     50,     /* B50 */
@@ -57,13 +59,14 @@ static uart_inst_t * rawuart_init_one(int num, int tx, int rx, int cts, int rts)
     uart_set_fifo_enabled(uart, true);
     if (cts > 0)
     {
-        gpio_set_function(DEV_UART_0_CTS_PIN, GPIO_FUNC_UART);
+        gpio_set_function(cts, GPIO_FUNC_UART);
     }
     if (rts > 0)
     {
-        gpio_set_function(DEV_UART_0_RTS_PIN, GPIO_FUNC_UART);
+        gpio_set_function(rts, GPIO_FUNC_UART);
     }
     uart_set_hw_flow(uart, cts > 0, rts > 0);
+    initialized[num] = true;
     return uart;
 }
 
@@ -87,8 +90,10 @@ static uart_inst_t * rawuart_init(uint_fast8_t uart)
     }
 }
 
-static void rawuart_deinit(uart_inst_t * uart){
+static void rawuart_deinit(uart_inst_t *uart, unsigned num)
+{
     uart_deinit(uart);
+    initialized[num] = false;
 }
 
 void rawuart_early_init(void)
@@ -125,21 +130,21 @@ int rawuart_getc(uint8_t devn)
     return -1;
 }
 
-static inline bool uart_tx_is_empty(uart_inst_t *uart)
+static inline bool uart_tx_is_idle(uart_inst_t *uart)
 {
-    return (uart_get_hw(uart)->fr & UART_UARTFR_TXFE_BITS) != 0;
+    return (uart_get_hw(uart)->fr & UART_UARTFR_BUSY_BITS) == 0;
 }
 
 void rawuart_setup(uint_fast8_t minor, uint_fast8_t devn, uint_fast8_t flags)
 {
     struct termios *t = &ttydata[minor].termios;
 
-    uart_inst_t *uart = rawuart_init(devn - 1);
+    uart_inst_t *uart = uart_get_instance(devn - 1);
 
     /* Wait for output to finish */
-    if (flags)
+    if (flags && initialized[devn - 1])
     {
-        while (!uart_tx_is_empty(uart))
+        while (!uart_tx_is_idle(uart))
             _sched_yield();
     }
     uint baud_rate;
@@ -151,9 +156,12 @@ void rawuart_setup(uint_fast8_t minor, uint_fast8_t devn, uint_fast8_t flags)
     baud_rate = clocks[speed];
     if (baud_rate == 0) // Hangup if speed is B0 as per stty.1
     {
-        rawuart_deinit(uart);
+        rawuart_deinit(uart, devn - 1);
         return;
     }
+
+    if (!initialized[devn - 1])
+        rawuart_init(devn - 1);
 
     if (t->c_cflag & CSTOPB)
     {
@@ -163,11 +171,7 @@ void rawuart_setup(uint_fast8_t minor, uint_fast8_t devn, uint_fast8_t flags)
     data_bits = ((t->c_cflag & CSIZE) >> 4) + 5;
     if (t->c_cflag & PARENB)
     {
-        parity = UART_PARITY_EVEN;
-    }
-    if (t->c_cflag & PARODD)
-    {
-        parity = UART_PARITY_ODD;
+        parity = (t->c_cflag & PARODD) ? UART_PARITY_ODD : UART_PARITY_EVEN;
     }
     uart_set_baudrate(uart, baud_rate);
     uart_set_format(uart, data_bits, stop_bits, parity);

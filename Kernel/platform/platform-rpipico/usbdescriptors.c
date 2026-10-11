@@ -35,7 +35,7 @@
 #define USBD_MAX_POWER_MA (250)
 
 #define USBD_ITF_CDC (0) // needs 2 interfaces
-#define USBD_ITF_MAX (CFG_TUD_CDC*2+1)
+#define USBD_ITF_MAX (CFG_TUD_CDC*2)
 
 #define USBD_CDC_EP_CMD (0x81)
 #define USBD_CDC_EP_OUT (0x02)
