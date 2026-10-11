@@ -53,7 +53,7 @@
 
 #define CONFIG_VT
 #define CONFIG_VT_SIMPLE
-#define VT_BASE	((uint8_t *)0x4000)
+#define VT_BASE	((uint8_t *)0x4A00)
 #define VT_MAP_CHAR(x)	((x) & 127)
 #define VT_CURSOR	'_'
 #define CONFIG_FONT8X8

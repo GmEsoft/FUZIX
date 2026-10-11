@@ -92,16 +92,14 @@ go:
 	.export mark
 mark:
 	;	Switch to final display
-	;	Use absolutes here as we don't want magic relocations
-	;	being done for us.
 	lda	#0x00
 	sta	0xD400
 	;	And our fonts
-	lda	#0x44
+	lda	#>0x4F		; 0x5000 - 256
 	sta	0xD409
-	lda	#0xC0
+	lda	#<dlist
 	sta	0xD402
-	lda	#0x43
+	lda	#>dlist
 	sta	0xD403
 	lda	#0x22
 	sta	0xD400
@@ -260,7 +258,7 @@ dlist8:
 	.export stub
 	.export stub_end
 stub:
-	.ds 700
+	.ds 600
 stub_end:
 ;
 ;	Overlay specific init
@@ -268,11 +266,38 @@ stub_end:
 	.overlay1
 	.overlay2
 	.overlay3
-	.overlay4		; Will use for video and buffers
+	.overlay4
 
-	; This is in the main bank
+	; Overlay 4 is the main bank but the first chunk of it is
+	; the buffers area (screen, disk buffers, dlist etc)
+	.ds	4096
+
+	; Font will follow at 0x5000
+
+	; at 0x4000 in main bank - max 4K
+	.buffers
+
+	.export _bufdata
+_bufdata:
+
+	; 0x4000
+	.ds	512 * NBUFS
+
+	; 0x4A00
+
 screen:
-	.ds	40 * 24
+	.ds	40 * 25
+
+	.ds	24
+
+	; 0x4F00
+
+	; Font is at 0x5000
+
+	.commondata
+
+	; Ensure always mapped
+
 dlist:	.byte	0x70,0x70,0x70
 	; 24 blank lines then set the start
 	.byte	0x42
@@ -284,10 +309,4 @@ dlist:	.byte	0x70,0x70,0x70
 	; Wait for vblank and return
 	.byte	0x41
 	.word	dlist
-
-	; Then  skip 32
-	.ds	32
-
-	; We are now at 0x4400
-	; Font will link here via font.o, then buffers via atari.o
 
