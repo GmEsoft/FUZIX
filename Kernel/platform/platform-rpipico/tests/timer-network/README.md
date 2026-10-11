@@ -5,3 +5,7 @@ The timer tests check 1,000 deadlines with nonzero handler cost, missed periods,
 The network tests verify that the GPIO ISR only records work, polling consumes it on core zero, a held-low INT line is retried, and an interrupt recorded during polling survives. They check deferral across SD/W5500 SPI transactions (including SD clocks with CS high, where the deferred-write helper must not interrupt an active transfer), release of completed deferred SD writes through the shared SD helper, stable consecutive samples of changing TX/RX counters, and a single sample for ordinary registers.
 
 The generic network poll routine and SD deferred-write helper are mocked at their interfaces; the tests do not emulate sockets, a card, or electrical bus timing. Baseline comparison uses no-op stubs for newly added polling/busy interfaces; the original counter and timer cases fail, while ordinary register reads pass. Full firmware builds with networking both disabled and enabled provide integration checks.
+
+Counter retries are tested in the shared net_w5x00 driver for W5100, W5200 and
+W5500 using each chip's production register offsets. Pico transport word reads
+remain single reads; pointer registers do not acquire counter retry behavior.

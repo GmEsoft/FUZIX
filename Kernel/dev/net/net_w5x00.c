@@ -836,6 +836,20 @@ int netproto_begin_connect(struct socket *s)
 	return 0;
 }
 
+/* Counter registers can change between the transport's high/low byte reads.
+ * Keep retries here so every W5100/W5200/W5500 transport uses the same rule. */
+static uint16_t w5x00_read_counter(uint8_t slot, uint16_t reg)
+{
+    uint16_t previous;
+    uint16_t value = w5x00_readsw(slot, reg);
+
+    do {
+        previous = value;
+        value = w5x00_readsw(slot, reg);
+    } while (value != previous);
+    return value;
+}
+
 /* Close down a socket - preferably politely */
 int netproto_close(struct socket *s)
 {
@@ -853,7 +867,7 @@ int netproto_close(struct socket *s)
 	}
 	/* Closing with unread data loses it so abort rather than wait */
 	if (s->s_type == W5100_TCP && s->s_state >= SS_CONNECTING && s->s_state <= SS_CONNECTED &&
-	    w5x00_readsw(s->proto.slot, Sn_RX_RSR) == 0) {
+	    w5x00_read_counter(s->proto.slot, Sn_RX_RSR) == 0) {
 		w5x00_cmd(s->proto.slot, DISCON);
 		s->s_state = SS_CLOSING;
 	} else
@@ -885,7 +899,7 @@ int netproto_read(struct socket *s)
 	   check higher up without this check here */
 	do {
 		filtered = 0;
-		n = w5x00_readsw(i, Sn_RX_RSR);
+		n = w5x00_read_counter(i, Sn_RX_RSR);
 		if (n == 0) {
 			if (s->s_iflags & SI_EOF)
 				return 0;
@@ -949,7 +963,7 @@ arg_t netproto_write(struct socket *s, struct ksockaddr *ka)
 	uint16_t room;
 	uint16_t n = 0;
 
-	room = w5x00_readsw(i, Sn_TX_FSR);
+	room = w5x00_read_counter(i, Sn_TX_FSR);
 
 	switch (s->s_type) {
 	case W5100_UDP:

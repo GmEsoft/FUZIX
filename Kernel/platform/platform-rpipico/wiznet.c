@@ -96,19 +96,10 @@ void w5x00_writesb(uint8_t sock, uint16_t off, uint8_t val)
 
 uint16_t w5x00_readsw(uint8_t sock, uint16_t off)
 {
-    uint16_t previous, value;
     uint16_t hi = w5x00_readsb(sock, off);
-    value = (hi << 8) | w5x00_readsb(sock, off + 1);
+    uint16_t lo = w5x00_readsb(sock, off + 1);
 
-    /* These counters change asynchronously, including between byte reads. */
-    if (off == 0x0020 || off == 0x0026) { /* Sn_TX_FSR / Sn_RX_RSR */
-        do {
-            previous = value;
-            hi = w5x00_readsb(sock, off);
-            value = (hi << 8) | w5x00_readsb(sock, off + 1);
-        } while (value != previous);
-    }
-    return value;
+    return (hi << 8) | lo;
 }
 
 /*

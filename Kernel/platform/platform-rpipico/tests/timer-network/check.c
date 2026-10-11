@@ -109,14 +109,6 @@ int main(int argc,char **argv)
         wiz_poll(); assert(polls==3 && !wiz_irq_pending);
         sd_spi_lower_cs(); gpio_cb(21,GPIO_IRQ_EDGE_FALL); release_sd=true;
         wiz_poll(); assert(polls==4 && !wiz_irq_pending && !sd_spi_busy);
-    } else if(!strcmp(argv[1],"counter")) {
-        wiz_spi_init();
-        uint8_t sequence[]={1,0xff,2,0,2,0}; memcpy(replies,sequence,6);
-        assert(w5x00_readsw(3,0x20)==0x200 && reply_index==6);
-        reply_index=0; memcpy(replies,sequence,6);
-        assert(w5x00_readsw(7,0x26)==0x200 && reply_index==6);
-        reply_index=0; memset(replies,0,sizeof(replies));
-        assert(!w5x00_readsw(0,0x26) && reply_index==4);
     } else if(!strcmp(argv[1],"normal")) {
         wiz_spi_init(); replies[0]=0x12; replies[1]=0x34;
         assert(w5x00_readsw(0,0x24)==0x1234 && reply_index==2);
