@@ -17,7 +17,8 @@ you can enable swapping to the SD card for up to 15.
 
 Out of the box:
 
-- /dev/hda is the flash flash, containing the root filesystem. It can be
+- /dev/hda is the block device for the onboard NOR flash, containing the
+  root filesystem. It can be
   partitioned but there's no real point, so it isn't.
 
 - /dev/hdb is the SD card. Fuzix understands DOS partition tables. It's not hot
@@ -234,7 +235,7 @@ Swap:     2048            0         2048
 
 You can't turn swap off again.
 
-You probably can swap to the flash flash, but it's a terrible idea.
+You probably can swap to the onboard NOR flash, but it's a terrible idea.
 
 ## Issues
 
