@@ -10,10 +10,12 @@ endif
 .PHONY: check clean
 check: tty-test
 	@set -e; for test in parse invalid remap full disconnect wakeup aliases diagnostic bounds; do ./tty-test $$test; done
-main.o: $(PLATFORM_DIR)/main.c $(shell find include -type f)
-	$(CC) $(CFLAGS) -Iinclude -I$(KERNEL_DIR)/cpu-armm0 -include include/kernel.h -Dmain=unused_platform_main -c $< -o $@
+main.o: generated/flash-layout.h $(PLATFORM_DIR)/main.c $(shell find include -type f)
+	$(CC) $(CFLAGS) -Iinclude -Igenerated -I$(KERNEL_DIR)/cpu-armm0 -include include/kernel.h -Dmain=unused_platform_main -c $(PLATFORM_DIR)/main.c -o $@
 tty-test: check.c main.o $(PLATFORM_DIR)/devtty.c $(PLATFORM_DIR)/core1.c $(shell find include -type f)
-	$(CC) $(CFLAGS) -Iinclude -include include/kernel.h check.c main.o $(PLATFORM_DIR)/devtty.c $(PLATFORM_DIR)/core1.c $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) -Iinclude -Igenerated -include include/kernel.h check.c main.o $(PLATFORM_DIR)/devtty.c $(PLATFORM_DIR)/core1.c $(LDFLAGS) -o $@
+generated/flash-layout.h: $(PLATFORM_DIR)/flash-layout.py
+	python3 $< --flash-bytes 2097152 --firmware-kib 96 --xip-kib 0 --output generated
 clean:
 	rm -f tty-test main.o
-	rm -rf tty-test.dSYM
+	rm -rf tty-test.dSYM generated
