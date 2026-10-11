@@ -26,8 +26,12 @@ with tempfile.TemporaryDirectory(prefix='pico-utilities-') as directory:
         env = dict(os.environ)
         env.pop('FAIL_OPEN', None)
         env.pop('FAIL_IOCTL', None)
+        env.pop('FAIL_IOCTL_STAGE', None)
         if failure:
-            env[failure] = '1'
+            if failure.startswith('STAGE'):
+                env['FAIL_IOCTL_STAGE'] = failure[-1]
+            else:
+                env[failure] = '1'
         result = subprocess.run([str(build / name)] + args, env=env,
                                 capture_output=True, text=True)
         assert (result.returncode == 0) == success, (name, args, result.stderr)
@@ -48,10 +52,13 @@ with tempfile.TemporaryDirectory(prefix='pico-utilities-') as directory:
     for args in [[], ['--help']]:
         run('picogpio', args, True, [])
     for args in [['', '1'], ['0', ''], ['-1', '1'], ['256', '1'], ['1x', '1'],
-                 ['1', '256'], ['1', '-1'], ['999999999999999999999', '1'], ['1']]:
+                 ['1', '256'], ['1', '-1'], ['1', '2'], ['255', '255'], ['999999999999999999999', '1'], ['1']]:
         run('picogpio', args, False, [])
-    for args in [['0', '0'], ['28', '1'], ['255', '255']]:
-        run('picogpio', args, True, ['OPEN', 'IOCTL', 'CLOSE'], gpio=' '.join(args))
+    for args in [['0', '0'], ['28', '1'], ['29', '0']]:
+        run('picogpio', args, True, ['OPEN', 'IOCTL', 'IOCTL', 'IOCTL', 'CLOSE'], gpio=' '.join(args))
     run('picogpio', ['1', '1'], False, ['OPEN'], 'FAIL_OPEN')
     run('picogpio', ['1', '1'], False, ['OPEN', 'IOCTL', 'CLOSE'], 'FAIL_IOCTL')
+    run('picogpio', ['30', '1'], False, ['OPEN', 'IOCTL', 'CLOSE'])
+    run('picogpio', ['1', '1'], False, ['OPEN', 'IOCTL', 'IOCTL', 'CLOSE'], 'STAGE2')
+    run('picogpio', ['1', '1'], False, ['OPEN', 'IOCTL', 'IOCTL', 'IOCTL', 'CLOSE'], 'STAGE3')
 print(f'{count} utility cases passed')
