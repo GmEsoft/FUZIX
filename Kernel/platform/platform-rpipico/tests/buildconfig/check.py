@@ -35,4 +35,9 @@ for board, processor, memory in [('pico2', 'rp2350-arm-s', '320'), ('pico_w', 'r
     assert settings['TOTALMEM'] == memory
 settings = configure(['TOTALMEM=144', 'PROCMEM=128'])
 assert settings['TOTALMEM'] == '144' and settings['PROCMEM'] == '128'
-print('Default board, board changes and memory overrides passed')
+settings = configure(['FLASH_FIRMWARE_KIB=128', 'FLASH_XIP_KIB=256'])
+assert settings['FLASH_FIRMWARE_KIB'] == '128' and settings['FLASH_XIP_KIB'] == '256'
+import json
+geometry = json.loads((platform / 'build/flash-layout.json').read_text())
+assert geometry['ftl_offset'] == 384 * 1024
+print('Default board, board changes, memory and flash geometry overrides passed')
