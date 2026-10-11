@@ -6,7 +6,7 @@ include(pico_sdk_import.cmake)
 project(fuzix C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_BUILD_TYPE Debug)
-set(PICO_COPY_TO_RAM 1)
+set(PICO_COPY_TO_RAM 0)
 set(TOTALMEM "160" CACHE STRING "User process memory pool in KiB")
 set(PROCMEM "64" CACHE STRING "Maximum resident process size in KiB, including udata")
 foreach(memory_setting TOTALMEM PROCMEM)
@@ -113,6 +113,7 @@ add_executable(fuzix
 target_link_libraries(fuzix
 	pico_stdlib
 	pico_multicore
+	pico_flash
 	hardware_flash
 	hardware_spi
 	tinyusb_device

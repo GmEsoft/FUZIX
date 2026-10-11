@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check real Dhara restart behavior through the production transfer callback."""
 import argparse
+import importlib.util
 from pathlib import Path
 import re
 import subprocess
@@ -13,13 +14,23 @@ root = Path(__file__).resolve().parents[4]
 platform = root / 'Kernel/platform' / ('platform-' + args.platform)
 text = (platform / 'devflash.c').read_text()
 nand_definition = re.search(r'static const struct dhara_nand nand\s*=\s*\{.*?\};', text, re.S).group(0)
-gc_ratio = int(re.search(r'dhara_map_init\(&dhara, &nand, journal_buf, (\d+)\)', text).group(1))
+if args.platform == 'rpipico':
+    spec = importlib.util.spec_from_file_location('flash_layout', platform / 'flash-layout.py')
+    geometry = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(geometry)
+    values = geometry.layout(2 * 1024 * 1024, 96, 0)
+    gc_ratio = values['gc_ratio']
+else:
+    gc_ratio = int(re.search(r'dhara_map_init\(&dhara, &nand, journal_buf, (\d+)\)', text).group(1))
 source = (root / 'Standalone/mkftl.c').read_text().split('static void panic(')[0]
 source = source.replace('"../Kernel/', '"' + str(root / 'Kernel') + '/')
 # Dhara resume also calls the NAND backend without an error-output pointer.
 source = source.replace('*err = DHARA_E_NONE;', 'if (err) *err = DHARA_E_NONE;')
 source = source.replace('*err = DHARA_E_BAD_BLOCK;', 'if (err) *err = DHARA_E_BAD_BLOCK;')
 if args.platform == 'rpipico':
+    with tempfile.TemporaryDirectory(prefix='flash-sync-geometry-') as generated:
+        geometry.generate(values, Path(generated))
+        source += (Path(generated) / 'flash-layout.h').read_text()
     source += '#define PICO_FLASH_SIZE_BYTES (2 * 1024 * 1024)\n'
     source += re.search(r'^#define FLASH_OFFSET .+$', (platform / 'globals.h').read_text(), re.M).group(0) + '\n'
 source += '#define TEST_GC_RATIO %d\n' % gc_ratio

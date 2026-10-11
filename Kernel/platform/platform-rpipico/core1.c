@@ -18,6 +18,7 @@
 
 #include <pico/critical_section.h>
 #include <pico/multicore.h>
+#include <pico/flash.h>
 #include <hardware/uart.h>
 #include <hardware/irq.h>
 
@@ -154,6 +155,10 @@ void tud_umount_cb(void)
 
 static void core1_main(void)
 {
+	/* Install the SDK's RAM-resident FIFO handler before enabling USB.
+	 * It parks this core without flash access while core 0 programs flash. */
+	if (!flash_safe_execute_core_init())
+		panic("USB flash lockout init");
 	tusb_init();
 
 	for (;;)
@@ -197,5 +202,8 @@ void core1_init(void)
 	critical_section_init(&critical_section);
 #if NUM_DEV_TTY_USB > 0
 	multicore_launch_core1(core1_main);
+	/* No filesystem write may race the victim-handler initialization. */
+	while (!multicore_lockout_victim_is_initialized(1))
+		tight_loop_contents();
 #endif
 }
