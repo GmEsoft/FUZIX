@@ -10,7 +10,7 @@
 /* Host fixture for swapper.c; no SDK, interrupts or physical block device. */
 #define CONFIG_H
 #define GLOBALS_H
-/* The allocator and swap fixture do not use generated flash geometry. */
+/* Allocator tests do not use generated flash geometry. */
 #define PTABSIZE 16
 #define BLKSHIFT 9
 #define CONFIG_TRIM
