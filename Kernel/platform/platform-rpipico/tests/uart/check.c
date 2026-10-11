@@ -38,6 +38,8 @@ void usbconsole_putc(uint8_t n, uint8_t c) { (void)n; (void)c; }
 ttyready_t usbconsole_ready(uint8_t n) { (void)n; return TTY_READY_NOW; }
 bool usbconsole_is_available(uint8_t n) { (void)n; return false; }
 void usbconsole_sleeping(uint8_t n) { (void)n; }
+/* USB wakeups are outside the UART fixture; keep it usable with the TTY fix. */
+bool usbconsole_wakeup(uint8_t n) { (void)n; return false; }
 uint_fast8_t tty_inproc(uint_fast8_t n, uint_fast8_t c) { (void)n; (void)c; return 0; }
 void tty_outproc(uint_fast8_t n) { (void)n; }
 int main(int argc, char **argv)
