@@ -105,6 +105,11 @@ void devtty_init(void)
         }
         ttymap_count = NUM_DEV_TTY;
     }
+    /* Custom mappings may replace or shorten the startup mapping. */
+    for (int i = 1; i <= NUM_DEV_TTY; i++)
+        termios_mask[i] = !ttymap[i].tty ? 0 :
+            ttymap[i].drv == TTYDRV_USB ? _CSYS :
+            CSIZE | CBAUD | CSTOPB | PARENB | PARODD | _CSYS;
 }
 
 /* Output for the system console (kprintf etc) */
@@ -119,6 +124,15 @@ void kputchar(uint_fast8_t c)
     }
     else
     {
+        /* Kernel diagnostics cannot wait for a USB host, particularly from
+         * interrupt context. Normal process output waits in the TTY layer. */
+        if (ttymap[1].drv == TTYDRV_USB)
+        {
+            if (c == '\n')
+                tty_putc(1, '\r');
+            tty_putc(1, c);
+            return;
+        }
         if (c == '\n')
         {
             while (tty_writeready(1) != TTY_READY_NOW)
@@ -188,12 +202,17 @@ void tty_setup(uint_fast8_t minor, uint_fast8_t flags)
 void tty_interrupt(void)
 {
     int c;
+    bool usb_wake[NUM_DEV_TTY_USB + 1];
+    for (unsigned n = 1; n <= NUM_DEV_TTY_USB; n++)
+        usb_wake[n] = usbconsole_wakeup(n);
     for (int minor = 1; minor <= ttymap_count; minor++)
     {
         struct ttymap *map = &ttymap[minor];
         if (map->tty == 0)
             continue;
         struct ttydriver *drv = &ttydrivers[map->drv];
+        if (map->drv == TTYDRV_USB && usb_wake[map->tty])
+            tty_outproc(minor);
         while ((c = drv->getc(map->tty)) >= 0)
         {
             if (tty_inproc(minor, c) == 0)
