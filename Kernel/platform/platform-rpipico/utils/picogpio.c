@@ -40,8 +40,8 @@ int main(int argc, char **argv) {
   }
   uint8_t pin = (uint8_t)strtoul(argv[1], NULL, 10);
 
-  if (!is_valid_uint8(argv[2])) {
-    fprintf(stderr, "Error: <value> must be a valid uint8_t value\n");
+  if (!is_valid_uint8(argv[2]) || strtoul(argv[2], NULL, 10) > 1) {
+    fprintf(stderr, "Error: <value> must be 0 or 1\n");
     return 1;
   }
   uint8_t value = (uint8_t)strtoul(argv[2], NULL, 10);
@@ -52,11 +52,26 @@ int main(int argc, char **argv) {
     exit(1);
   }
   
+  struct gpio info;
   struct gpioreq gr;
+  uint8_t mask = 1U << (pin & 7);
+  memset(&info, 0, sizeof(info));
+  info.pinmask = pin; /* GETINFO takes the pin in the first byte. */
   gr.pin = pin;
-  gr.val = value;
-  
-  if (ioctl(fd, GPIOC_SET, &gr) != 0) {
+
+  if (ioctl(fd, GPIOC_GETINFO, &info) != 0) {
+    perror("Failed to read GPIO configuration");
+    close(fd);
+    return 1;
+  }
+  gr.val = info.wmask | mask;
+  if (ioctl(fd, GPIOC_SETRW, &gr) != 0) {
+    perror("Failed to configure GPIO output");
+    close(fd);
+    return 1;
+  }
+  gr.val = mask;
+  if (ioctl(fd, value ? GPIOC_SET : GPIOC_CLR, &gr) != 0) {
     perror("Failed to perform operation");
     close(fd);
     exit(1);
