@@ -69,12 +69,20 @@ The following utils need to be installed:
 - make
 - cmake
 - git
+- Python 3 (for shared flash layout generation)
 
 ### Building
 
 You do not need to install the [Raspberry Pi Pico
-SDK](https://www.raspberrypi.org/documentation/pico/getting-started/), up to
-date version will be pulled automatically from git.
+SDK](https://www.raspberrypi.org/documentation/pico/getting-started/): release
+2.3.1 will be pulled automatically from git. Set `PICO_SDK_PATH` to use an
+existing SDK checkout instead, or `PICO_SDK_FETCH_FROM_GIT_TAG` to fetch a
+different release. The SDK's submodules, including TinyUSB, must match that
+release (`git submodule update --init` in an existing SDK checkout).
+
+After changing SDK versions, remove the existing
+`Kernel/platform/platform-rpipico/build` directory before rebuilding, or use
+a fresh build directory when invoking CMake directly.
 
 In the **root folder** of the FUZIX repository run:
 
@@ -111,7 +119,39 @@ To flash the image either:
 - **OR** Using picotool
   - Connect computer to UART 0 on the Pico using USB to UART adapter.
   - Copy `filesystem.ftl` to the board by executing `picotool load
-    filesystem.ftl -t bin -o 0x10018000`.
+    filesystem.ftl -t bin -o ADDRESS`, using `FTL_ADDRESS` from
+    `build/flash-layout.env` (normally `0x10018000`).
+
+### Flash layout
+
+CMake generates `build/flash-layout.json`, `.h`, `.env` and `.ld` from the SDK
+board's flash size and two settings: `FLASH_FIRMWARE_KIB` (default 96) and
+`FLASH_XIP_KIB` (default 0). Both regions must be aligned to 4 KiB. The remaining
+flash belongs to Dhara. For example, `FLASH_XIP_KIB=256` reserves 256 KiB after
+firmware for future immutable userspace images; it does not enable XIP execution.
+
+The flash driver and image tools consume this same geometry. The linker rejects
+firmware that extends beyond its reservation. A SHA-256 layout identifier in the
+manifest identifies the geometry; it is not yet an executable ABI identifier.
+`mkftl -c` reports the logical capacity using the actual Dhara implementation.
+Image generation sizes the filesystem to at most 90% of that capacity (and at
+most the historical 2547 sectors), retaining space for garbage collection.
+`ucp -e` stops image construction on the first failed command, including a full
+filesystem, instead of allowing later commands to hide the failure.
+
+Changing these settings moves or resizes the filesystem. Back up existing files
+and generate a new filesystem together with the matching firmware before using
+a changed layout. Old flash images cannot be reused at the new offset.
+
+For offline provisioning on RP2040, `boot-bundle.py --layout
+build/flash-layout.json --firmware build/fuzix.bin --filesystem filesystem.ftl
+--output build/fuzix-boot.uf2` packages matching firmware and filesystem in one
+UF2. It checks region sizes and writes a JSON report with content hashes. This
+bundle replaces the entire configured flash, including the reserved XIP region
+(filled with erased bytes); back up files before programming it. This helper is
+for RP2040 only. It does not replace the SDK's RP2350 packaging tools.
+
+Run the offline layout and image checks with `make -C tests -f Makefile.flash check`.
 
 ### Installing filesystem onto SD card
 

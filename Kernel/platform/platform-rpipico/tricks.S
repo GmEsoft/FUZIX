@@ -53,6 +53,7 @@ isr_svcall_user:
     # Essentially, they called us as if they were a normal procedure call,
     # except we need to preserve lr.
 
+    sub sp, #4                 /* keep C calls eight-byte aligned */
     push {r0, r1, r2, r3}       /* push parameters */
     mov r0, r12
     ldr r1, =svc_pc_stash
@@ -63,9 +64,9 @@ isr_svcall_user:
     ldr r1, =(udata + UDATA_SIZE_ASM) /* switch to kernel stack */
     mov sp, r1
 
-    push {r0}
+    push {r0, r1}
     bl syscall_handler          /* call C system call handler */
-    pop {r0}
+    pop {r0, r1}
 
     mov sp, r0                  /* restore stack */
     bl deliver_signals          /* may not return if signal handler longjmps out */
@@ -74,7 +75,7 @@ isr_svcall_user:
     mov lr, r3
     mov r12, r0
     pop {r0, r1}                /* pop return values */
-    add sp, #8                  /* discard the old r2 and r3 */
+    add sp, #12                 /* discard old r2, r3 and alignment padding */
     mov pc, r2                  /* can't use bx as r2 doesn't have the thumb bit set */
 
 .comm svc_pc_stash, 4
@@ -87,7 +88,7 @@ plt_switchout:
 	/* Save the callee-saved registers onto the stack in the same order
 	 * that switchout will do it, so switchin will restore it correctly. */
 
-    push {r5, r6, r7, lr}
+    push {r4, r5, r6, r7, lr}
     mov r1, r8
     mov r2, r9
     mov r3, r10
@@ -97,7 +98,7 @@ plt_switchout:
 
 	/* Dummy value used as the return value for fork. */
 
-    push {r0}
+    push {r0, r1}               /* return value and alignment padding */
 
 	/* Save stack pointer */
 
@@ -138,14 +139,14 @@ switchin:
     ldr r1, =runticks
     strh r0, [r1]
 
-    pop {r0}                /* pushed pid */
+    pop {r0, r1}            /* pushed pid and alignment padding */
     pop {r1, r2, r3, r4, r5}
     mov r8, r1
     mov r9, r2
     mov r10, r3
     mov r11, r4
     mov r12, r5
-    pop {r5, r6, r7, pc}
+    pop {r4, r5, r6, r7, pc}
 
 .global dofork
 .text
@@ -155,7 +156,7 @@ dofork:
 	/* Save the callee-saved registers onto the stack in the same order
 	 * that switchout will do it, so switchin will restore it correctly. */
 
-    push {r5, r6, r7, lr}
+    push {r4, r5, r6, r7, lr}
     mov r1, r8
     mov r2, r9
     mov r3, r10
@@ -166,7 +167,7 @@ dofork:
 	/* Store child's pid so the parent can return it. */
 
     ldrh r1, [r0, #P_TAB__P_PID_OFFSET]
-    push {r1}
+    push {r1, r2}               /* child's pid and alignment padding */
 
 	/* Save parent's stack pointer */
 
@@ -197,7 +198,7 @@ dofork:
     ldr r1, =runticks
     strh r0, [r1]
 
-    pop {r0}            /* pushed pid */
+    pop {r0, r1}        /* pushed pid and alignment padding */
     mov r0, #0          /* Child process returns 0 */
     pop {r1, r2, r3, r4, r5}
     mov r8, r1
@@ -205,7 +206,7 @@ dofork:
     mov r10, r3
     mov r11, r4
     mov r12, r5
-    pop {r5, r6, r7, pc}
+    pop {r4, r5, r6, r7, pc}
 
 // vim: sw=4 ts=4 et:
 

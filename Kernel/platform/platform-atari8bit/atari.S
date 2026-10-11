@@ -97,15 +97,18 @@ init_early:
 	rts
 
 init_hardware:
-	lda	#0
-	sta	_ramsize
 	lda	#128
-	sta	_ramsize+1
+	sta	_ramsize
 	lda	#48
 	sta	_procmem
 	lda	#0
 	sta	_procmem+1
-	jmp	program_vectors_k
+	sta	_ramsize+1
+	jsr	program_vectors_k
+	jsr	_vtinit
+	jmp	x0
+	nop
+x0:	rts
 
 	.literal
 
@@ -131,8 +134,11 @@ _program_vectors:
 	sei
 	;
 	jsr	__pop
-	; C argument into XA - just pass it on
+	; C argument into XA - just pass it on_
 	jsr	map_proc
+	jsr	program_vectors_k
+	jmp	map_kernel
+
 program_vectors_k:
 	lda	#<vector
 	sta	$FFFE
@@ -142,7 +148,7 @@ program_vectors_k:
 	sta	$FFFA
 	lda	#>nmi_handler
 	sta	$FFFB
-	jmp	map_kernel
+	rts
 
 ;
 ;	On a fully switching system with far copies like the 6509 this is
@@ -177,20 +183,21 @@ map_proc_always:
 	; RAM select, antic on main, cpu on extended
 	; Bank 3 (user page) basic off, OS ROM off
 	lda	0xD301
-;FIXME	sta	old_kmap
-	lda	#0x9E
+	sta	old_kmap
+	lda	#EXT3
 	; Set PORTB correctly
 	sta	0xD301		; Select banks
 	pla
 	rts
 ;
 ;	X,A points to the map table of this process
+;	We don't care though - we only have one map
 ;
 map_proc:
 	cmp	#0
-	bne	map_proc_2
+	bne	map_proc_always
 	cpx	#0
-	bne	map_proc_2
+	bne	map_proc_always
 ;
 ;	Need to adjust this to the map_kernel and save semantic ?
 ;
@@ -199,19 +206,6 @@ map_kernel:
 	lda	old_kmap	; Back to the kernel bank we mapped from
 	sta	0xD301	
 	pla
-	rts
-
-; X,A holds the map table of this process
-map_proc_2:
-	sta	@tmp
-	stx	@tmp+1
-	tya
-	pha
-	ldy	#0
-	lda	(@tmp),y	; 4 bytes if needed
-	sta	0xD301
-	pla
-	tay
 	rts
 
 ;
@@ -236,7 +230,7 @@ map_save_kernel:
 	lda	old_kmap
 	sta	old_kbank
 	; Main memory (overlay 4) shouldn't matter which we use
-	lda	#0x82
+	lda	#MAIN
 	sta	0xD301
 	rts
 
@@ -272,6 +266,7 @@ saved_map:
 	.export __stub_3
 	.export __stub_4
 
+
 jsrxy:
 	txa
 	pha
@@ -281,93 +276,103 @@ jsrxy:
 
 
 __bank_1_2:
-	lda	#0x96	; RAM select, antic on main, cpu on ext page 1
+	lda	#EXT1	; RAM select, antic on main, cpu on ext page 1
 b1call:
 	sta	0xD301
 	jsr	jsrxy
-	lda	#0x92	; cpu on ext page 1
+	pha
+	lda	#EXT0	; cpu on ext page 1
 	sta	0xD301
+	pla
 	rts
 __bank_1_3:
-	lda	#0x9A	; cpu on ext page 2
+	lda	#EXT2	; cpu on ext page 2
 	bne	b1call
 __bank_1_4:
-	lda	#0x82	; cpu on main page (overlay 4)
+	lda	#MAIN	; cpu on main page (overlay 4)
 	bne	b1call
 
 __bank_2_1:
-	lda	#0x92	; RAM select, antic on main, cpu on ext page 0
+	lda	#EXT0	; RAM select, antic on main, cpu on ext page 0
 b2call:
 	sta	0xD301
 	jsr	jsrxy
-	lda	#0x96	; cpu on ext page 1
+	pha
+	lda	#EXT1	; cpu on ext page 1
 	sta	0xD301
+	pla
 	rts
 __bank_2_3:
-	lda	#0x9A	; cpu on ext page 2
+	lda	#EXT2	; cpu on ext page 2
 	bne	b2call
 __bank_2_4:
-	lda	#0x82	; cpu on main page (overlay 4)
+	lda	#MAIN	; cpu on main page (overlay 4)
 	bne	b2call
 
 __bank_3_1:
-	lda	#0x92	; RAM select, antic on main, cpu on ext page 0
+	lda	#EXT0	; RAM select, antic on main, cpu on ext page 0
 b3call:
 	sta	0xD301
 	jsr	jsrxy
-	lda	#0x9A	; cpu on ext page 2
+	pha
+	lda	#EXT2	; cpu on ext page 2
 	sta	0xD301
+	pla
 	rts
 __bank_3_2:
-	lda	#0x96	; cpu on ext page 1
+	lda	#EXT1	; cpu on ext page 1
 	bne	b3call
 __bank_3_4:
-	lda	#0x82	; cpu on main page (overlay 4)
+	lda	#MAIN	; cpu on main page (overlay 4)
 	bne	b3call
 
 __bank_4_1:
-	lda	#0x92	; RAM select, antic on main, cpu on ext page 0
+	lda	#EXT0	; RAM select, antic on main, cpu on ext page 0
 b4call:
 	sta	0xD301
 	jsr	jsrxy
-	lda	#0x82	; cpu on main page
+	pha
+	lda	#MAIN	; cpu on main page
 	sta	0xD301
+	pla
 	rts
 __bank_4_2:
-	lda	#0x96	; cpu on ext page 1
+	lda	#EXT1	; cpu on ext page 1
 	bne	b4call
 __bank_4_3:
-	lda	#0x9A	; cpu on ext page 3
+	lda	#EXT2	; cpu on ext page 3
 	bne	b4call
 
 __stub_1:
 __bank_0_1:
 	lda	0xD301
 	pha		; not ideal we need to see if this is too much stack
-	lda	#0x92
+	lda	#EXT0
 bnk0h:
 	sta	0xD301
 	jsr	jsrxy
+	tay
 	pla
 	sta	0xD301
+	tya
 	rts
 __stub_2:
 __bank_0_2:
 	lda	0xD301
 	pha		; not ideal we need to see if this is too much stack
-	lda	#0x96
+	lda	#EXT1
 	bne	bnk0h
 __stub_3:
 __bank_0_3:
 	lda	0xD301
 	pha		; not ideal we need to see if this is too much stack
-	lda	#0x9A
+	lda	#EXT2
 	bne	bnk0h
 __stub_4:
 __bank_0_4:
 	lda	0xD301
 	pha		; not ideal we need to see if this is too much stack
-	lda	#0x82
+	lda	#MAIN
 	bne	bnk0h
 
 	
@@ -779,6 +784,10 @@ x11:
 ;	part of the page away)	
 ;
 
+; Needs to live with buffers
+
+	.overlay4
+
 	.export _devide_read_data
 	.export _devide_write_data
 
@@ -799,6 +808,9 @@ hd_kmap:
 	jsr	hd_read256
 	inc	@tmp3+1
 	jsr	hd_read256
+hd_unmap:
+	lda	_td_raw
+	beq	no_remap
 	jmp	map_kernel
 
 hd_read256:
@@ -806,6 +818,7 @@ hd_read256:
 	sta	(@tmp3),y
 	iny
 	bne	hd_read256
+no_remap:
 	rts
 
 _devide_write_data:
@@ -824,7 +837,7 @@ hd_kmapw:
 	jsr	hd_write256
 	inc	@tmp3+1
 	jsr	hd_write256
-	jmp	map_kernel
+	jmp	hd_unmap
 
 ; This one is a shade more complicated. Write the bytes swapped in order
 ; TODO: would it be better to have a tmp4 thats tmp3 + 1 and avoid the
@@ -841,3 +854,142 @@ hd_write256:
 	iny
 	bne	hd_write256
 	rts
+
+;
+;	Screen handling
+;
+	.overlay4
+
+	.export	_plot_char
+	.export _scroll_up
+	.export _scroll_down
+	.export _vtattr_notify
+	.export _clear_across
+	.export _clear_lines
+	.export _cursor_on
+	.export _cursor_off
+	.export _cursor_disable
+
+gaddr:
+	ldy	#1
+	lda	(@sp),y
+	tax
+	dey
+	lda	(@sp),y
+_cursor_disable:
+_vtattr_notify:
+	rts
+
+addr:
+	jsr	gaddr
+	; A = Y X = X Y = 0
+set_addr:
+	ldy	#0
+	stx	@tmp		; X co-ord
+	; A is 0-39
+	asl	a		; x 2
+	asl	a		; x 4
+	; Can overflow beyond this point
+	asl	a
+	bcc	noover
+	iny
+noover:
+	sty	@tmp2		; set upper byte
+	sty	@tmp3+1		; save whole x 8 value
+	sta	@tmp3
+	asl	a		; x 16
+	rol	@tmp2
+	asl	a		; x 32
+	rol	@tmp2
+	; C will be clear
+	adc	@tmp3		; low add
+	bcc	nobump
+	inc	@tmp3+1		; carry into uppet for add
+nobump:	adc	@tmp		; add X
+	sta	@tmp		; low set
+	lda	@tmp2		; high
+	adc	@tmp3+1		; fold in upper of tmp3 and any X overflow
+	adc	#0x4A		; screen base
+	sta	@tmp+1
+	ldy	#2
+	rts
+
+_plot_char:
+	jsr	addr
+	; @tmp is now address
+	lda	(@sp),y
+	ldy	#0
+	sta	(@tmp),y
+	jmp	__add4sp
+
+_cursor_on:
+	jsr	addr
+	ldy	#0
+	lda	(@tmp),y
+	eor	#0x80
+	sta	(@tmp),y
+	lda	@tmp
+	sta	cursorl
+	lda	@tmp+1
+	sta	cursorh
+	jmp	__add2sp
+
+_cursor_off:
+	lda	cursorl
+	sta	@tmp
+	lda	cursorh
+	sta	@tmp+1
+	ldy	#0
+	lda	(@tmp),y
+	eor	#0x80
+	sta	(@tmp),y
+	rts
+
+_clear_across:
+	jsr	addr
+	lda	(@sp),y
+	tax
+	lda	#' '
+	ldy	#0
+clac:
+	sta	(@tmp),y
+	iny
+	dex
+	bne	clac
+	jmp	__add4sp
+
+_clear_lines:
+	jsr	gaddr
+	stx	@tmp2+1		; not touched by set_addr
+	beq	nowork
+	ldx	#0
+	jsr	set_addr	; start of line
+	lda	#' '
+line:
+	ldy	#40
+doline:
+	sta	(@tmp),y
+	dey
+	bne	doline
+	lda	@tmp
+	clc
+	adc	#40
+	sta	@tmp
+	bcc	nline
+	inc	@tmp+1
+nline:	dec	@tmp2
+	bne	doline
+nowork:
+	jmp	__add2sp
+
+_scroll_up:
+_scroll_down:
+	; TODO
+	rts
+
+	; Can live in banked space
+
+cursorl:
+	.byte	0
+cursorh:
+	.byte	0

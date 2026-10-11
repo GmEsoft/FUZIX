@@ -414,8 +414,10 @@ static arg_t readwrite(uint_fast8_t reading)
 	}
 
 	/* Reading from disk is writing to user space and vice versa... */
-	if (!valaddr(buf, nbytes, reading))
+	if (valaddr(buf, nbytes, reading) != nbytes) {
+		udata.u_error = EFAULT;
 	        return -1;
+	}
 
 	/* Set up u_base, u_offset, ino; check permissions, file num. */
 	if ((ino = rwsetup(reading, &flag)) == NULLINODE)

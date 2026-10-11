@@ -68,7 +68,7 @@ loop:	lda	(@tmp),y
 	lda	#0x80
 	sta	0x8001
 
-	jmp	0x0200		; Into the kernel discard which starts with
+	jmp	0x0400		; Into the kernel discard which starts with
 				; the ROM copier
 
 ;	We could run off either, but eventually we might want to
