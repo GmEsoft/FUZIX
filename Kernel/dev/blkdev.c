@@ -180,9 +180,8 @@ int blkdev_ioctl(uint_fast8_t minor, uarg_t request, char *data)
                 if (request == HDIO_TRIM_KERNEL) {
                     /* _ioctl rejects the kernel request class. Filesystem
                      * and swap callers pass their own local block number. */
-                    blkno_t sector;
-                    memcpy(&sector, data, sizeof(sector));
-                    blk_op.lba = sector;
+                    /* This will always be properly aligned from the kernel */
+                    blk_op.lba = *(blkno_t *)data;
                 } else {
                     if (valaddr_r((uint8_t *)data, sizeof(uint16_t)) != sizeof(uint16_t)) {
                         udata.u_error = EFAULT;
