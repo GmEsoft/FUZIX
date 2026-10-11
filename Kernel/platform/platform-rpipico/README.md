@@ -89,6 +89,12 @@ Flash image (if not using SD card) is at `Kernel/platform/platform-rpipico/files
 
 FUZIX kernel firmware is build in `Kernel/platform/platform-rpipico/build/fuzix.uf2`.
 
+### Kernel execution from flash
+
+Ordinary kernel and TinyUSB code execute directly from flash. Critical flash
+routines, their arguments and writable data remain in SRAM. Erasing/programming flash
+temporarily disables execution from it on both cores.
+
 ### Installing Kernel
 
 - Push and hold the BOOTSEL button as you plug usb into your computer.

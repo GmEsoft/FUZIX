@@ -9,6 +9,8 @@
 
 /* Host fixture for swapper.c; no SDK, interrupts or physical block device. */
 #define CONFIG_H
+/* Allocator tests do not use generated flash geometry. */
+#define GLOBALS_H
 #define PTABSIZE 16
 #define BLKSHIFT 9
 #define USERMEM (160 * 1024)
@@ -57,6 +59,7 @@ int pagemap_alloc(ptptr);
 int pagemap_realloc(struct exec *, usize_t);
 void pagemap_free(ptptr);
 void pagemap_init(void);
+void contextswitch(ptptr);
 usize_t pagemap_mem_used(void);
 arg_t brk_extend(uaddr_t);
 
