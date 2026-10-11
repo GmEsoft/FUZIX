@@ -25,7 +25,28 @@ add_compile_definitions(
 
 pico_sdk_init()
 
+# One geometry for the driver, linker checks and offline image tools. Board
+# flash sizes may be SDK arithmetic expressions rather than decimal numbers.
+set(FLASH_FIRMWARE_KIB "96" CACHE STRING "Flash reserved for firmware in KiB")
+set(FLASH_XIP_KIB "0" CACHE STRING "Flash reserved for immutable user images in KiB")
+foreach(flash_setting FLASH_FIRMWARE_KIB FLASH_XIP_KIB)
+    if(NOT "${${flash_setting}}" MATCHES "^[0-9]+$")
+        message(FATAL_ERROR "${flash_setting} must be a nonnegative integer in KiB")
+    endif()
+endforeach()
+math(EXPR FUZIX_FLASH_BYTES "${PICO_FLASH_SIZE_BYTES}")
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS flash-layout.py)
+execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/flash-layout.py
+    --flash-bytes ${FUZIX_FLASH_BYTES} --firmware-kib ${FLASH_FIRMWARE_KIB}
+    --xip-kib ${FLASH_XIP_KIB} --output ${CMAKE_CURRENT_BINARY_DIR}
+    RESULT_VARIABLE FLASH_LAYOUT_RESULT)
+if(NOT FLASH_LAYOUT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Invalid FUZIX flash layout")
+endif()
+
 include_directories(
+	${CMAKE_CURRENT_BINARY_DIR}
 	.
 	../..
 	../../dev
@@ -100,3 +121,5 @@ target_link_libraries(fuzix
 pico_set_float_implementation(fuzix none)
 pico_set_double_implementation(fuzix none)
 pico_add_extra_outputs(fuzix)
+target_link_options(fuzix PRIVATE "LINKER:-T,${CMAKE_CURRENT_BINARY_DIR}/flash-layout.ld")
+pico_add_link_depend(fuzix ${CMAKE_CURRENT_BINARY_DIR}/flash-layout.ld)

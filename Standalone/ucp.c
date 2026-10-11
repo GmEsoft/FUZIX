@@ -65,7 +65,7 @@ static int interactive = 0;
 
 static void cmdusage(void)
 {
-	fprintf(stderr, "Usage: ucp FILE [COMMAND]\n");
+	fprintf(stderr, "Usage: ucp [-e] FILE [COMMAND]\n");
 	exit(1);
 }
 
@@ -79,9 +79,13 @@ int main(int argc, char *argval[])
 	struct filesys fsys;
 	int j, retc = 0;
 	int opt;
+	int stop_on_error = 0;
 
-	while ((opt = getopt(argc, argval, "")) != -1) {
+	while ((opt = getopt(argc, argval, "e")) != -1) {
 		switch (opt) {
+		case 'e':
+			stop_on_error = 1;
+			break;
 		default:
 			cmdusage();
 		}
@@ -274,6 +278,10 @@ int main(int argc, char *argval[])
 			retc = -1;
 			break;
 		}		/* End Switch */
+		if (stop_on_error && retc != 0) {
+			xfs_end();
+			exit(1);
+		}
 	} while (multiline || pending_line);
 
 	fuzix_sync();
@@ -2569,5 +2577,4 @@ static void bufinit(void)
 		bp->bf_dev = -1;
 	}
 }
-
 

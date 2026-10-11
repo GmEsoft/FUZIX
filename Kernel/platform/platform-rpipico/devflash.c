@@ -11,12 +11,16 @@
 #include "picosdk.h"
 #include <hardware/flash.h>
 
+#if PICO_FLASH_SIZE_BYTES != FUZIX_FLASH_FLASH_BYTES
+#error "Generated flash layout does not match the SDK board flash size"
+#endif
+
 static struct dhara_map dhara;
 static const struct dhara_nand nand = 
 {
 	.log2_page_size = 9, /* 512 bytes */
 	.log2_ppb = 12 - 9, /* 4096 bytes */
-	.num_blocks = (PICO_FLASH_SIZE_BYTES - FLASH_OFFSET) / 4096,
+	.num_blocks = FUZIX_FLASH_FTL_BYTES / FUZIX_FLASH_ERASE_BYTES,
 };
 
 static uint8_t journal_buf[512];
@@ -79,7 +83,7 @@ void flash_dev_init(void)
 		return;
 
 	kprintf("NAND flash, ");
-	dhara_map_init(&dhara, &nand, journal_buf, 10);
+	dhara_map_init(&dhara, &nand, journal_buf, FUZIX_FLASH_GC_RATIO);
 	dhara_error_t err = DHARA_E_NONE;
 	dhara_map_resume(&dhara, &err);
 	uint32_t lba = dhara_map_capacity(&dhara);
@@ -95,4 +99,3 @@ void flash_dev_init(void)
 }
 
 /* vim: sw=4 ts=4 et: */
-

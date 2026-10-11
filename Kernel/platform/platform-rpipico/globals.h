@@ -1,7 +1,9 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define FLASH_OFFSET (96*1024)
+#include "flash-layout.h"
+
+#define FLASH_OFFSET FUZIX_FLASH_FTL_OFFSET
 
 extern void flash_dev_init(void);
 extern void sd_rawinit(void);
@@ -54,4 +56,3 @@ struct extended_exception_frame
 };
 
 #endif
-

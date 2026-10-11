@@ -102,12 +102,13 @@ static int ilog2(uint32_t i)
 
 static void syntax_error(void)
 {
-    fprintf(stderr, "Syntax: mkftl [options] <inputfile> -o <outputfile>\n");
+    fprintf(stderr, "Syntax: mkftl [options] -o <outputfile> <inputfile>\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -p <number>   set page size, in bytes (default: %d bytes)\n", pagesize);
     fprintf(stderr, "  -e <number>   set erase block size, in bytes (default: %d bytes)\n", erasesize);
     fprintf(stderr, "  -s <number>   set image size, in kilobytes (default: %d kB)\n", flashsize/1024);
     fprintf(stderr, "  -g <number>   set garbage collection ratio (default: %d)\n", gcratio);
+    fprintf(stderr, "  -c            print logical capacity in sectors; do not create an image\n");
     exit(1);
 }
 
@@ -115,14 +116,18 @@ int main(int argc, char* const* argv)
 {
     const char* outputfilename = NULL;
     const char* inputfilename = NULL;
+    bool capacity_only = false;
 
     for (;;)
     {
-        int opt = getopt(argc, argv, "o:p:e:s:g:");
+        int opt = getopt(argc, argv, "co:p:e:s:g:");
         if (opt == -1)
             break;
         switch (opt)
         {
+            case 'c':
+                capacity_only = true;
+                break;
             case 'o':
                 outputfilename = optarg;
                 break;
@@ -148,11 +153,12 @@ int main(int argc, char* const* argv)
         }
     }
 
-    if (argc != (optind+1))
+    if (argc != (optind + (capacity_only ? 0 : 1)))
         syntax_error();
-    inputfilename = argv[optind];
+    if (!capacity_only)
+        inputfilename = argv[optind];
 
-    if (!outputfilename)
+    if (!capacity_only && !outputfilename)
         panic("output filename must be supplied");
 
     if (!is_power_of_2(pagesize))
@@ -173,6 +179,8 @@ int main(int argc, char* const* argv)
     nand.num_blocks = flashsize / erasesize;
 
     flashdata = malloc(flashsize);
+    if (!flashdata)
+        panic("cannot allocate flash image");
     memset(flashdata, 0xff, flashsize);
 
     uint8_t journal_buf[512];
@@ -180,9 +188,14 @@ int main(int argc, char* const* argv)
     dhara_map_init(&dhara, &nand, journal_buf, gcratio);
     dhara_error_t err = DHARA_E_NONE;
     dhara_map_resume(&dhara, &err);
-    printf("Number of physical erase blocks: %d\n", nand.num_blocks);
-
     uint32_t lba = dhara_map_capacity(&dhara);
+    if (capacity_only)
+    {
+        printf("%u\n", (unsigned)lba);
+        free(flashdata);
+        return 0;
+    }
+    printf("Number of physical erase blocks: %d\n", nand.num_blocks);
     printf("Maximum logical size: %dkB (%d sectors)\n", lba / 2, lba);
 
     FILE* inf = fopen(inputfilename, "rb");
@@ -237,4 +250,3 @@ int main(int argc, char* const* argv)
 }
 
 // vim: sw=4 ts=4 et:
-
