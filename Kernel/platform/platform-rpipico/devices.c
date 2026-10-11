@@ -11,6 +11,9 @@
 #include "picosdk.h"
 #include <hardware/irq.h>
 #include "core1.h"
+#ifdef CONFIG_NET_WIZNET
+#include "wiznet_spi.h"
+#endif
 
 struct devsw dev_tab[] =  /* The device driver switch table */
 {
@@ -29,7 +32,8 @@ struct devsw dev_tab[] =  /* The device driver switch table */
   /* Pack to 7 with nxio if adding private devices and start at 8 */
 };
 
-static absolute_time_t now;
+static uint64_t tick_deadline;
+#define TICK_US (1000000 / TICKSPERSEC)
 
 bool validdev(uint16_t dev)
 {
@@ -47,15 +51,23 @@ static void timer_tick_cb(unsigned alarm)
     udata.u_ininterrupt = 1;
 
     absolute_time_t next;
-    update_us_since_boot(&next, to_us_since_boot(now) + (1000000 / TICKSPERSEC));
+    tick_deadline += TICK_US;
 
     tty_interrupt();
     timer_interrupt();
+#ifdef CONFIG_NET_WIZNET
+    wiz_poll();
+#endif
 
-    if (hardware_alarm_set_target(0, next))
-    {
-        update_us_since_boot(&next, time_us_64() + (1000000 / TICKSPERSEC));
-        hardware_alarm_set_target(0, next);
+    /* Keep the original phase rather than adding handler time every tick.
+     * If interrupts were delayed, skip expired deadlines to the next period. */
+    for (;;) {
+        update_us_since_boot(&next, tick_deadline);
+        if (!hardware_alarm_set_target(alarm, next))
+            break;
+        uint64_t current = time_us_64();
+        if (current >= tick_deadline)
+            tick_deadline += ((current - tick_deadline) / TICK_US + 1) * TICK_US;
     }
 
     udata.u_ininterrupt = 0;
@@ -71,7 +83,7 @@ void device_init(void)
     /* Timer interrup must be initialized before blcok devices.
        set_boot_line uses pause syscall which will not be operational otherwise. */
     hardware_alarm_claim(0);
-    update_us_since_boot(&now, time_us_64());
+    tick_deadline = time_us_64();
     hardware_alarm_set_callback(0, timer_tick_cb);
     hardware_alarm_force_irq(0);
 

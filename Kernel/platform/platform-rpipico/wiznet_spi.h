@@ -6,6 +6,7 @@
 extern volatile uint8_t wiz_irq_pending;
 
 void wiz_spi_init(void);
+void wiz_poll(void);
 uint8_t wiz_spi_xfer(uint8_t v);
 void wiz_spi_select(void);
 void wiz_spi_deselect(void);

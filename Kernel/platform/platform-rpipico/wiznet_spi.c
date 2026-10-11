@@ -2,6 +2,7 @@
 #include <hardware/gpio.h>
 #include "picosdk.h"
 #include <net_w5x00.h>
+#include <dev/devsd.h>
 #include <printf.h>
 
 #define W5X00_SPI spi0
@@ -15,6 +16,24 @@
 
 static spi_inst_t *wiz_spi = spi0;
 volatile uint8_t wiz_irq_pending;
+static volatile bool wiz_spi_busy;
+static bool wiz_ready;
+extern volatile bool sd_spi_busy;
+
+/* Called on core zero by the timer, never from the GPIO interrupt. */
+void wiz_poll(void)
+{
+    if (!wiz_ready || wiz_spi_busy)
+        return;
+    if (sd_spi_busy) {
+        if (sd_spi_try_release() || sd_spi_busy)
+            return;
+    }
+    if (wiz_irq_pending || !gpio_get(W5X00_INT)) {
+        wiz_irq_pending = 0;
+        w5x00_poll();
+    }
+}
 
 static void w5x00_gpio_irq(uint gpio, uint32_t events)
 {
@@ -47,6 +66,7 @@ void wiz_spi_init(void)
     gpio_set_irq_callback(w5x00_gpio_irq);
     gpio_set_irq_enabled(W5X00_INT, GPIO_IRQ_EDGE_FALL, true);
     irq_set_enabled(IO_IRQ_BANK0, true);
+    wiz_ready = true;
 }
 
 uint8_t wiz_spi_xfer(uint8_t v)
@@ -58,10 +78,12 @@ uint8_t wiz_spi_xfer(uint8_t v)
 
 void wiz_spi_select(void)
 {
+    wiz_spi_busy = true;
     gpio_put(W5X00_CS, 0);
 }
 
 void wiz_spi_deselect(void)
 {
     gpio_put(W5X00_CS, 1);
+    wiz_spi_busy = false;
 }

@@ -55,11 +55,14 @@
 
 #endif
 
+volatile bool sd_spi_busy;
+
 #define SLOW_SPEED 250000
 #define FAST_SPEED 4000000
 
 void sd_rawinit(void)
 {
+    sd_spi_busy = true;
     //initilase GPIO ports
     gpio_init(Pico_SD_SCK );
     gpio_init(Pico_SD_TX);
@@ -77,44 +80,62 @@ void sd_rawinit(void)
 
     spi_init(Pico_SD_SPI_MOD, SLOW_SPEED);
     spi_set_format(Pico_SD_SPI_MOD, 8, 0, 0, SPI_MSB_FIRST);
+    sd_spi_busy = false;
 }
 
 void sd_spi_clock(bool go_fast)
 {
+    bool busy = sd_spi_busy;
+    sd_spi_busy = true;
     spi_set_baudrate(Pico_SD_SPI_MOD,
         go_fast ? FAST_SPEED : SLOW_SPEED);
+    sd_spi_busy = busy;
 }
 
 void sd_spi_raise_cs(void)
 {
     gpio_put(Pico_SD_CS, true);
+    sd_spi_busy = false;
 }
 
 void sd_spi_lower_cs(void)
 {
+    sd_spi_busy = true;
     gpio_put(Pico_SD_CS, false);
 }
 
 void sd_spi_transmit_byte(uint_fast8_t b)
 {
+    bool busy = sd_spi_busy;
+    sd_spi_busy = true;
     spi_write_blocking(Pico_SD_SPI_MOD, (uint8_t*) &b, 1);
+    sd_spi_busy = busy;
 }
 
 uint_fast8_t sd_spi_receive_byte(void)
 {
     uint8_t b;
+    bool busy = sd_spi_busy;
+    sd_spi_busy = true;
     spi_read_blocking(Pico_SD_SPI_MOD, 0xff, (uint8_t*) &b, 1);
+    sd_spi_busy = busy;
     return b;
 }
 
 bool sd_spi_receive_sector(void)
 {
+    bool busy = sd_spi_busy;
+    sd_spi_busy = true;
     spi_read_blocking(Pico_SD_SPI_MOD, 0xff, (uint8_t*) blk_op.addr, 512);
+    sd_spi_busy = busy;
         return 0;
 }
 
 bool sd_spi_transmit_sector(void)
 {
+    bool busy = sd_spi_busy;
+    sd_spi_busy = true;
     spi_write_blocking(Pico_SD_SPI_MOD,  (uint8_t*) blk_op.addr, 512);
+    sd_spi_busy = busy;
         return 0;
 }
