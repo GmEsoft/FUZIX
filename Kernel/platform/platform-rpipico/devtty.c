@@ -43,7 +43,7 @@ static void devtty_defconfig(uint8_t drv, int count, int minor)
         }
         else
         {
-            termios_mask[minor] = CSIZE | CBAUD | PARENB | PARODD | _CSYS;
+            termios_mask[minor] = CSIZE | CBAUD | CSTOPB | PARENB | PARODD | _CSYS;
         }
         minor++;
     }
