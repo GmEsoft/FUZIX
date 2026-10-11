@@ -4,8 +4,8 @@ CASES = break realloc-failure alloc-failure bounds grow-shrink
 LIMITS = 64 128 160
 TESTS = $(addprefix pagemap-test-,$(LIMITS))
 
-.PHONY: check check-config check-flash-sync clean
-check: $(TESTS) check-config check-flash-sync
+.PHONY: check check-config check-flash-sync check-esp8266-flash-sync clean
+check: $(TESTS) check-config check-flash-sync check-esp8266-flash-sync
 	@set -e; for exe in $(TESTS); do echo $$exe; for test in $(CASES); do ./$$exe $$test; done; done
 
 pagemap-test-%: pagemap.c ../swapper.c $(wildcard include/*.h)
@@ -27,3 +27,6 @@ clean:
 
 check-flash-sync:
 	python3 flash-sync.py
+
+check-esp8266-flash-sync:
+	python3 flash-sync.py --platform esp8266

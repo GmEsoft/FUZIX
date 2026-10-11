@@ -20,3 +20,13 @@ Host addresses use uintptr_t so the real memory movement can run on 64-bit
 hosts. This does not verify the ARM ABI or exception/context-switch assembly.
 The block device is disabled: swap I/O and hardware execution require separate
 target tests.
+
+Dhara flash checkpoint tests
+---------------------------
+
+`make check` also tests the production Pico and ESP8266 flash transfer/flush
+callbacks against real Dhara under ASan/UBSan, using each platform's block count
+and GC ratio. It reproduces loss of an uncheckpointed write, checks 32 durable
+writes across restart, confirms reads do not checkpoint, and verifies flush
+and checkpoint error handling. No platform SDK is required. This tests completed
+flash operations; hardware power cuts and torn flash operations are not covered.

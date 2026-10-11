@@ -1,21 +1,33 @@
 #!/usr/bin/env python3
 """Check real Dhara restart behavior through the production transfer callback."""
+import argparse
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
-platform = Path(__file__).resolve().parent.parent
-root = platform.parents[2]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--platform', choices=('rpipico', 'esp8266'), default='rpipico')
+args = parser.parse_args()
+root = Path(__file__).resolve().parents[4]
+platform = root / 'Kernel/platform' / ('platform-' + args.platform)
+text = (platform / 'devflash.c').read_text()
+nand_definition = re.search(r'static const struct dhara_nand nand\s*=\s*\{.*?\};', text, re.S).group(0)
+gc_ratio = int(re.search(r'dhara_map_init\(&dhara, &nand, journal_buf, (\d+)\)', text).group(1))
 source = (root / 'Standalone/mkftl.c').read_text().split('static void panic(')[0]
 source = source.replace('"../Kernel/', '"' + str(root / 'Kernel') + '/')
 # Dhara resume also calls the NAND backend without an error-output pointer.
 source = source.replace('*err = DHARA_E_NONE;', 'if (err) *err = DHARA_E_NONE;')
 source = source.replace('*err = DHARA_E_BAD_BLOCK;', 'if (err) *err = DHARA_E_BAD_BLOCK;')
+if args.platform == 'rpipico':
+    source += '#define PICO_FLASH_SIZE_BYTES (2 * 1024 * 1024)\n'
+    source += re.search(r'^#define FLASH_OFFSET .+$', (platform / 'globals.h').read_text(), re.M).group(0) + '\n'
+source += '#define TEST_GC_RATIO %d\n' % gc_ratio
+source += nand_definition + '\n'
 source += '''
 #include <assert.h>
 static struct dhara_map dhara;
 static uint8_t journal_buf[512];
-static const struct dhara_nand nand = { .log2_page_size=9, .log2_ppb=3, .num_blocks=488 };
 static struct { unsigned lba; uint8_t *addr; bool is_read; } blk_op;
 static struct { int u_error; } udata;
 static unsigned sync_calls;
@@ -30,7 +42,6 @@ static int test_map_sync(struct dhara_map *map, dhara_error_t *err) {
 }
 #define dhara_map_sync test_map_sync
 '''
-text = (platform / 'devflash.c').read_text()
 start = text.index('static uint_fast8_t transfer_cb(')
 end = text.index('static int trim_cb(', start)
 assert 'blk->flush = flush_cb;' in text
@@ -39,7 +50,7 @@ source += '''
 #undef dhara_map_sync
 static void restart(void) {
     dhara_error_t err;
-    dhara_map_init(&dhara, &nand, journal_buf, 10);
+    dhara_map_init(&dhara, &nand, journal_buf, TEST_GC_RATIO);
     assert(dhara_map_resume(&dhara, &err) == 0);
 }
 int main(void) {
@@ -50,7 +61,7 @@ int main(void) {
     assert(flashdata);
     memset(flashdata, 255, flashsize);
     memset(input, 1, sizeof(input));
-    dhara_map_init(&dhara, &nand, journal_buf, 10);
+    dhara_map_init(&dhara, &nand, journal_buf, TEST_GC_RATIO);
     assert(dhara_map_write(&dhara, 1, input, &err) == 0);
     assert(dhara_map_sync(&dhara, &err) == 0);
     restart();
@@ -90,4 +101,4 @@ with tempfile.TemporaryDirectory(prefix='fuzix-flash-sync-') as directory:
                     str(root / 'Kernel/lib/dhara/map.c'), str(root / 'Kernel/lib/dhara/journal.c'),
                     str(root / 'Kernel/lib/dhara/error.c'), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print('PASS: unsynced sector loss, 32 durable writes, read path, flush and checkpoint errors')
+print('PASS %s: unsynced sector loss, 32 durable writes, read path, flush and checkpoint errors' % args.platform)
