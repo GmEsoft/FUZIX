@@ -20,6 +20,8 @@ uint_fast8_t plt_param(char* p)
     if (strncmp(p, "tty=", sizeof("tty=")-1) == 0)
     {
         ttymap_count = 0;
+        memset(ttymap, 0, sizeof(ttymap));
+        memset(termios_mask, 0, sizeof(termios_mask));
         p += sizeof("tty=")-1;
         while(*p)
         {
@@ -45,13 +47,20 @@ uint_fast8_t plt_param(char* p)
                 kprintf("invalid param %s\n", s);
                 panic("tty=");
             }
-            ttymap[ttymap_count+1].tty = atoi(s);
-            ttymap[ttymap_count+1].drv = drv;
-            ttymap_count++;
-            if (ttymap_count >= NUM_DEV_TTY)
+            unsigned limit = drv == TTYDRV_USB ? NUM_DEV_TTY_USB : NUM_DEV_TTY_UART;
+            unsigned number = 0;
+            while (*s >= '0' && *s <= '9')
             {
-                panic("ttycount");
+                number = number * 10 + (*s++ - '0');
+                if (number > limit)
+                    panic("tty number");
             }
+            if (*s || !number)
+                panic("tty number");
+            if (ttymap_count == NUM_DEV_TTY)
+                panic("ttycount");
+            ttymap[++ttymap_count].tty = number;
+            ttymap[ttymap_count].drv = drv;
         }
         devtty_init();
         return 1;
