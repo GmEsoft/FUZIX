@@ -27,6 +27,7 @@ void deliver_signals(void)
 
 void doexec(uaddr_t entrypoint)
 {
+	udata.u_insys = 0;
 	asm volatile ("mov sp, %0\nisb\nbx %1"
 		:: "r" (udata.u_sp), "r" (entrypoint));
     __builtin_unreachable();
@@ -47,5 +48,4 @@ void swap_blocks(void* p1, void* p2, size_t len)
 		len -= 4;
     }
 }
-
 
