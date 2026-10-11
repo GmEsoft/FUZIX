@@ -71,7 +71,7 @@ int swapread(uint16_t dev, blkno_t blkno, register usize_t nbytes,
 #endif
 	res = ((*dev_tab[major(dev)].dev_read) (minor(dev), 2, 0));
 
-#ifdef CONFIG_TRIM
+#if defined(CONFIG_TRIM) && !defined(CONFIG_SWAP_KEEP_IMAGE)
 	while (nbytes != 0)
 	{
 		d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blkno);

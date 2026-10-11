@@ -18,8 +18,22 @@ process limits must fail compilation.
 
 Host addresses use uintptr_t so the real memory movement can run on 64-bit
 hosts. This does not verify the ARM ABI or exception/context-switch assembly.
-The block device is disabled: swap I/O and hardware execution require separate
-target tests.
+Swap tests use a mock disk, with the real udata alias at the beginning of RAM.
+They check repeated slot reuse, first/partial read and write errors, flush
+failure, exhausted swap space, cleanup after a failed swap-in, and alternating
+128/160 KiB processes. The mock read modifies udata scratch state on each call,
+so full-pool tests also detect premature reuse of physical block zero. Failed
+swap-in must panic rather than resume a partial image; its disk slot is retained.
+
+These tests verify allocator and I/O control flow, not physical SD behavior or
+power-loss durability. To compare swap regressions with another checkout:
+
+    make swap-test-128 PLATFORM_DIR=/path/to/checkout/Kernel/platform/platform-rpipico
+    ./swap-test-128 reuse
+
+Build in a clean test directory or remove swap-test-* first when changing the
+source under test. The unmodified e35ad7c code fails slot reuse, I/O failure and
+large-process checks. ARM ABI tests are in hardware/ and require a board.
 
 Dhara flash checkpoint tests
 ---------------------------
@@ -30,3 +44,4 @@ and GC ratio. It reproduces loss of an uncheckpointed write, checks 32 durable
 writes across restart, confirms reads do not checkpoint, and verifies flush
 and checkpoint error handling. No platform SDK is required. This tests completed
 flash operations; hardware power cuts and torn flash operations are not covered.
+

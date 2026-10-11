@@ -247,8 +247,12 @@ void contextswitch(ptptr p)
         kprintf("context switch from %d to %d\n", get_slot(udata.u_ptab), get_slot(p));
     #endif
 
+    int map = -1;
     if (!p->p_page)
-        swapin(p, p->p_page2);
+    {
+        map = p->p_page2;
+        swapin(p, map);
+    }
 
     int slot = get_slot(p);
     int blocks = get_proc_size_blocks(p);
@@ -283,6 +287,20 @@ void contextswitch(ptptr p)
             *b1 = *b2;
             *b2 = t;
         }
+    }
+
+    /* The incoming udata is now at PROGBASE. Do not issue I/O before this:
+     * swapread uses the old udata as scratch, even if block zero was reused. */
+    if (map >= 0)
+    {
+#ifdef CONFIG_TRIM
+        uint8_t error = udata.u_error;
+        blkno_t block = map * SWAP_SIZE;
+        for (unsigned i = 0; i < SWAP_SIZE; i++, block++)
+            d_ioctl(SWAPDEV, HDIO_TRIM_KERNEL, (void *)&block);
+        udata.u_error = error;
+#endif
+        swapmap_add(map);
     }
 
     #ifdef DEBUG
@@ -355,44 +373,89 @@ int swapout(ptptr p)
     for (int i=0; i<blocks; i++)
     {
         struct mapentry* b = find_block(slot, i);
+        if (!b)
+            panic("missing block");
         int blockindex = b - allocation_map;
-        void* p = (void*)PROGBASE + blockindex*BLOCKSIZE;
+        uaddr_t addr = PROGBASE + blockindex*BLOCKSIZE;
 
-        swapwrite(SWAPDEV, swaparea + (i*(BLOCKSIZE>>BLKSHIFT)),
-            BLOCKSIZE, (uaddr_t)p, 1);
-
-        b->slot = b->block = 0xff;
+        if (swapwrite(SWAPDEV, swaparea + (i*(BLOCKSIZE>>BLKSHIFT)),
+                BLOCKSIZE, addr, 1) != BLOCKSIZE)
+            goto failed;
     }
+    if (d_flush(SWAPDEV))
+        goto failed;
 
-	p->p_page = 0;
-	p->p_page2 = map;
-	return 0;
+    /* Keep every RAM block until the complete disk image is committed. */
+    free_blocks(slot, 0);
+    p->p_page = 0;
+    p->p_page2 = map;
+    return 0;
+failed:
+    swapmap_add(map);
+    return EIO;
 }
 
 /*
- * Swap ourself in: must be on the swap stack when we do this
+ * Swap ourself in: must be on the swap stack when we do this.
  */
 void swapin(ptptr p, uint16_t map)
 {
     uint16_t swaparea = map * SWAP_SIZE;
-
     int slot = get_slot(p);
     int blocks = get_proc_size_blocks(p);
+    ptptr current = udata.u_ptab;
+    bool reserved_zero = false;
+
+    /* Allocate the whole image before reading. The normal victim selector
+     * excludes the outgoing process; here its stack is no longer in use. */
     for (int i=0; i<blocks; i++)
     {
         struct mapentry* b = find_free_block(p);
-        int blockindex = b - allocation_map;
-        void* p = (void*)PROGBASE + blockindex*BLOCKSIZE;
-
-        swapread(SWAPDEV, swaparea + (i*(BLOCKSIZE>>BLKSHIFT)),
-            BLOCKSIZE, (uaddr_t)p, 1);
-
+        if (!b && current && current != p && current->p_page)
+        {
+            if (swapout(current))
+                goto failed;
+            /* udata remains I/O scratch until the very last read. */
+            allocation_map[0].block = 0;
+            reserved_zero = true;
+            b = find_free_block(p);
+        }
+        if (!b && reserved_zero && i == blocks - 1)
+        {
+            b = &allocation_map[0];
+            reserved_zero = false;
+        }
+        if (!b)
+            goto failed;
         b->slot = slot;
         b->block = i;
     }
 
+    /* Read physical block zero last: subsequent swapread calls would modify
+     * the data just loaded there through the udata alias. */
+    for (int pass=0; pass<2; pass++)
+        for (int i=0; i<blocks; i++)
+        {
+            struct mapentry* b = find_block(slot, i);
+            int blockindex = b - allocation_map;
+            if ((blockindex == 0) != (pass == 1))
+                continue;
+            if (swapread(SWAPDEV, swaparea + (i*(BLOCKSIZE>>BLKSHIFT)),
+                    BLOCKSIZE, PROGBASE + blockindex*BLOCKSIZE, 1) != BLOCKSIZE)
+                goto failed;
+        }
+    if (reserved_zero)
+        allocation_map[0].block = 0xff;
     p->p_page = 1;
     p->p_page2 = 0;
+    return;
+failed:
+    free_blocks(slot, 0);
+    if (reserved_zero)
+        allocation_map[0].block = 0xff;
+    /* The disk slot remains owned by p. Never resume a partial image. The
+     * void swapin interface has no way to return a scheduling failure. */
+    panic("swapin failed");
 }
 
 arg_t brk_extend(uaddr_t addr)
