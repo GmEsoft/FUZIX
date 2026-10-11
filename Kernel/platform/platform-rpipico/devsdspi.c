@@ -56,13 +56,14 @@
 #endif
 
 volatile bool sd_spi_busy;
+volatile bool sd_spi_active;
 
 #define SLOW_SPEED 250000
 #define FAST_SPEED 4000000
 
 void sd_rawinit(void)
 {
-    sd_spi_busy = true;
+    sd_spi_active = true;
     //initilase GPIO ports
     gpio_init(Pico_SD_SCK );
     gpio_init(Pico_SD_TX);
@@ -74,6 +75,7 @@ void sd_rawinit(void)
     gpio_set_function(Pico_SD_TX, GPIO_FUNC_SPI);  // TX
     gpio_set_function(Pico_SD_RX, GPIO_FUNC_SPI);  // RX
     gpio_set_function(Pico_SD_CS, GPIO_FUNC_SIO);  // CS
+    gpio_put(Pico_SD_CS, true);
     gpio_set_dir(Pico_SD_CS, true);
 
     //initalise SPI module
@@ -81,15 +83,15 @@ void sd_rawinit(void)
     spi_init(Pico_SD_SPI_MOD, SLOW_SPEED);
     spi_set_format(Pico_SD_SPI_MOD, 8, 0, 0, SPI_MSB_FIRST);
     sd_spi_busy = false;
+    sd_spi_active = false;
 }
 
 void sd_spi_clock(bool go_fast)
 {
-    bool busy = sd_spi_busy;
-    sd_spi_busy = true;
+    sd_spi_active = true;
     spi_set_baudrate(Pico_SD_SPI_MOD,
         go_fast ? FAST_SPEED : SLOW_SPEED);
-    sd_spi_busy = busy;
+    sd_spi_active = false;
 }
 
 void sd_spi_raise_cs(void)
@@ -106,36 +108,32 @@ void sd_spi_lower_cs(void)
 
 void sd_spi_transmit_byte(uint_fast8_t b)
 {
-    bool busy = sd_spi_busy;
-    sd_spi_busy = true;
+    sd_spi_active = true;
     spi_write_blocking(Pico_SD_SPI_MOD, (uint8_t*) &b, 1);
-    sd_spi_busy = busy;
+    sd_spi_active = false;
 }
 
 uint_fast8_t sd_spi_receive_byte(void)
 {
     uint8_t b;
-    bool busy = sd_spi_busy;
-    sd_spi_busy = true;
+    sd_spi_active = true;
     spi_read_blocking(Pico_SD_SPI_MOD, 0xff, (uint8_t*) &b, 1);
-    sd_spi_busy = busy;
+    sd_spi_active = false;
     return b;
 }
 
 bool sd_spi_receive_sector(void)
 {
-    bool busy = sd_spi_busy;
-    sd_spi_busy = true;
+    sd_spi_active = true;
     spi_read_blocking(Pico_SD_SPI_MOD, 0xff, (uint8_t*) blk_op.addr, 512);
-    sd_spi_busy = busy;
+    sd_spi_active = false;
         return 0;
 }
 
 bool sd_spi_transmit_sector(void)
 {
-    bool busy = sd_spi_busy;
-    sd_spi_busy = true;
+    sd_spi_active = true;
     spi_write_blocking(Pico_SD_SPI_MOD,  (uint8_t*) blk_op.addr, 512);
-    sd_spi_busy = busy;
+    sd_spi_active = false;
         return 0;
 }

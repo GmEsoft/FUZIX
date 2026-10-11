@@ -18,12 +18,12 @@ static spi_inst_t *wiz_spi = spi0;
 volatile uint8_t wiz_irq_pending;
 static volatile bool wiz_spi_busy;
 static bool wiz_ready;
-extern volatile bool sd_spi_busy;
+extern volatile bool sd_spi_busy, sd_spi_active;
 
 /* Called on core zero by the timer, never from the GPIO interrupt. */
 void wiz_poll(void)
 {
-    if (!wiz_ready || wiz_spi_busy)
+    if (!wiz_ready || wiz_spi_busy || sd_spi_active)
         return;
     if (sd_spi_busy) {
         if (sd_spi_try_release() || sd_spi_busy)

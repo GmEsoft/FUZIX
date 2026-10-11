@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../../wiznet_spi.h"
-extern volatile bool sd_spi_busy;
+extern volatile bool sd_spi_busy, sd_spi_active;
 void device_init(void);
 void sd_rawinit(void);
 void sd_spi_raise_cs(void);
@@ -30,7 +30,7 @@ void irqrestore(irqflags_t irq) { assert(irq==123); }
 void timer_interrupt(void) { assert(udata.u_ininterrupt); ticks++; clock_us+=137; }
 void tty_interrupt(void) { assert(udata.u_ininterrupt); tty_ticks++; }
 void devsd_init(void) {}
-uint_fast8_t sd_spi_try_release(void) { if (!release_sd) return 1; sd_spi_raise_cs(); return 0; }
+uint_fast8_t sd_spi_try_release(void) { assert(!sd_spi_active); if (!release_sd) return 1; sd_spi_raise_cs(); return 0; }
 void netdev_init(void) { wiz_spi_init(); }
 void w5x00_poll(void) { polls++; if(raise_during_poll) gpio_cb(21,GPIO_IRQ_EDGE_FALL); }
 void update_us_since_boot(absolute_time_t *t,uint64_t us) { *t=us; }
@@ -104,7 +104,7 @@ int main(int argc,char **argv)
         gpio_cb(21,GPIO_IRQ_EDGE_FALL); try_poll_during_spi=true;
         w5x00_readsb(0,0); assert(polls==1 && wiz_irq_pending);
         wiz_poll(); assert(polls==2 && !wiz_irq_pending);
-        gpio_cb(21,GPIO_IRQ_EDGE_FALL); sd_spi_receive_byte();
+        gpio_cb(21,GPIO_IRQ_EDGE_FALL); release_sd=true; sd_spi_receive_byte();
         assert(polls==2 && wiz_irq_pending); /* Includes clocks with CS high. */
         wiz_poll(); assert(polls==3 && !wiz_irq_pending);
         sd_spi_lower_cs(); gpio_cb(21,GPIO_IRQ_EDGE_FALL); release_sd=true;
