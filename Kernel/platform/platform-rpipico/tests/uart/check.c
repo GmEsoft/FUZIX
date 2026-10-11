@@ -9,12 +9,15 @@
 #include "../../devtty.h"
 static uart_inst_t ports[2]={{.num=0},{.num=1}};
 static unsigned inits[2], deinits, pins, yields, formats;
+static bool allow_busy;
+static uint8_t pending[32];
+static unsigned pending_count;
 static uint rate, bits, stops;
 static uart_parity_t parity;
 struct tty ttydata[NUM_DEV_TTY+1];
 uart_inst_t *uart_get_instance(unsigned n) { assert(n<2); return &ports[n]; }
 uart_hw_t *uart_get_hw(uart_inst_t *p) { return &p->hw; }
-uint uart_init(uart_inst_t *p, uint baud) { inits[p->num]++; p->hw.fr=UART_UARTFR_TXFE_BITS; return baud; }
+uint uart_init(uart_inst_t *p, uint baud) { inits[p->num]++; pending_count=0; p->hw.fr=UART_UARTFR_TXFE_BITS; return baud; }
 void uart_deinit(uart_inst_t *p) { (void)p; deinits++; }
 void gpio_set_function(unsigned pin, unsigned function) { assert(function==2 && pin<32); pins|=1u<<pin; }
 void uart_set_translate_crlf(uart_inst_t *p, bool v) { (void)p; assert(!v); }
@@ -22,10 +25,10 @@ void uart_set_fifo_enabled(uart_inst_t *p, bool v) { (void)p; assert(v); }
 void uart_set_hw_flow(uart_inst_t *p, bool cts, bool rts) { (void)p; assert(cts && rts); }
 bool uart_is_writable(uart_inst_t *p) { (void)p; return true; }
 bool uart_is_readable(uart_inst_t *p) { (void)p; return false; }
-void uart_putc(uart_inst_t *p, char c) { (void)p; (void)c; }
-uint uart_set_baudrate(uart_inst_t *p, uint baud) { assert(!(p->hw.fr&UART_UARTFR_BUSY_BITS)); rate=baud; return baud; }
+void uart_putc(uart_inst_t *p, char c) { assert(pending_count<sizeof(pending)); pending[pending_count++]=c; p->hw.fr=UART_UARTFR_BUSY_BITS; }
+uint uart_set_baudrate(uart_inst_t *p, uint baud) { assert(allow_busy || !(p->hw.fr&UART_UARTFR_BUSY_BITS)); rate=baud; return baud; }
 void uart_set_format(uart_inst_t *p, uint data, uint stop, uart_parity_t mode)
-{ assert(!(p->hw.fr&UART_UARTFR_BUSY_BITS)); formats++; bits=data; stops=stop; parity=mode; }
+{ assert(allow_busy || !(p->hw.fr&UART_UARTFR_BUSY_BITS)); formats++; bits=data; stops=stop; parity=mode; }
 void _sched_yield(void) { yields++; assert(yields<5); ports[0].hw.fr &= ~UART_UARTFR_BUSY_BITS; }
 void tight_loop_contents(void) {}
 void kprintf(const char *fmt, ...) { (void)fmt; }
@@ -71,6 +74,16 @@ int main(int argc, char **argv)
         ttydata[1].termios.c_cflag=B115200|CS8;
         rawuart_setup(1,1,1);
         assert(inits[0]==2);
+    } else if (!strcmp(argv[1],"prompt")) {
+        static const char prompt[]="Password: ";
+        rawuart_early_init();
+        ttydata[1].termios.c_lflag=ECHO;
+        for (unsigned i=0;i<sizeof(prompt)-1;i++) rawuart_putc(1,prompt[i]);
+        ttydata[1].termios.c_lflag &= ~ECHO;
+        allow_busy=true; /* TCSANOW is allowed without draining. SDK format changes retain FIFO data. */
+        rawuart_setup(1,1,0);
+        assert(inits[0]==1 && !yields && !deinits);
+        assert(pending_count==sizeof(prompt)-1 && !memcmp(pending,prompt,pending_count));
     } else if (!strcmp(argv[1],"mask")) {
         devtty_init();
         assert(termios_mask[1]&CSTOPB);

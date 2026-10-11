@@ -15,3 +15,8 @@ and sustained throughput still need hardware testing.
 
 Remove main.o/tty-test before changing PLATFORM_DIR to another checkout. The
 unchanged e35ad7c sources fail the mapping, backpressure and bounds regressions.
+
+The irq-echo case extracts the actual common tty_echo/tty_putc_wait/output
+functions from Kernel/tty.c. It tests a full and disconnected USB queue with
+u_ininterrupt set; any wait/schedule attempt aborts. Echo is best effort when
+the queue is full, and pending output must remain intact.

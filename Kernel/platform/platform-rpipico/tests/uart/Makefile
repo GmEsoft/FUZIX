@@ -3,7 +3,7 @@ CFLAGS = -std=c99 -g -Wall -Wextra -Wno-unused-parameter -fsanitize=address,unde
 PLATFORM_DIR ?= ../..
 .PHONY: check clean
 check: uart-test
-	@set -e; for test in pins drain settings hangup mask; do ./uart-test $$test; done
+	@set -e; for test in pins drain settings hangup mask prompt; do ./uart-test $$test; done
 uart-test: check.c $(PLATFORM_DIR)/rawuart.c $(PLATFORM_DIR)/devtty.c $(shell find include -type f)
 	$(CC) $(CFLAGS) -Iinclude -include include/kernel.h check.c $(PLATFORM_DIR)/rawuart.c $(PLATFORM_DIR)/devtty.c -o $@
 clean:

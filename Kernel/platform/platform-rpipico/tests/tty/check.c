@@ -90,6 +90,19 @@ int main(int argc,char **argv)
         usbconsole_putc(1,'X'); /* IRQ echo must not wait or overwrite. */
         usb_room=16; pump(16);
         assert(usb_sent==16 && last_byte=='p');
+    } else if (!strcmp(argv[1],"irq-echo")) {
+        tud_mount_cb(); parse("tty=usb1",true);
+        ttydata[1].termios.c_lflag=ECHO;
+        for (unsigned i=0;i<16;i++) usbconsole_putc(1,'a'+i);
+        udata.u_ininterrupt=1;
+        tty_echo(1,'X'); /* Actual common IRQ path must not wait for a full queue. */
+        assert(udata.u_ininterrupt);
+        usb_room=16; pump(16);
+        assert(usb_sent==16 && last_byte=='p'); /* Echo cannot overwrite pending output. */
+        tty_echo(1,'Y'); usb_room=1; pump(1);
+        assert(usb_sent==17 && last_byte=='Y');
+        tud_umount_cb(); tty_echo(1,'Z'); /* Disconnected host must not block IRQ echo. */
+        assert(usb_sent==17 && udata.u_ininterrupt);
     } else if (!strcmp(argv[1],"disconnect")) {
         assert(usbconsole_ready(1)==TTY_READY_LATER);
         for (unsigned i=0;i<100;i++) usbconsole_putc(1,'X');
