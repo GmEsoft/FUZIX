@@ -4,7 +4,25 @@
 ; 256+256 bytes.
 U_DATA__TOTALSIZE       .equ	0x200
 
-PROGLOAD		.equ	0x4000
+PROGLOAD		.equ	0x0200
 
 ; Must match config.h
 NBUFS			.equ	5
+
+#define	CARTPORT	0xD500
+#define PORTB		0xD301
+
+/*
+   Bit 7: set to keep diagnostic rom out
+   Bit 6: unused
+   Bit 5: set to keep set to keep video in main bank
+   Bit 4: set and CPU uses main bank, clear alt bank
+   Bit 3:2 external bank if selected
+   Bit 1:0 set to 2 to keep the ROM out */
+
+#define EXT0		0xA2
+#define EXT1		0xA6
+#define EXT2		0xAA
+#define EXT3		0xAE
+#define MAIN		0xB2
+

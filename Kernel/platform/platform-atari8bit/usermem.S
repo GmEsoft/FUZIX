@@ -43,7 +43,7 @@ ugparg:		; uget/put argument fetch
 		ldy	#0
 		rts
 
-; user, dst, count(count in ax)
+; user, dst, count
 ;
 ;	Decidedly unoptimised (even the 6502 could manage a word a switch)
 ;
@@ -146,8 +146,7 @@ __uputc:	ldy	#3
 		jsr	map_kernel
 		tya
 		tax
-		ldy	#4
-		jmp	__addysp
+		jmp	__add4sp
 
 __uputw:	ldy	#3
 		lda	(@sp),y
@@ -169,8 +168,7 @@ __uputw:	ldy	#3
 		jsr	map_kernel
 		lda	#0
 		tax
-		ldy	#4
-		jmp	__addysp
+		jmp	__add4sp
 
 
 __uzero:	ldy	#3
@@ -186,7 +184,6 @@ __uzero:	ldy	#3
 		lda	(@sp),y
 		sta	@tmp3
 
-		; Our C stack vanishes at this point
 		jsr	map_proc_always
 
 		ldy	#0
@@ -209,5 +206,4 @@ __uzero_tail:
 		iny
 		bne	__uzero_tail
 __uzero_done:	jsr	map_kernel
-		ldy	#4
-		jmp	__addysp
+		jmp	__add4sp

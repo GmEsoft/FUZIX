@@ -1,18 +1,10 @@
 #include "kernel.def"
 #include "../../cpu-6502/kernel02.def"
-
-#define	CARTPORT	0xD500
-#define PORTB		0xD301
-#define EXT0		0x12
-#define EXT1		0x16
-#define EXT2		0x1A
-#define EXT3		0x1E
-#define MAIN		0x02
-
 ;
 ;	We kick off in discard as we know where it is anyway.
 ;
 	.discard
+	.export copy16k
 ;
 ;	We loaded the low 8K block from cartridge and ran it. NMI is off
 ;	stack is sane, interrupts are off, not much else is defined.
@@ -74,7 +66,7 @@ go:
 	;	Copy from cartridge bank 8 and 9 into 4000-7FFF ext bank 2
 	lda	#EXT2
 	sta	PORTB		; bank in at 4000-7FFF
-	lda	#0xE7		; cart bank
+	ldx	#0xE7		; cart bank
 	jsr	copy16k
 
 
@@ -95,7 +87,7 @@ mark:
 	lda	#0x00
 	sta	0xD400
 	;	And our fonts
-	lda	#>0x4F		; 0x5000 - 256
+	lda	#0x50		; 0x5000 - 53FF
 	sta	0xD409
 	lda	#<dlist
 	sta	0xD402
@@ -261,25 +253,31 @@ stub:
 	.ds 600
 stub_end:
 ;
-;	Overlay specific init
+;	Overlay specific init. Land a marker byte in each bank for
+;	debugging. Maybe evetually for switching - but better it's at
+;	7FFF
 ;
 	.overlay1
+	.byte	0x92
 	.overlay2
+	.byte	0x96
 	.overlay3
+	.byte	0x9A
 	.overlay4
+	.byte	0x82
 
 	; Overlay 4 is the main bank but the first chunk of it is
 	; the buffers area (screen, disk buffers, dlist etc)
-	.ds	4096
-
+	.ds	4095
+	.ds	256		; push font up a bit until we rework alignment
 	; Font will follow at 0x5000
 
 	; at 0x4000 in main bank - max 4K
 	.buffers
 
 	.export _bufdata
-_bufdata:
 
+_bufdata:
 	; 0x4000
 	.ds	512 * NBUFS
 

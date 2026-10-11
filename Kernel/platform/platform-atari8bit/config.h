@@ -52,18 +52,14 @@
 #define BOOT_TTY 513        /* Set this to default device for stdio, stderr */
 
 #define CONFIG_VT
-#define CONFIG_VT_SIMPLE
-#define VT_BASE	((uint8_t *)0x4A00)
-#define VT_MAP_CHAR(x)	((x) & 127)
-#define VT_CURSOR	'_'
 #define CONFIG_FONT8X8
 #define CONFIG_FONT8X8SMALL
 
 /* Vt definitions */
-#define VT_WIDTH	64
-#define VT_HEIGHT	16
-#define VT_RIGHT	63
-#define VT_BOTTOM	15
+#define VT_WIDTH	40
+#define VT_HEIGHT	25
+#define VT_RIGHT	39
+#define VT_BOTTOM	24
 
 /* We need a tidier way to do this from the loader */
 #define CMDLINE	NULL	  /* Location of root dev name */
