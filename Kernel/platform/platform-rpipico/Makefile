@@ -24,7 +24,7 @@ FLASH_FIRMWARE_KIB ?= 96
 FLASH_XIP_KIB ?= 0
 
 PICOTOOLFLAGS= --family rp2040
-ifeq (${SUBTARGET}, pico2)
+ifneq ($(filter pico2 pico2_w,$(SUBTARGET)),)
 PICOTOOLFLAGS= --family data
 endif
 
@@ -45,6 +45,10 @@ build/fuzix.elf: ../../version.c build/Makefile
 # Reconfigure even when only a command-line memory/board setting changed.
 build/Makefile: CMakeLists.txt $(wildcard ../../*.[chS]) $(wildcard ../../*/*.[chS]) FORCE
 	mkdir -p build
+	@if test -f build/CMakeCache.txt && ! grep -qx 'PICO_BOARD:STRING=${SUBTARGET}' build/CMakeCache.txt; then \
+		rm -f build/CMakeCache.txt; \
+		rm -rf build/CMakeFiles; \
+	fi
 	(cd build && cmake -DPICO_BOARD=${SUBTARGET} -DTOTALMEM=${TOTALMEM} -DPROCMEM=${PROCMEM} -DFLASH_FIRMWARE_KIB=${FLASH_FIRMWARE_KIB} -DFLASH_XIP_KIB=${FLASH_XIP_KIB} ..)
 
 .PHONY: FORCE

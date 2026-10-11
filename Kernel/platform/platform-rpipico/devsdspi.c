@@ -41,6 +41,7 @@
 #define Pico_SD_TX  19 // MOSI
 #define Pico_SD_RX  16 // MISO
 #define Pico_SD_CS  17 // SD_CS
+#define Pico_SD_SPI_MOD spi0
 
 #else
 

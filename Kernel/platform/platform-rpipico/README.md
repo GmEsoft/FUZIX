@@ -4,11 +4,11 @@
 
 The Raspberry Pi Pico is a very small and very cheap microcontroller board based
 around the Raspberry Pi Foundation's RP2040 chip. It's got two Cortex-M0+ cores,
-2MB of onboard NAND flash which can be used for code via a demand-paging system,
+2MB of onboard NOR flash for firmware and the root filesystem,
 and 264kB of RAM.
 
 The Fuzix port runs in cooperative multitasking mode with the root filesystem on
-NAND, and with an optional SD card on the second SPI interface for anything
+flash, and with an optional SD card on the second SPI interface for anything
 else. It supports both console over UART and it'll also pretend to be a USB
 serial device. There's enough memory to run four or five processes at once, and
 you can enable swapping to the SD card for up to 15.
@@ -17,7 +17,8 @@ you can enable swapping to the SD card for up to 15.
 
 Out of the box:
 
-- /dev/hda is the NAND flash, containing the root filesystem. It can be
+- /dev/hda is the block device for the onboard NOR flash, containing the
+  root filesystem. It can be
   partitioned but there's no real point, so it isn't.
 
 - /dev/hdb is the SD card. Fuzix understands DOS partition tables. It's not hot
@@ -54,8 +55,8 @@ By default FUZIX sets up 1 UART and 4 USB consoles. You can change it in
 At startup system will automatically choose USB as boot console if it's
 connected, otherwise boot will print on UART0.
 
-You can force certain configuration by passwing boot command line. For example:
-`tty=usb1,uart0,usb0`
+You can force certain configuration by passing boot command line. For example:
+`tty=usb1,uart1,usb2`
 
 ## Building and installation
 
@@ -87,14 +88,16 @@ a fresh build directory when invoking CMake directly.
 In the **root folder** of the FUZIX repository run:
 
 * For original Pi Pico `make TARGET=rpipico SUBTARGET=pico`
-* For Pi Pico W `make TARGET=rpipico SUBTARGET=pico`
-* For Pi Pico 2 and Pico 2 W `make TARGET=rpipico SUBTARGET=pico2 diskimage`
+* For Pi Pico W `make TARGET=rpipico SUBTARGET=pico_w`
+* For Pi Pico 2 `make TARGET=rpipico SUBTARGET=pico2`
+* For Pi Pico 2 W `make TARGET=rpipico SUBTARGET=pico2_w`
 
-SD card image (32MB) is located at `Images/rpipico/filesys.img`.
+Build an SD card image with `make TARGET=rpipico SUBTARGET=pico diskimage`
+(or the appropriate SUBTARGET). The SD card image (32MB) is located at `Images/rpipico/filesys.img`.
 
-Flash image (if not using SD card) is at `Kernel/platform/platform-rpipico/filesystem.uf2`
+The kernel build also produces the flash filesystem image at `Kernel/platform/platform-rpipico/filesystem.uf2`
 
-FUZIX kernel firmware is build in `Kernel/platform/platform-rpipico/build/fuzix.uf2`.
+FUZIX kernel firmware is built in `Kernel/platform/platform-rpipico/build/fuzix.uf2`.
 
 ### Kernel execution from flash
 
@@ -105,13 +108,14 @@ temporarily disables execution from it on both cores.
 ### Installing Kernel
 
 - Push and hold the BOOTSEL button as you plug usb into your computer.
-- Copy `Kernel/platform/platform-rpipico/filesystem.uf2` onto the storage device. After copying is done, Pico
-  will restart into FUZIX.
+- Copy `Kernel/platform/platform-rpipico/build/fuzix.uf2` onto the storage device.
+  The Pico restarts after the copy. Install a root filesystem too before booting
+  FUZIX for the first time.
 - To update the kernel, repeat the same procedure.
 
 ### Installing filesystem onto flash
 
-The Pico's built-in NAND flash is supported, appearing as `/dev/hda` insize
+The Pico's built-in NOR flash is supported, appearing as `/dev/hda` inside
 Fuzix (the SD card is on `/dev/hdb`).  It's mapped via the Dhara FTL library, so
 you get proper wear levelling.  The FTL library requires empty flash sectors to
 work efficiently; the Fuzix filesystem has trim support, so the FTL library gets
@@ -123,7 +127,8 @@ To flash the image either:
 
 - Follow the same steps as for the kernel using `Kernel/platform/platform-rpipico/filesystem.uf2` file.
 - **OR** Using picotool
-  - Connect computer to UART 0 on the Pico using USB to UART adapter.
+  - Hold BOOTSEL while connecting the Pico directly to the computer via USB.
+    picotool talks to the USB bootloader.
   - Copy `filesystem.ftl` to the board by executing `picotool load
     filesystem.ftl -t bin -o ADDRESS`, using `FTL_ADDRESS` from
     `build/flash-layout.env` (normally `0x10018000`).
@@ -169,7 +174,9 @@ Filesystem image files are located in `Images/rpipico/filesys.img`.
 Partition SD card on your computer using MBR partition scheme then create 32MB
 partition. If using Linux or MacOS you can then copy `filesys.img` onto the SD card using `dd` command.
 
-``` dd if=filesystem.img of=/dev/sdXn oflag=direct bs=8192 ```
+```sh
+dd if=Images/rpipico/filesys.img of=/dev/sdXn bs=8192
+```
 
 The first thing you probably want to do is `stty erase '^?'` to make the DELETE
 key in your terminal work properly. (Use the `levee` editor to add it to
@@ -196,7 +203,9 @@ the user memory pool (`TOTALMEM`, normally 160 KiB on RP2040, less networking
 storage when enabled). The same limit applies to executable loading and heap
 growth. A larger limit does not reserve all that memory for each process.
 
-The Makefile reconfigures CMake when building, so a changed command-line limit
+The Makefile resets the CMake cache when SUBTARGET changes, so the SDK selects
+the correct CPU/toolchain. Direct CMake users should use separate build
+directories for different boards. It reconfigures CMake when building, so a changed command-line limit
 also applies to an existing build directory. Direct CMake users can set
 `-DPROCMEM=128`. Changing this setting also changes the swap slot size. Boot
 the new kernel and enable swap afresh; do not reuse a running old kernel's swap
@@ -232,7 +241,7 @@ Swap:     2048            0         2048
 
 You can't turn swap off again.
 
-You probably can swap to the NAND flash, but it's a terrible idea.
+You probably can swap to the onboard NOR flash, but it's a terrible idea.
 
 ## Issues
 
