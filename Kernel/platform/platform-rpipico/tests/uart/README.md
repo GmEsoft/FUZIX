@@ -9,3 +9,8 @@ To compare another checkout, remove uart-test and set PLATFORM_DIR to its
 platform-rpipico directory. The unchanged e35ad7c sources fail all five cases.
 These are driver sequencing tests; electrical UART timing/flow control still
 requires a board and serial connection.
+
+The prompt case models issue #1204: queued "Password: " output must survive
+a TCSANOW echo-only change without reinitializing/resetting the UART. SDK
+baud/format operations retain FIFO data in this fixture; physical UART timing
+is not modeled or claimed.
