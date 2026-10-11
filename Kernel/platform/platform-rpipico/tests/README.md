@@ -45,3 +45,12 @@ writes across restart, confirms reads do not checkpoint, and verifies flush
 and checkpoint error handling. No platform SDK is required. This tests completed
 flash operations; hardware power cuts and torn flash operations are not covered.
 
+
+Kernel flash safety tests
+
+Run `make check` with Python 3 and a host compiler supporting ASan/UBSan.
+The fixture compiles production `rawflash.c` with SDK/IRQ stubs. It checks
+RAM staging before flash becomes unavailable, flash offsets, partial reads,
+IRQ state restoration and failures entering/leaving the safety gate. USB and
+no-USB builds are exercised. Hardware USB and multicore behavior require
+separate on-device tests.
