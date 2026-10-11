@@ -22,6 +22,14 @@ set(PICO_SDK_PATH "${PICO_SDK_PATH}" CACHE PATH "Path to the Raspberry Pi Pico S
 set(PICO_SDK_FETCH_FROM_GIT "${PICO_SDK_FETCH_FROM_GIT}" CACHE BOOL "Set to ON to fetch copy of SDK from git if not otherwise locatable")
 set(PICO_SDK_FETCH_FROM_GIT_PATH "${PICO_SDK_FETCH_FROM_GIT_PATH}" CACHE FILEPATH "location to download SDK")
 
+if (DEFINED ENV{PICO_SDK_FETCH_FROM_GIT_TAG} AND (NOT PICO_SDK_FETCH_FROM_GIT_TAG))
+    set(PICO_SDK_FETCH_FROM_GIT_TAG $ENV{PICO_SDK_FETCH_FROM_GIT_TAG})
+endif ()
+if (NOT PICO_SDK_FETCH_FROM_GIT_TAG)
+    set(PICO_SDK_FETCH_FROM_GIT_TAG "2.3.1")
+endif ()
+set(PICO_SDK_FETCH_FROM_GIT_TAG "${PICO_SDK_FETCH_FROM_GIT_TAG}" CACHE STRING "SDK release tag to fetch")
+
 if (NOT PICO_SDK_PATH)
     if (PICO_SDK_FETCH_FROM_GIT)
         include(FetchContent)
@@ -32,7 +40,7 @@ if (NOT PICO_SDK_PATH)
         FetchContent_Declare(
                 pico_sdk
                 GIT_REPOSITORY https://github.com/raspberrypi/pico-sdk
-                GIT_TAG master
+                GIT_TAG ${PICO_SDK_FETCH_FROM_GIT_TAG}
         )
         if (NOT pico_sdk)
             message("Downloading Raspberry Pi Pico SDK")

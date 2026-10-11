@@ -1,6 +1,6 @@
 # Set one of these depending.
 export PICO_SDK_FETCH_FROM_GIT = yes
-#export PICO_SDK_PATH = ${HOME}/.pico-sdk/sdk/1.5.1
+#export PICO_SDK_PATH = ${HOME}/.pico-sdk/sdk/2.3.1
 
 # Set 'SUBTARGET' to one of pico-sdk compatible boards
 # valid values: pico or pico2
