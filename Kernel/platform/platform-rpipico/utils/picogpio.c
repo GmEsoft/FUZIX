@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,7 @@ int is_valid_uint8(const char *str) {
     long val = strtol(str, &endptr, 10);
     
     // check string was a number and within the range of uint8_t
-    if (*endptr == '\0' && val >= 0 && val <= UINT8_MAX) {
+    if (endptr != str && *endptr == '\0' && val >= 0 && val <= UINT8_MAX) {
         return 1;
     }
     return 0;
