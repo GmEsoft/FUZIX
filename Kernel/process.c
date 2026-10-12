@@ -323,6 +323,9 @@ void makeproc(register ptptr p, register u_data *u)
 	p->p_sig[1].s_held = pp->p_sig[1].s_held;
 	p->p_tty = pp->p_tty;
 	p->p_uid = pp->p_uid;
+#ifdef CONFIG_LEVEL_2
+	p->p_session = pp->p_session;
+#endif
 	/* Set default priority */
 	p->p_priority = MAXTICKS;
 
