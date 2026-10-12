@@ -124,6 +124,7 @@ uint8_t write_core_image(void)
 
 	ino = n_open((uint8_t *)udata.u_syscall_sp - 5, &parent);
 	if (ino) {
+		i_deref(ino);
 		i_deref(parent);
 		return 0;
 	}
@@ -152,10 +153,8 @@ uint8_t write_core_image(void)
 			/* Ask the memory manager to dump the memory map */
 			coredump_image(ino);
 			i_deref(ino);
-			i_deref(parent);
 			return W_COREDUMP;
 		}
-		i_deref(parent);
 	}
 	return 0;
 }
