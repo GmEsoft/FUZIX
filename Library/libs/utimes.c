@@ -11,6 +11,6 @@ int utimes(const char *filename, const struct timeval times[2])
   if (times == NULL)  
     return utime(filename, NULL);
   u.actime = times[0].tv_sec;
-  u.modtime = times[0].tv_usec;
+  u.modtime = times[1].tv_sec;
   return utime(filename, &u);
 }
