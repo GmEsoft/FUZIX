@@ -71,7 +71,7 @@ ttyready_t tty_writeready(uint8_t minor)
 void tty_putc(uint8_t minor, unsigned char c)
 {
 	minor;
-	tty_debug2 = c;	
+	tty_debug2 = c;
 //	if (minor == 1) {
 		if (!vswitch)
 			vtoutput(&c, 1);
@@ -154,7 +154,7 @@ static void keydecode(void)
 	if (keymap[6] & 3 ) {	/* shift or control */
 		c = shiftkeyboard[keybyte][keybit];
 		/* VT switcher */
-#if 0		
+#if 0
 		if (c == KEY_F1 || c == KEY_F2 || c == KEY_F3 || c == KEY_F4) {
 			if (inputtty != c - KEY_F1) {
 				inputtty = c - KEY_F1;
@@ -162,7 +162,7 @@ static void keydecode(void)
 			}
 			return;
 		}
-#endif			
+#endif
 	} else
 		c = keyboard[keybyte][keybit];
 
@@ -442,10 +442,8 @@ int vdptty_ioctl(uint8_t minor, uarg_t arg, char *ptr)
 			return -1;
 		size = rw.lines * rw.cols;
 		addr = (uint8_t *)rw.data;
-		if (valaddr(addr, size, is_wr) != size) {
-			udata.u_error = EFAULT;
+		if (valaddr(addr, size, size, is_wr))
 			return -1;
-		}
 		if (arg == VDPIOC_READ)
 			udata.u_error = vdp_rop(&rw);
 		else
