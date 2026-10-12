@@ -152,6 +152,12 @@ int tty_write(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 		++udata.u_base;
 		++udata.u_done;
 	}
+	/* Report a short write if output blocked or was interrupted. */
+	if (udata.u_error == EAGAIN || udata.u_error == EINTR) {
+		if (!udata.u_done)
+			return -1;
+		udata.u_error = 0;
+	}
 	return udata.u_done;
 }
 
