@@ -35,22 +35,21 @@ int initgroups(const char *user, gid_t gid)
 	if ((grp_fd = open("/etc/group", O_RDONLY)) < 0)
 		return -1;
 
-	num_groups = 0;
-	group_list[num_groups] = gid;
+	num_groups = 1;
+	group_list[0] = gid;
 	while (num_groups < GR_MAX_GROUPS &&
 	       (group = __getgrent(grp_fd)) != NULL) {
 		if (group->gr_gid != gid) {
 			tmp_mem = group->gr_mem;
 			while (*tmp_mem != NULL) {
 				if (!strcmp(*tmp_mem, user)) {
-					num_groups++;
-					group_list[num_groups] =
-					    group->gr_gid;
+					group_list[num_groups++] = group->gr_gid;
+					break;
 				}
 				tmp_mem++;
 			}
 		}
 	}
 	close(grp_fd);
-	return setgroups(num_groups + 1, group_list);
+	return setgroups(num_groups, group_list);
 }
