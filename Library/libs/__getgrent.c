@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <grp.h>
+#include <errno.h>
 #include "config-getent.h"
 
 /*
@@ -34,7 +35,7 @@ __getgrent(int grp_fd)
 {
 #ifndef GR_SCALE_DYNAMIC  
   static char line_buff[GR_MAX_LINE_LEN];
-  static char * members[GR_MAX_MEMBERS];
+  static char * members[GR_MAX_MEMBERS + 1];
 #else
   static char * line_buff;
   static char ** members;
@@ -130,6 +131,10 @@ restart:
     {
       *ptr='\0';
       ptr++;
+      if (member_num == GR_MAX_MEMBERS) {
+        errno = ERANGE;
+        return NULL;
+      }
       members[member_num]=field_begin;
       field_begin=ptr;
       member_num++;
@@ -138,6 +143,10 @@ restart:
     members[member_num]=NULL;
   else
     {
+      if (member_num == GR_MAX_MEMBERS) {
+        errno = ERANGE;
+        return NULL;
+      }
       members[member_num]=field_begin;
       members[member_num+1]=NULL;
     }
