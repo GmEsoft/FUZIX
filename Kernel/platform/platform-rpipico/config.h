@@ -40,6 +40,11 @@
 /* #define CONFIG_NET_WIZNET   */
 /* #define CONFIG_NET_W5500    */
 
+#ifdef CONFIG_NET_WIZNET
+/* Allow the timer to finish deferred SD writes before polling the W5500. */
+#define CONFIG_SPI_SHARED
+#endif
+
 #undef CONFIG_NET_NATIVE
 /* Profil syscall support (not yet complete) */
 #undef CONFIG_PROFIL
