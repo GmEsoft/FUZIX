@@ -51,6 +51,10 @@ int tty_read(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 		        if ((t->flag & TTYF_DEAD) && (!q->q_count))
 				goto dead;
 			if (remq(q, &c)) {
+				/* EOF terminates the line without entering the user buffer. */
+				if ((t->termios.c_lflag & ICANON) &&
+				    c == t->termios.c_cc[VEOF])
+					goto out;
 				if (udata.u_sysio)
 					*udata.u_base = c;
 				else
@@ -78,11 +82,6 @@ int tty_read(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 
 		/* return according to mode */
 		if (t->termios.c_lflag & ICANON) {
-			if (udata.u_done == 1 && (c == t->termios.c_cc[VEOF])) {
-				/* ^D */
-				udata.u_done = 0;
-				break;
-			}
 			if (c == '\n' || c == t->termios.c_cc[VEOL])
 				break;
 		}
