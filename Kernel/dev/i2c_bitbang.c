@@ -36,7 +36,7 @@ static void i2c_stop(uint_fast8_t bus)
 }
 
 /* Read a byte from the bus - the bus must be held at this point */
-static uint_fast8_t i2c_read(uint_fast8_t bus)
+static uint_fast8_t i2c_read(uint_fast8_t bus, bool ack)
 {
     uint_fast8_t n = 8;
     uint_fast8_t v = 0;
@@ -49,7 +49,8 @@ static uint_fast8_t i2c_read(uint_fast8_t bus)
             v |= 1;
         i2c_clear(bus, I2C_SCL);
     }
-    i2c_clear(bus, I2C_SDA);
+    if (ack)
+        i2c_clear(bus, I2C_SDA);
     i2c_clock_up(bus);
     i2c_clear(bus, I2C_SCL);
     return v;
@@ -65,14 +66,14 @@ static uint_fast8_t i2c_write(uint_fast8_t bus, uint_fast8_t val)
             i2c_set(bus, I2C_SDA);
         else
             i2c_clear(bus, I2C_SDA);
-        v <<= 1;
+        val <<= 1;
         i2c_clock_up(bus);
         i2c_clear(bus, I2C_SCL);
     }
     /* Now check for an ACK */
     /* Tristate the bus */
+    i2c_set(bus, I2C_SDA);
     i2c_clock_up(bus);
-    i2c_set(bus, I2C_SCL);
     /* The device should pull SDA down */
     v = i2c_sda(bus);
     /* Now take the bus back */
@@ -89,34 +90,6 @@ static uint_fast8_t i2c_write(uint_fast8_t bus, uint_fast8_t val)
 
 int i2c_bb_receive(uint_fast8_t bus, uint_fast8_t dev, uint8_t *buf, unsigned int len)
 {
-    unsigned int received = 0;
-
-    if (i2c_claim_bus(bus))
-        return -1;
-
-    i2c_start(bus);
-
-    if (i2c_write(bus, dev)) {
-        /* Nobody home */
-        i2c_stop(bus);
-        return -ENODEV;
-    }
-
-    while(len--) {
-        if (i2c_write(bus, *buf++))
-            break;
-        received++;
-    }
-
-    i2c_stop(bus);
-    i2c_release_bus(bus);
-    return received;
-}
-
-int i2c_bb_send(uint_fast8_t bus, uint_fast8_t dev, uint8_t *buf, unsigned int len)
-{
-    unsigned int sent = 0;
-
     if (i2c_claim_bus(bus))
         return -1;
 
@@ -130,14 +103,39 @@ int i2c_bb_send(uint_fast8_t bus, uint_fast8_t dev, uint8_t *buf, unsigned int l
     }
 
     while(len--) {
-        if (i2c_write(bus, *buf++))
-            break;
-        sent++;
+        *buf++ = i2c_read(bus, len != 0);
     }
 
     i2c_stop(bus);
     i2c_release_bus(bus);
-    return sent;
+    return 0;
+}
+
+int i2c_bb_send(uint_fast8_t bus, uint_fast8_t dev, uint8_t *buf, unsigned int len)
+{
+    if (i2c_claim_bus(bus))
+        return -1;
+
+    i2c_start(bus);
+
+    if (i2c_write(bus, dev)) {
+        /* Nobody home */
+        i2c_stop(bus);
+        i2c_release_bus(bus);
+        return -ENODEV;
+    }
+
+    while(len--) {
+        if (i2c_write(bus, *buf++)) {
+            i2c_stop(bus);
+            i2c_release_bus(bus);
+            return -EIO;
+        }
+    }
+
+    i2c_stop(bus);
+    i2c_release_bus(bus);
+    return 0;
 }
 
 
