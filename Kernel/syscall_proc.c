@@ -334,9 +334,9 @@ arg_t _waitpid(void)
 		found = 0;
 		for (p = ptab; p < ptab_end; ++p) {
 			if (p->p_status && p->p_pptr == udata.u_ptab) {
-				found = 1;
 				if (pid == -1 || p->p_pid == pid ||
 					p->p_pgrp == -pid) {
+					found = 1;
 					if (p->p_status == P_ZOMBIE) {
 						if (statloc)
 							uputi(p->p_exitval, statloc);
@@ -350,8 +350,10 @@ arg_t _waitpid(void)
 					}
 					if (p->p_event && (options & WUNTRACED)) {
 						retval = (uint16_t)(p->p_event << 8) | _WSTOPPED;
+						if (statloc)
+							uputi(retval, statloc);
 						p->p_event = 0;
-						return retval;
+						return p->p_pid;
 					}
 				}
 			}
@@ -362,11 +364,9 @@ arg_t _waitpid(void)
 		}
 		/* Nothing yet, so wait */
 		if (options & WNOHANG)
-			break;
+			return 0;
 		psleep(udata.u_ptab);
 	}
-	udata.u_error = EINTR;
-	return -1;
 }
 
 #undef pid
