@@ -135,7 +135,8 @@ int net_write(void)
 {
 	int r;
 	register struct socket *s = sockets + udata.u_net.sock;
-	if (s->s_state != SS_CONNECTED && s->s_state != SS_CLOSING) {
+	if (s->s_state != SS_CONNECTED && s->s_state != SS_CLOSING &&
+	    s->s_state != SS_CLOSEWAIT) {
 		if (s->s_state >= SS_CLOSEWAIT) {
 			udata.u_net.sig = SIGPIPE;
 			udata.u_error = EPIPE;
@@ -143,7 +144,7 @@ int net_write(void)
 			udata.u_error = EINVAL;
 		return 0;
 	}
-	r = netproto_write(s, &s->src_addr);
+	r = netproto_write(s, &s->dst_addr);
 	udata.u_retval = udata.u_done;
 	return r;
 }
