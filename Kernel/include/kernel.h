@@ -279,6 +279,15 @@ struct hd_geometry {
 #define major(x) ((x) >> 8)
 #define minor(x) ((x) & 0xFF)
 
+/* Select: if we do the map optimisation trick then we will want one bit free
+   for optimising, so ideal PTABSIZE will become 1 below a multiple of 8 */
+
+#define SELMAPSIZE  ((PTABSIZE+7)/8)
+
+struct selmap {
+  uint8_t map[SELMAPSIZE];
+};
+
 /* In memory inode structure */
 typedef struct cinode {
     uint16_t   c_magic;         /* Used to check for corruption. */
@@ -297,6 +306,9 @@ typedef struct cinode {
    uint8_t     c_super;		/* Superblock index */
 #ifdef CONFIG_BLOCK_SLEEP
    uint16_t    c_lock;		/* inode lock state */
+#endif
+#ifdef CONFIG_LEVEL_2
+   struct selmap c_select[3];  /* Separate from disk and pipe block pointers. */
 #endif
 } cinode, *inoptr;
 
@@ -854,15 +866,6 @@ typedef struct {
  *	System info shared with user space
  */
 #include <sysinfoblk.h>
-
-/* Select: if we do the map optimisation trick then we will want one bit free
-   for optimising, so ideal PTABSIZE will become 1 below a multiple of 8 */
-
-#define SELMAPSIZE  ((PTABSIZE+7)/8)
-
-struct selmap {
-  uint8_t map[SELMAPSIZE];
-};
 
 #define SELECT_IN		1
 #define SELECT_OUT		2

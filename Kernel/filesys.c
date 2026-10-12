@@ -326,6 +326,10 @@ found:
         if(!(nindex->c_node.i_nlink && nindex->c_node.i_mode & F_MASK))
             goto badino;
     }
+#ifdef CONFIG_LEVEL_2
+    if (!nindex->c_refs)
+        memset(nindex->c_select, 0, sizeof(nindex->c_select));
+#endif
     nindex->c_refs++;
     return nindex;
 
