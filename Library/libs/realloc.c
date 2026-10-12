@@ -25,6 +25,7 @@ void *realloc(void *ptr, size_t size)
 	register struct memh *mh = MH(ptr);
 	void *np;
 	size_t nblocks;
+	size_t overhead = 2 * sizeof(struct memh) - 1;
 
 	if (size == 0) {
 		free(ptr);
@@ -34,9 +35,9 @@ void *realloc(void *ptr, size_t size)
 	if (ptr == NULL)
 		return malloc(size);
 
-	nblocks =
-	    (size + sizeof(struct memh) + sizeof(struct memh) -
-	     1) / sizeof(struct memh);
+	if (size > (size_t)-1 - overhead)
+		return NULL;
+	nblocks = (size + overhead) / sizeof(struct memh);
 
 	/* If size in mem blocks is sufficiently similar (make this fuzzier ?) */
 	if (nblocks == mh->size)
@@ -46,7 +47,7 @@ void *realloc(void *ptr, size_t size)
 		return ptr;
 	np = malloc(size);
 	if (np == NULL)
-		return ptr;
+		return NULL;
 	memcpy(np, ptr, mh->size * sizeof(struct memh));
 	free(ptr);
 	return np;
