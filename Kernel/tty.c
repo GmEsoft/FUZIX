@@ -62,7 +62,8 @@ int tty_read(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 
 				if ((udata.u_done || !n) && udata.u_done >= t->termios.c_cc[VMIN])
 					goto out;
-				if (n) {
+				/* VMIN > 0 uses a timer only after the first byte. */
+				if (n && (udata.u_done || !t->termios.c_cc[VMIN])) {
 			                udata.u_ptab->p_timeout = n + 1;
 			                ptimer_insert();
 				}
