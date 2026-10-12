@@ -17,6 +17,9 @@ static int extras;
    char * r;
    int len;
 
+   if (environ != mall_env)
+      extras = 0;
+
    r = strchr(var, '=');
    if( r == 0 )  len = strlen(var);
    else          len = r-var;
