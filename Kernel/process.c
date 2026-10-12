@@ -1029,7 +1029,7 @@ void exec_or_die(void)
 	irq = di();
 	pid = dofork(p);
 	irqrestore(irq);
-	if (pid != 1)
+	if (pid == 0)
 		swaptask();
 #endif
 	kputs("Starting /init\n");
