@@ -523,6 +523,8 @@ inoptr newfile(register inoptr pino, uint8_t *name)
     }
     wr_inode(nindex);
     if (!ch_link(pino, (uint8_t *)"", name, nindex)) {
+        nindex->c_node.i_nlink = 0;
+        nindex->c_flags |= CDIRTY;
         i_deref(nindex);
 	/* ch_link sets udata.u_error */
         goto nogood;
