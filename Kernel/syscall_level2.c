@@ -69,7 +69,7 @@ arg_t _getrlimit(void)
 		udata.u_error = EINVAL;
 		return -1;
 	}
-	return uput(rlim, udata.u_rlimit + res, sizeof(struct rlimit));
+	return uput(udata.u_rlimit + res, rlim, sizeof(struct rlimit));
 }
 
 #undef res
