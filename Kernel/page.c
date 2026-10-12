@@ -36,11 +36,13 @@ int pageread(uint16_t dev, blkno_t blkno, usize_t nbytes,
 	res = ((*dev_tab[major(dev)].dev_read) (minor(dev), 2, 0));
 		
 #ifdef CONFIG_TRIM
-	while (nbytes != 0)
-	{
-		d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blkno);
-		blkno++;
-		nbytes -= 1 << BLKSHIFT;
+	/* Keep the recovery image unless the whole read completed. */
+	if (res >= 0 && (usize_t)res == nbytes) {
+		while (nbytes != 0) {
+			d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blkno);
+			blkno++;
+			nbytes -= 1 << BLKSHIFT;
+		}
 	}
 #endif
 
