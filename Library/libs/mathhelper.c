@@ -3,7 +3,6 @@
 void __force_eval(float f)
 {
     volatile float result = f;
-    (void)result;
 }
 
 #if defined(NO_64BIT) && !defined(double)
