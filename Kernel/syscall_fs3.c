@@ -441,11 +441,40 @@ done:
 
 /* We copy the 32bit offset in and out rather than passing it
    as a 32bit OS might */
+/* Zero the unused suffix of an allocated partial block without allocating holes. */
+static int truncate_tail(inoptr ino, off_t end)
+{
+	static const uint8_t zero[32] = { 0 };
+	uint16_t pos = (uint16_t)(end % BLKSIZE);
+	blkno_t block;
+	bufptr bp;
+
+	if (pos == 0)
+		return 0;
+	block = bmap(ino, BLOCK(end), 1);
+	if (block == NULLBLK)
+		return udata.u_error ? -1 : 0;
+	if (block == 0) {
+		udata.u_error = EIO;
+		return -1;
+	}
+	bp = bread(ino->c_dev, block, 0);
+	if (bp == NULL)
+		return -1;
+	while (pos < BLKSIZE) {
+		uint16_t count = min(sizeof(zero), BLKSIZE - pos);
+		blkfromk(zero, bp, pos, count);
+		pos += count;
+	}
+	return bfree(bp, 1);
+}
+
 arg_t _ftruncate(void)
 {
 	register inoptr ino;
 	register struct oft *o;
 	off_t n;
+	uint32_t keep;
 
 	if (uget(offset, &n, sizeof(n)))
 	        return -1;
@@ -455,16 +484,25 @@ arg_t _ftruncate(void)
 
 	o = &of_tab[udata.u_files[file]];
 	if (n < 0 || (HIBYTE32(n) & BLKOVERSIZE32) ||
+	    (uint32_t)n > 65536UL * BLKSIZE ||
 	    O_ACCMODE(o->o_access) == O_RDONLY ||
 	    getmode(ino) != MODE_R(F_REG)) {
 		udata.u_error = EINVAL;
 		return -1;
 	}
 
+	if (ino->c_flags & CRDONLY) {
+		udata.u_error = EROFS;
+		return -1;
+	}
 	if (n == ino->c_node.i_size)
 		return 0;
-	if (n < ino->c_node.i_size)
-		f_trunc_blocks(ino, BLOCK(n + BLKSIZE - 1));
+	if (truncate_tail(ino, min(n, ino->c_node.i_size)))
+		return -1;
+	keep = ((uint32_t)n + BLKSIZE - 1) / BLKSIZE;
+	if (n < ino->c_node.i_size && keep <= UINT16_MAX &&
+	    f_trunc_blocks(ino, keep))
+		return -1;
 	ino->c_node.i_size = n;
 	setftime(ino, M_TIME | C_TIME);
 	wr_inode(ino);
