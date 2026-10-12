@@ -1,10 +1,10 @@
 #include <math.h>
 
-unsigned int __float_bits(float p)
+uint32_t __float_bits(float p)
 {
   union {
     float f;
-    unsigned int bits;
+    uint32_t bits;
   } conv;
   
   conv.f = p;
