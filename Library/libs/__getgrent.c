@@ -60,14 +60,14 @@ restart:
   /* Read the line into the static buffer */
   if ((line_len=read(grp_fd, line_buff, GR_MAX_LINE_LEN))<=0)
     return NULL;
-  field_begin=strchr(line_buff, '\n');
+  field_begin=memchr(line_buff, '\n', line_len);
   if (field_begin!=NULL)
     lseek(grp_fd, (long) (1+field_begin-(line_buff+line_len)), SEEK_CUR);
   else /* The line is too long - skip it :-\ */
     {
       do { if ((line_len=read(grp_fd, line_buff, GR_MAX_LINE_LEN))<=0)
 	return NULL;
-      } while (!(field_begin=strchr(line_buff, '\n')));
+      } while (!(field_begin=memchr(line_buff, '\n', line_len)));
       lseek(grp_fd, (long) ((field_begin-line_buff)-line_len+1), SEEK_CUR);
       goto restart;
     }
@@ -83,7 +83,7 @@ restart:
       if ((line_len=read(grp_fd, line_buff+line_index,
 			 buff_size-line_index))<=0)
 	  return NULL;
-      field_begin=strchr(line_buff, '\n');
+      field_begin=memchr(line_buff, '\n', line_index + line_len);
       if (field_begin!=NULL)
 	{
 	  lseek(grp_fd, (long) (1+field_begin-(line_len+line_index+line_buff)),
