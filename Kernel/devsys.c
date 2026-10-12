@@ -85,7 +85,7 @@ int sys_write(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 	case 2:
 		return udata.u_count;
 	case 1:
-		if(uget((unsigned char *) udata.u_offset, udata.u_base,
+		if(uget(udata.u_base, (unsigned char *) udata.u_offset,
 			       udata.u_count))
 			return -1;
 		return umove(udata.u_count);
