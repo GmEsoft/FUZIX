@@ -93,8 +93,9 @@ int net_syscall(void)
 		if (s->s_state < SS_BOUND)
 			break;
 		if (!is_datagram(s) || udata.u_net.args[5] == 0)
-			return netproto_write(s, &s->dst_addr);
-		r = netproto_write(s, &udata.u_net.addrbuf);
+			r = netproto_write(s, &s->dst_addr);
+		else
+			r = netproto_write(s, &udata.u_net.addrbuf);
 		udata.u_retval = udata.u_done;
 		return r;
 	case 7:		/* recvfrom */
@@ -107,7 +108,7 @@ int net_syscall(void)
 		udata.u_retval = udata.u_done;
 		return r;
 	case 8:		/* shutdown */
-		if (udata.u_argn1 > 2)
+		if (udata.u_net.args[2] < 0 || udata.u_net.args[2] > 2)
 			break;
 		return netproto_shutdown(s, udata.u_net.args[2]);
 	case 9:		/* getpeername */
