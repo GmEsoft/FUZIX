@@ -89,7 +89,7 @@ static int pcf8584_connect(uint8_t addr)
 static int pcf8584_xmit(uint8_t byte)
 {
     i2c_s0 = byte;
-    return pcf8584_pin_wait();
+    return pcf8584_ack_pin();
 }
 
 static int pcf8584_recv(void)
@@ -110,6 +110,10 @@ int pcf8584_rx_msg(uint8_t addr, uint8_t *buf, unsigned len)
     r = pcf8584_connect(addr);
     if (r)
         goto fail;
+    if (len == 0) {
+        i2c_s1 = SEND_STOP_ACK;
+        return 0;
+    }
     i2c_s0;		/* Start receiving */
     while(len > 1) {
         r = pcf8584_recv();
@@ -125,8 +129,8 @@ int pcf8584_rx_msg(uint8_t addr, uint8_t *buf, unsigned len)
     /* Final byte */
     i2c_s1 = NACK;
     r = pcf8584_recv();
-    if (r == -1)
-        return -1;
+    if (r < 0)
+        goto fail;
     *buf = r;
     i2c_s1 = SEND_STOP_ACK;
     return 0;
