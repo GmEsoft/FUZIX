@@ -115,8 +115,8 @@ int bfree(register bufptr bp, uint_fast8_t dirty)
 		if (bdwrite(bp) != BLKSIZE) {
 			udata.u_error = EIO;
 			ret = -1;
-		}
-		bp->bf_dirty = false;
+		} else
+			bp->bf_dirty = false;
 	}
 	/* Time stamp the buffer on free up. It doesn't matter if we stamp it
 	   on read or free as while locked it can't go away. However if we
@@ -176,8 +176,10 @@ static void bdput(register bufptr bp)
 {
 	block_s(bp);
 	if (bp->bf_dirty) {
-		bdwrite(bp);
-		bp->bf_dirty = false;
+		if (bdwrite(bp) == BLKSIZE)
+			bp->bf_dirty = false;
+		else
+			udata.u_error = EIO;
 		bunlock_s(bp);
 		d_flush(bp->bf_dev);
 	} else
