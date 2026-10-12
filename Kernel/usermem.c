@@ -200,16 +200,16 @@ int _uputw(uint16_t value,  uint16_t *user)
 
 int _uzero(uint8_t *user, usize_t count)
 {
-	BANK_KERNEL;
+	BANK_PROCESS;
 	while(count--)
 		*user++=0;
-	BANK_PROCESS;
+	BANK_KERNEL;
 	return 0;
 }
 
 #ifdef CONFIG_32BIT
 
-uint32_t _ugetl(void *uaddr)
+uint32_t _ugetl(const uint32_t *uaddr)
 {
 	uint32_t v;
 	BANK_PROCESS;
@@ -218,7 +218,7 @@ uint32_t _ugetl(void *uaddr)
 	return v;
 }
 
-int _uputl(uint32_t val, void *uaddr)
+int _uputl(uint32_t val, uint32_t *uaddr)
 {
 	BANK_PROCESS;
 	*(uint32_t *)uaddr = val;
