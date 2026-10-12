@@ -19,6 +19,7 @@ int getlogin_r(char *buf, size_t len)
   char tty[UT_LINESIZE + 6];
   struct utmp ut, *utp;
   int err;
+  size_t n;
   int fd = open("/dev/tty", O_RDONLY|O_NOCTTY);
 
   if (fd == -1)
@@ -27,7 +28,7 @@ int getlogin_r(char *buf, size_t len)
   if (len > UT_NAMESIZE + 1)
     len = UT_NAMESIZE + 1;
 
-  err = ttyname_r(fd, buf, sizeof(tty));
+  err = ttyname_r(fd, tty, sizeof(tty));
   close(fd);
   if (err)
     return -1;
@@ -42,6 +43,12 @@ int getlogin_r(char *buf, size_t len)
     errno = ENOENT;
     return -1;
   }
-  strlcpy(buf, utp->ut_user, len);
+  for (n = 0; n < UT_NAMESIZE && utp->ut_user[n]; n++);
+  if (len <= n) {
+    errno = ERANGE;
+    return -1;
+  }
+  memcpy(buf, utp->ut_user, n);
+  buf[n] = 0;
   return 0;
 }
