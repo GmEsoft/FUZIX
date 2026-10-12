@@ -361,7 +361,7 @@ arg_t _flock(void)
 	lock = lockop & ~LOCK_NB;
 	self = 0;
 
-	if (lock != LOCK_SH && lock != LOCK_EX && lock != LOCK_UN) {
+	if (lock > LOCK_UN) {
 		udata.u_error = EINVAL;
 		return -1;
 	}
