@@ -933,8 +933,8 @@ uint16_t devnum(inoptr ino)
  */
 int f_trunc_blocks(register inoptr ino, uint16_t nblock)
 {
-    uint16_t dev;
-    int_fast8_t j;
+    register uint16_t dev;
+    register int_fast8_t j;
     uint16_t indirect = BLKSIZE / sizeof(blkno_t);
     uint16_t map1 = 0, map2 = 0;
 
@@ -999,9 +999,9 @@ void freeblk(uint16_t dev, blkno_t blk, uint_fast8_t level, uint16_t nblock)
     struct blkbuf *buf;
     blkno_t child;
     uint16_t span, first, keep;
-    int16_t j;
+    register int16_t j;
 #ifndef CONFIG_BLKBUF_EXTERNAL
-    blkno_t *entries;
+    register blkno_t *entries;
 #endif
 
     if (!blk)
