@@ -88,7 +88,7 @@ int si_docmd(uint8_t *data)
 		err = si_writecmd(sizeof(struct Sidcb0));
 
 	if (err)
-		return err;
+		goto out;
 
 	/* Do command actions */
 	if (si_dcb.length) {
@@ -99,9 +99,10 @@ int si_docmd(uint8_t *data)
 	}
 	if (err == 0)
 		err = si_cmdend();
+out:
 	si_clear();		/* Clears any data on scsi bus */
 	si_deselect();
-	return 0;
+	return err;
 }
 
 /*
@@ -112,6 +113,7 @@ int si_docmd(uint8_t *data)
 uint8_t si_cmd(void)
 {
 	int	count, err;
+	uint8_t nblock;
 
 	/* FIXME: we need some kind of mapping helper from the platform */
 	si_dcb.device = blk_op.blkdev->driver_data & DRIVE_NR_MASK;
@@ -122,6 +124,9 @@ uint8_t si_cmd(void)
 	   them we need to use them only on big devices as they are not in
 	   early devices or SASI */
 
+	/* A 16-bit byte length can describe at most 127 sectors. */
+	nblock = blk_op.nblock > 127 ? 127 : blk_op.nblock;
+
 	/* Retry command */
 	for(count = 0; count < 10; count++) {
 		/* Sets up command device control block */
@@ -131,9 +136,9 @@ uint8_t si_cmd(void)
 		si_dcb.cb.cb0.miblock = (blk_op.lba >> 8) & 0xFF;
 		si_dcb.cb.cb0.loblock = blk_op.lba & 0xFF;
 		/* FIXME: if we do non 512 byte blocks we need to be smarter here */
-		si_dcb.cb.cb0.noblocks = blk_op.nblock;
+		si_dcb.cb.cb0.noblocks = nblock;
 		si_dcb.cb.cb0.control = 0;
-		si_dcb.length = 512 * blk_op.nblock;
+		si_dcb.length = 512U * nblock;
 
 		/* User or kernel target ? */
 		si_user = blk_op.is_user;
@@ -158,7 +163,7 @@ uint8_t si_cmd(void)
 			si_err("Recovered",  err);
 		}
 	}
-	return blk_op.nblock;
+	return nblock;
 }
 
 /* This needs plumbing into a /dev/sg device off devsys */
@@ -181,11 +186,12 @@ int si_ioctl(uint_fast8_t dev, uarg_t req, char *data)
 	/* FIXME: needs to depend on the end - and need to tidy up the
 	   ioctl anyway */
 	   if (sip.si_dcb.direction != SIDIR_NONE && 
-		!valaddr((void *)sip.si_data, sip.si_dcb.length, sip.si_dcb.direction == SIDIR_READ))
+		valaddr((void *)sip.si_data, sip.si_dcb.length, sip.si_dcb.direction == SIDIR_READ) != sip.si_dcb.length) {
+		udata.u_error = EFAULT;
 		return -1;
+	}
 	/* Set it up as a user mode read/write */
-	blk_op.addr = sip.si_data;
-	blk_op.is_user = 1;
+	si_user = 1;
 	/* Issue the command block */
 	return si_docmd(sip.si_data);
 }
