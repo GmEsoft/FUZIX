@@ -15,7 +15,7 @@
 void kputs_utf16le(uint8_t *s)
 {
 	int i;
-	for (i = 0; s[i] || s[i+1]; i += 2) {
+	for (i = 0; i < 72 && (s[i] || s[i+1]); i += 2) {
 		if (s[i+1])
 			kputchar('!');
 		else
@@ -27,17 +27,22 @@ int parse_gpt_part_entry(gpt_partition_entry_t *entry, uint8_t next)
 {
 	int i;
 	uint8_t zero_check = 0;
+	uint32_t first, last;
 	for (i = 0; i < 16; i++)
 		zero_check |= entry->type_guid[i];
 	if (zero_check == 0)
 		return 0;
-	if (entry->last_lba_msb != 0) {
+	if (entry->first_lba_msb != 0 || entry->last_lba_msb != 0) {
 		kputs("Partition out of reach\n");
 		return 0;
 	}
 
-	blk_op.blkdev->lba_first[next] = le32_to_cpu(entry->first_lba_lsb);
-	blk_op.blkdev->lba_count[next] = le32_to_cpu(entry->last_lba_lsb) - le32_to_cpu(entry->first_lba_lsb);
+	first = le32_to_cpu(entry->first_lba_lsb);
+	last = le32_to_cpu(entry->last_lba_lsb);
+	if (first > last || last >= blk_op.blkdev->drive_lba_count)
+		return 0;
+	blk_op.blkdev->lba_first[next] = first;
+	blk_op.blkdev->lba_count[next] = last - first + 1;
 
 	kprintf("%d ", next + 1);
 
@@ -67,9 +72,10 @@ void parse_gpt(uint8_t *buf, uint8_t i_mbr)
 
 	/* read block 1 into buffer, mbr.c has set it all up */
 	blk_op.lba = 1;
-	blk_op.blkdev->transfer();
+	if (!blk_op.blkdev->transfer())
+		return;
 
-	if (strcmp((const char *) gpt_header->signature, "EFI PART")) {
+	if (memcmp(gpt_header->signature, "EFI PART", 8)) {
 		kputs("No valid GPT header in block 1\n");
 		/* TODO look for backup header */
 		return;
@@ -94,7 +100,8 @@ void parse_gpt(uint8_t *buf, uint8_t i_mbr)
 		/* each block has 4 partition entries */
 		if (i % 4 == 0) {
 			blk_op.lba = entry_block++;
-			blk_op.blkdev->transfer();
+			if (!blk_op.blkdev->transfer())
+				return;
 		}
 		entry = (gpt_partition_entry_t *) buf + (i % 4);
 		counted = parse_gpt_part_entry(entry, next);
