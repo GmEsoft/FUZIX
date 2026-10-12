@@ -53,7 +53,7 @@
 
 #define CONFIG_VT
 #define CONFIG_FONT8X8
-#define CONFIG_FONT8X8SMALL
+#define CONFIG_FONT8X8_7BIT	/* Only 128 symbols */
 
 /* Vt definitions */
 #define VT_WIDTH	40

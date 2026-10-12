@@ -184,6 +184,7 @@ map_proc_always:
 	; Bank 3 (user page) basic off, OS ROM off
 	lda	0xD301
 	sta	old_kmap
+	sta	0xD5FF		; Cartridge off
 	lda	#EXT3
 	; Set PORTB correctly
 	sta	0xD301		; Select banks
@@ -205,6 +206,7 @@ map_kernel:
 	pha
 	lda	old_kmap	; Back to the kernel bank we mapped from
 	sta	0xD301	
+	sta	0xD5E3		; Cartridge on
 	pla
 	rts
 
@@ -217,6 +219,11 @@ map_restore:
 	sta	old_kmap	; if we IRQ during a kernel user access
 	lda	saved_map
 	sta	0xD301
+	sta	0xD5FF		; Cartridge off
+	cmp	#EXT3
+	beq	nocart
+	sta	0xD5E3
+nocart:
 	pla
 	rts
 
@@ -232,6 +239,7 @@ map_save_kernel:
 	; Main memory (overlay 4) shouldn't matter which we use
 	lda	#MAIN
 	sta	0xD301
+	sta	0xD5E3		; Cartridge on
 	rts
 
 old_kbank:
@@ -909,7 +917,7 @@ nobump:	adc	@tmp		; add X
 	sta	@tmp		; low set
 	lda	@tmp2		; high
 	adc	@tmp3+1		; fold in upper of tmp3 and any X overflow
-	adc	#0x4A		; screen base
+	adc	#0x44		; screen base
 	sta	@tmp+1
 	ldy	#2
 	rts

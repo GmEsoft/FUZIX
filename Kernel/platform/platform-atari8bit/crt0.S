@@ -87,7 +87,7 @@ mark:
 	lda	#0x00
 	sta	0xD400
 	;	And our fonts
-	lda	#0x50		; 0x5000 - 53FF
+	lda	#0x40		; 0x4000 - 53FF
 	sta	0xD409
 	lda	#<dlist
 	sta	0xD402
@@ -105,7 +105,7 @@ mark:
 	jsr	romtosect
 
 	lda	#0x80
-	sta	0x4027
+	sta	0x4427
 
 
 	lda	#0xD8		; Skip the I/O (2K)
@@ -116,7 +116,7 @@ mark:
 	jsr	romblock
 
 	lda	#0x80
-	sta	0x4026
+	sta	0x4426
 
 	lda	CARTPORT+0xE4	; Final 8K from bank 11
 	lda	#0xE0
@@ -124,12 +124,10 @@ mark:
 	jsr	romtobank
 
 	lda	#0x80
-	sta	0x4025
+	sta	0x4425
 
-	lda	CARTPORT+0xFF	; ROMs off IDE still accessible
-	; A000-BFFF is now RAM and our memory map is set up as
-	; RAM from 0000-CFFF and D800-FFFF with the I/O window
-	; non removable.
+	lda	CARTPORT+0xE3
+	; Set the cartridge to the live kernel A000-BFFF
 
 	; Everything should now be in place
 
@@ -241,11 +239,13 @@ dlist8:
 	.byte	0x41
 	.word	dlist8
 
-	.common
+	.data
 
-; We may want to move some common across the top of each bank but we need
-; to be careful to pack it right. Possibly also use 0x0400-0x0FFF if using
-; RAMBO style expansions in future. Things to ponder TODO
+;
+;	We can put the stubs anywhere always mapped by the kernel
+;	For the moment shove it with the data but it can go with
+;	code too or shared depending where there is space
+;
 
 	.export stub
 	.export stub_end
@@ -264,33 +264,33 @@ stub_end:
 	.overlay3
 	.byte	0x9A
 	.overlay4
-	.byte	0x82
-
 	; Overlay 4 is the main bank but the first chunk of it is
 	; the buffers area (screen, disk buffers, dlist etc)
-	.ds	4095
-	.ds	256		; push font up a bit until we rework alignment
-	; Font will follow at 0x5000
 
-	; at 0x4000 in main bank - max 4K
+	; The font has already been loaded here for 1024 bytes by
+	; the linker
+	; Now allow for the screen
+	.ds	8192
+	; Now allow for the disk buffers
+	.ds	512 * NBUFS
+	; Actual overlay4 code will follow
+
+;
+;	Describe the layout of the main chunk of overlay4 in buffers. If
+;	we reference it via overlay4 then the linker will generate stubs
+;	for the data which we don't want. The two should match exactly
+;
 	.buffers
 
 	.export _bufdata
-
+	; Font comes first (1K then)
+	.ds	1024
+	; 0x4400
+screen:
+	.ds	8192
 _bufdata:
-	; 0x4000
 	.ds	512 * NBUFS
 
-	; 0x4A00
-
-screen:
-	.ds	40 * 25
-
-	.ds	24
-
-	; 0x4F00
-
-	; Font is at 0x5000
 
 	.commondata
 
