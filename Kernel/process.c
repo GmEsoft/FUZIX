@@ -878,7 +878,7 @@ void acctexit(ptptr p)
 	udata.u_count = 48;	/* Includes some spare for expansion */
 
 	/* Append to the end of the file */
-	oftp->o_ptr = ino->c_node.i_size;
+	udata.u_offset = ino->c_node.i_size;
 	writei(ino, 0);
 }
 #endif
