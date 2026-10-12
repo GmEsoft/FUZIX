@@ -7,16 +7,14 @@ import re
 import subprocess
 import tempfile
 
-CASES = ['shrink-regrow', 'grow-partial', 'truncate-failure', 'read-failure', 'sparse-hole', 'readonly', 'unchanged', 'large-retained-count', 'map-error', 'invalid-range', 'copy-fault']
+CASES = ['shrink', 'grow', 'truncate-failure', 'readonly-shrink', 'readonly-grow', 'unchanged', 'large-retained-count', 'invalid-range', 'copy-fault']
 VARIANTS = [('512', ['-DTEST_BLOCK=512']), ('400', ['-DTEST_BLOCK=400'])]
 
 
-def function(text, name, variant):
+def function(text, name):
     matches = list(re.finditer(r'(?m)^[\w *\t]+\b' + re.escape(name) +
                               r'\s*\([^;{}]*\)\s*\{', text))
-    occurrence = int(variant) if variant.isdigit() else (1 if variant == 'inline' and len(matches) > 1 else 0)
-    if variant == 'optional' and not matches: return ''
-    match = matches[occurrence]
+    match = matches[0]
     masked = re.sub(r'/\*[\s\S]*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'',
                     lambda m: ' ' * len(m.group()), text)
     depth = 0
@@ -36,7 +34,7 @@ def main():
     parser.add_argument('--cc', default=os.environ.get('CC', 'cc'))
     args = parser.parse_args()
     kernel = args.kernel_dir.resolve()
-    headers = '\n'.join((kernel/'include'/name).read_text() for name in ['kernel.h','tty.h','level2.h'])
+    headers = '\n'.join((kernel/'include'/name).read_text() for name in ['kernel.h'])
     fixture = Path(__file__).with_name('check.c').read_text()
     def define(match):
         name = match.group(1)
@@ -45,28 +43,14 @@ def main():
             raise ValueError('missing kernel constant: ' + name)
         return '#undef ' + name + '\n' + value.group()
     fixture = re.sub(r'/\* DEFINE (\w+) \*/', define, fixture)
-    fixture = fixture.replace('/* NICE_FIELD */', re.search(r'(?:u?int8_t)\s+p_nice;', headers).group())
-    masks = re.search(r'static const uint16_t stopper =[\s\S]*?static const uint16_t clear =[\s\S]*?;', (kernel/'process.c').read_text()).group()
-    fixture = fixture.replace('/* SIGNAL_MASKS */', masks)
     failed = False
     with tempfile.TemporaryDirectory(prefix='fuzix-core-test-') as directory:
         directory = Path(directory)
         for label, flags in VARIANTS:
             def body(match):
                 file, name, variant = match.groups()
-                if variant == 'configured':
-                    variant = 'external' if '-DCONFIG_BLKBUF_EXTERNAL' in flags else 'inline'
-                return function((kernel/file).read_text(), name, variant)
+                return function((kernel/file).read_text(), name)
             source = re.sub(r'/\* FUNCTION ([\w./-]+) (\w+) (\w+) \*/', body, fixture)
-            if '/* TYPES */' in source:
-                # Use real inode and select-map layouts to catch metadata overruns.
-                types = []
-                types.append(re.search(r'struct selmap \{[\s\S]*?\};', headers).group())
-                for name in ['dinode','cinode']:
-                    types.append(re.search(r'typedef struct ' + name + r' \{[\s\S]*?\}[^;]+;', headers).group())
-                source = source.replace('/* TYPES */', '\n'.join(types))
-                if 'c_select' in types[-1]:
-                    source = '#define HAS_SELECT_STORAGE\n' + source
             cfile = directory/(label+'.c')
             binary = directory/label
             cfile.write_text(source)

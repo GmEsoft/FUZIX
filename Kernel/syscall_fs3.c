@@ -441,34 +441,6 @@ done:
 
 /* We copy the 32bit offset in and out rather than passing it
    as a 32bit OS might */
-/* Zero the unused suffix of an allocated partial block without allocating holes. */
-static int truncate_tail(inoptr ino, off_t end)
-{
-	static const uint8_t zero[32] = { 0 };
-	uint16_t pos = (uint16_t)(end % BLKSIZE);
-	blkno_t block;
-	bufptr bp;
-
-	if (pos == 0)
-		return 0;
-	block = bmap(ino, BLOCK(end), 1);
-	if (block == NULLBLK)
-		return udata.u_error ? -1 : 0;
-	if (block == 0) {
-		udata.u_error = EIO;
-		return -1;
-	}
-	bp = bread(ino->c_dev, block, 0);
-	if (bp == NULL)
-		return -1;
-	while (pos < BLKSIZE) {
-		uint16_t count = min(sizeof(zero), BLKSIZE - pos);
-		blkfromk(zero, bp, pos, count);
-		pos += count;
-	}
-	return bfree(bp, 1);
-}
-
 arg_t _ftruncate(void)
 {
 	register inoptr ino;
@@ -497,12 +469,12 @@ arg_t _ftruncate(void)
 	}
 	if (n == ino->c_node.i_size)
 		return 0;
-	if (truncate_tail(ino, min(n, ino->c_node.i_size)))
-		return -1;
-	keep = ((uint32_t)n + BLKSIZE - 1) / BLKSIZE;
-	if (n < ino->c_node.i_size && keep <= UINT16_MAX &&
-	    f_trunc_blocks(ino, keep))
-		return -1;
+	if (n < ino->c_node.i_size) {
+		keep = ((uint32_t)n + BLKSIZE - 1) / BLKSIZE;
+		/* 65536 retained blocks must not wrap to zero. */
+		if (keep <= UINT16_MAX && f_trunc_blocks(ino, keep))
+			return -1;
+	}
 	ino->c_node.i_size = n;
 	setftime(ino, M_TIME | C_TIME);
 	wr_inode(ino);
