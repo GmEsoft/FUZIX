@@ -371,6 +371,8 @@ fatal:
 	udata.u_ptab->p_status = P_RUNNING;
 	ssig(udata.u_ptab, SIGKILL);
 error:
+	if (udata.u_ptab->p_status == P_NOSLEEP)
+		udata.u_ptab->p_status = P_RUNNING;
 	if (abuf)
 		tmpfree(abuf);
 	if (ebuf)
