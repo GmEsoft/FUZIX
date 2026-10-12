@@ -1,0 +1,1 @@
+Run `python3 Kernel/tests/mm-banked-pages/check.py`. Host fixtures compile the actual backends with swap enabled and execute allocation, resizing, swap layout, accounting, and error checks under AddressSanitizer and UndefinedBehaviorSanitizer. Platform mapping and interrupt hooks are mocked; this does not replace target builds or hardware tests.

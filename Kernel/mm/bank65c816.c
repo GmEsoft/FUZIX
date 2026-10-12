@@ -34,6 +34,8 @@ static unsigned char pfmax;
 
 void pagemap_add(uint8_t page)
 {
+	if (pfptr == MAX_MAPS)
+		panic(PANIC_MAPOVER);
 	pfree[pfptr++] = page;
 	pfmax = pfptr;
 }
@@ -81,8 +83,10 @@ int pagemap_prepare(struct exec *hdr)
 	   space we have */
 	if (hdr->a_size == 0)
 		hdr->a_size = (ramtop >> 8) - hdr->a_base;
-	if (hdr->a_size > (MAP_SIZE >> 8))
+	if (hdr->a_size > (MAP_SIZE >> 8)) {
+		udata.u_error = ENOMEM;
 		return -1;
+	}
 	return 0;
 }
 
