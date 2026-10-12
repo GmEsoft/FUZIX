@@ -119,7 +119,7 @@ uint8_t si_cmd(void)
 	si_dcb.device = blk_op.blkdev->driver_data & DRIVE_NR_MASK;
 	si_dcb.lun = 0;
 	si_dcb.bus = 0;
-	
+
 	/* Very big disks might need READ10/WRITE10 etc, however if we add
 	   them we need to use them only on big devices as they are not in
 	   early devices or SASI */
@@ -185,11 +185,10 @@ int si_ioctl(uint_fast8_t dev, uarg_t req, char *data)
 	/* Make sure the address given for the user mode I/O is valid */
 	/* FIXME: needs to depend on the end - and need to tidy up the
 	   ioctl anyway */
-	   if (sip.si_dcb.direction != SIDIR_NONE && 
-		valaddr((void *)sip.si_data, sip.si_dcb.length, sip.si_dcb.direction == SIDIR_READ) != sip.si_dcb.length) {
-		udata.u_error = EFAULT;
+	if (sip.si_dcb.direction != SIDIR_NONE &&
+		!valaddr((void *)sip.si_data, sip.si_dcb.length, sip.si_dcb.length, sip.si_dcb.direction == SIDIR_READ))
 		return -1;
-	}
+
 	/* Set it up as a user mode read/write */
 	si_user = 1;
 	/* Issue the command block */

@@ -27,13 +27,13 @@ int devi2c_ioctl(uarg_t arg, char *data)
      * fails as -1 with no u_error, which d_ioctl turns into ENOTTY, so
      * it reads as "no such ioctl" rather than as a bug here.
      */
-    if (valaddr(msg.data, msg.len, (msg.addr & 1)) != msg.len)
+    if (!valaddr(msg.data, msg.len, msg.len, (msg.addr & 1)))
         return -1;
     if ((msg.addr & 1) == 0)
-        uget(msg.data, buf, msg.len);
+        _uget(msg.data, buf, msg.len);
     r = plt_i2c_msg(&msg, buf);
     if (r == 0 && (msg.addr & 1))
-        uput(buf, msg.data, msg.len);
+        _uput(buf, msg.data, msg.len);
     if (r == 0)
         return r;
     udata.u_error = -r;
