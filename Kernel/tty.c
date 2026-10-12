@@ -113,16 +113,16 @@ int tty_write(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 		for (;;) {	/* Wait on the ^S/^Q flag */
 #ifdef CONFIG_LEVEL_2
 	                if (jobcontrol_out(minor, t))
-				return udata.u_done;
+				goto out;
 #endif
 		        if (t->flag & TTYF_DEAD) {
 			        udata.u_error = ENXIO;
-			        return -1;
+			        goto out;
 			}
 			if (!(t->flag & TTYF_STOP))
 				break;
 			if (psleep_flags_io(&t->flag, flag))
-				return udata.u_done;
+				goto out;
 		}
 		/* We could optimize this significantly by
 		   a) looping here if not sleeping rather than repeating all
@@ -151,6 +151,13 @@ int tty_write(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 		}
 		++udata.u_base;
 		++udata.u_done;
+	}
+out:
+	/* Preserve completed input bytes on any output error. */
+	if (udata.u_error) {
+		if (!udata.u_done || udata.u_done == (usize_t)-1)
+			return -1;
+		udata.u_error = 0;
 	}
 	return udata.u_done;
 }
