@@ -482,13 +482,15 @@ arg_t _profil(void)
 	   passed to the kernel is a shift value
 	   not a divider */
 	register ptptr p = udata.u_ptab;
+	unsigned n;
 
 	if (scale == 0) {
 		p->p_profscale = scale;
 		return 0;
 	}
 
-	if (!valaddr_w(samples, size >> (scale - 1)))
+	n =  = size >> (scale - 1);
+	if (!valaddr_w(samples, n, n))
 		return -1;
 
 	p->p_profscale = scale;

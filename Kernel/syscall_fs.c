@@ -65,8 +65,7 @@ arg_t _lseek(void)
 	        goto bad;
 
         o->o_ptr = p;
-	uput(&p, offset, sizeof(n));
-	return 0;
+	return uput(&p, offset, sizeof(n));
 bad:
 	udata.u_error = EINVAL;
 	return (-1);
@@ -342,9 +341,7 @@ arg_t _pipe(void)
 	ino->c_writers++;
 
 	// write results to userspace
-	uputi(u1, fildes);
-	uputi(u2, fildes + 1);
-	return (0);
+	return uputi(u1, fildes) | uputi(u2, fildes + 1);
 
       nogood3:
 	i_deref(ino);
@@ -414,10 +411,8 @@ static arg_t readwrite(uint_fast8_t reading)
 	}
 
 	/* Reading from disk is writing to user space and vice versa... */
-	if (valaddr(buf, nbytes, reading) != nbytes) {
-		udata.u_error = EFAULT;
+	if (!valaddr(buf, nbytes, nbytes, reading))
 	        return -1;
-	}
 
 	/* Set up u_base, u_offset, ino; check permissions, file num. */
 	if ((ino = rwsetup(reading, &flag)) == NULLINODE)

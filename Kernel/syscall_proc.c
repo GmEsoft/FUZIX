@@ -204,16 +204,16 @@ char *buf;
 
 arg_t _times(void)
 {
+	int r;
 	irqflags_t irq;
 
 	irq = di();
 
-	uput(&udata.u_ptab->p_utime, buf, 4 * sizeof(clock_t));
-	uput(&ticks, buf + 4 * sizeof(clock_t),
-	     sizeof(clock_t));
+	r = uput(&udata.u_ptab->p_utime, buf, 4 * sizeof(clock_t)) |
+		uput(&ticks, buf + 4 * sizeof(clock_t), sizeof(clock_t));
 
 	irqrestore(irq);
-	return 0;
+	return r;
 }
 
 #undef buf
@@ -316,10 +316,8 @@ arg_t _waitpid(void)
 	int retval;
 	uint_fast8_t found;
 
-	if (statloc && !valaddr_w((uint8_t *) statloc, sizeof(int))) {
-		udata.u_error = EFAULT;
+	if (statloc && !valaddr_w((uint8_t *) statloc, sizeof(int), sizeof(int)))
 		return (-1);
-	}
 
 	if (pid == 0)
 		pid = -udata.u_ptab->p_pgrp;
@@ -529,8 +527,7 @@ arg_t _signal(void)
 		if (sig != SIGKILL && sig != SIGSTOP)
 			sb->s_ignored |= m;
 	} else {
-		if (func != SIG_DFL && !valaddr_r((uint8_t *) func, 1)) {
-			udata.u_error = EFAULT;
+		if (func != SIG_DFL && !valaddr_r((uint8_t *) func, 1, 1)) {
 			irqrestore(irq);
 			return -1;
 		}

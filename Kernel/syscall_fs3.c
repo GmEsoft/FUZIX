@@ -333,7 +333,8 @@ arg_t _uname(void)
 	sysinfo.loadavg[0] = loadavg[0].average;
 	sysinfo.loadavg[1] = loadavg[1].average;
 	sysinfo.loadavg[2] = loadavg[2].average;
-	uput(&sysinfo, buf, size);
+	if (uput(&sysinfo, buf, size))
+		return -1;
 	return size;
 }
 
