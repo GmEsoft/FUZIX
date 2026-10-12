@@ -902,13 +902,13 @@ static int signal_parent(ptptr c)
         if (p->p_sig[1].s_ignored & (1 << (SIGCHLD - 16))) {
 		/* POSIX.1 says that SIG_IGN for SIGCHLD means don't go
 		   zombie, just clean up as we go */
-		udata.u_ptab->p_status = P_EMPTY;
+		c->p_status = P_EMPTY;
                 return 0;
 	}
 	ssig(p, SIGCHLD);
 	/* Wake up a waiting parent, if any. */
 	wakeup((char *)p);
-	udata.u_ptab->p_status = P_ZOMBIE;
+	c->p_status = P_ZOMBIE;
 	return 1;
 }
 
