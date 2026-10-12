@@ -46,7 +46,7 @@ int scsi_sense(uint_fast8_t dev, uint8_t *buf)
   uint8_t r;
 
   td_raw = 0;
-  r = scsi_cmd(dev, cmd_sense, buf, 36);
+  r = scsi_cmd(dev, cmd_sense, buf, 16);
   td_raw = mem;
   return r;
 }
@@ -56,23 +56,22 @@ int scsi_xfer(uint_fast8_t dev, bool is_read, uint32_t lba, uint8_t * dptr)
   uint8_t buf[16];
   /* Only use the 10 byte command if needed, older drives don't know it */
   if (lba > 0xFFFFF) {
-      cmd_rw10[0] = is_read ? 0x2A : 0x2A; /* READ/WRITE EXTENDED */
+      cmd_rw10[0] = is_read ? 0x28 : 0x2A; /* READ/WRITE EXTENDED */
       cmd_rw10[2] = lba >> 24;
       cmd_rw10[3] = lba >> 16;
       cmd_rw10[4] = lba >> 8;
       cmd_rw10[5] = lba;
-      return 1;
   } else {
     cmd_rw[0] = is_read ? 0x08 : 0x0A;	/* READ6/WRITE6 */
     cmd_rw[1] = lba >> 16;
     cmd_rw[2] = lba >> 8;
     cmd_rw[3] = lba;
   }
-  if (scsi_cmd(dev, cmd_rw, dptr, 512))
+  if (scsi_cmd(dev, lba > 0xFFFFF ? cmd_rw10 : cmd_rw, dptr, 512))
     return 0;
   if (scsi_status[0] & 0x02) {
-      if (scsi_sense(dev, buf))
-        return 1;
+      if (scsi_sense(dev, buf) || (scsi_status[0] & 0x02))
+        return 0;
       /* Oddity: an error code 0108 means the disk got the data
          but had to correct it */
       if ((buf[0] & 0xFFF) == 0x0108) {
