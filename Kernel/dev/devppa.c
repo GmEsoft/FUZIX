@@ -36,7 +36,7 @@ static void ppa_c_pulse(uint8_t v)
 	ppa_write_ctrl(0x0C);
 }
 
-static static void ppa_connect(void)
+static void ppa_connect(void)
 {
 	ppa_c_pulse(0);
 	ppa_c_pulse(0x3C);
@@ -90,12 +90,12 @@ static uint8_t ppa_command(uint8_t target, uint8_t *cmd, uint8_t cmd_len, uint8_
 
 	ppa_connect();
 	if (ppa_select(7, target) == 0)
-		return 0xFF;
+		goto fail;
 
 	ppa_write_ctrl(0x0C);
 	for (i = 0; i < cmd_len;i++) {
 		if (!ppa_wait_done())
-			return 0xFF;
+			goto fail;
 		ppa_write_data(*cmd++);
 		ppa_write_ctrl(0x0E);
 		ppa_write_ctrl(0x0C);
@@ -139,9 +139,12 @@ static uint8_t ppa_command(uint8_t target, uint8_t *cmd, uint8_t cmd_len, uint8_
 			return d;
 		default:
 			kprintf("ppa: bad status %2x\n", r);
-			return 0xFF;
+			goto fail;
 		}
 	}
+fail:
+	ppa_disconnect();
+	return 0xFF;
 }		
 
 static uint8_t cmd_rw[6] = { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00 };
