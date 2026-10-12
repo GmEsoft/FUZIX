@@ -60,8 +60,8 @@ uint16_t ugetw(const void *user)
 	if (!valaddr_r(user, 2))
 		return -1;
 #ifdef MISALIGNED
-	if (MISALIGNED(user, 2)) }
-		ssig(udata.u_proc, SIGBUS);
+	if (MISALIGNED(user, 2)) {
+		ssig(udata.u_ptab, SIGBUS);
 		return -1;
 	}
 #endif
@@ -88,8 +88,8 @@ int uputw(uint16_t value, void *user)
 	if (!valaddr_w(user, 2))
 		return -1;
 #ifdef MISALIGNED
-	if (MISALIGNED(user, 2)) }
-		ssig(udata.u_proc, SIGBUS);
+	if (MISALIGNED(user, 2)) {
+		ssig(udata.u_ptab, SIGBUS);
 		return -1;
 	}
 #endif
@@ -110,8 +110,8 @@ uint32_t ugetl(void *uaddr)
 	if (!valaddr_r(uaddr, 4))
 		return -1;
 #ifdef MISALIGNED
-	if (MISALIGNED(user, 4)) }
-		ssig(udata.u_proc, SIGBUS);
+	if (MISALIGNED(uaddr, 4)) {
+		ssig(udata.u_ptab, SIGBUS);
 		return -1;
 	}
 #endif
@@ -123,8 +123,8 @@ int uputl(uint32_t val, void *uaddr)
 	if (!valaddr_w(uaddr, 4))
 		return -1;
 #ifdef MISALIGNED
-	if (MISALIGNED(user, 2)) }
-		ssig(udata.u_proc, SIGBUS);
+	if (MISALIGNED(uaddr, 4)) {
+		ssig(udata.u_ptab, SIGBUS);
 		return -1;
 	}
 #endif
