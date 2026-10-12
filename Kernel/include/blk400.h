@@ -11,9 +11,8 @@
 
 #define BLOCK(x)	(x / 400)
 
-/* Help the compilers out by preventing any 32bit promotions. Will want an
-   asm helper ? */
-#define BLKOFF(x)	(((uint16_t)(x)) % 400)
+/* Compute the remainder before narrowing a large file offset. */
+#define BLKOFF(x)	((uint16_t)((x) % 400))
 
 #define BLK_TO_OFFSET(x)	((x) * 400)
 
