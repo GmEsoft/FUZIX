@@ -88,14 +88,103 @@ return 0;
 
 static int case_minimum_pid(void)
 {
-udata.u_ptab=ptab;ptab[1].p_pptr=ptab;ptab[1].p_status=P_RUNNING;ptab[1].p_pid=42;udata.u_argn=INTPTR_MIN;udata.u_argn2=WNOHANG;TEST(_waitpid()==-1 && udata.u_error==ECHILD,"extreme negative PID has no matching group");
+udata.u_ptab=ptab;ptab[1].p_pptr=ptab;ptab[1].p_status=P_RUNNING;ptab[1].p_pid=42;udata.u_argn=INT16_MIN;udata.u_argn2=WNOHANG;TEST(_waitpid()==-1 && udata.u_error==ECHILD,"minimum 16-bit PID has no matching group");
 return 0;
+}
+
+#define npid ((uint16_t)udata.u_argn)
+#define npgid ((uint16_t)udata.u_argn1)
+/* FUNCTION syscall_level2.c _setpgid 0 */
+
+static void setup_groups(void)
+{
+    udata.u_ptab = ptab;
+    ptab[0].p_pid = 41;
+    ptab[0].p_pgrp = 7;
+    ptab[0].p_session = 7;
+    ptab[1].p_pid = 42;
+    ptab[1].p_pgrp = 7;
+    ptab[1].p_session = 7;
+    ptab[1].p_pptr = ptab;
+    ptab[1].p_status = P_RUNNING;
+}
+
+static int case_setpgid_zero(int target)
+{
+    setup_groups();
+    udata.u_argn = target ? 42 : 0;
+    udata.u_argn1 = 0;
+    TEST(_setpgid() == 0 && !udata.u_error &&
+         ptab[target].p_pgrp == ptab[target].p_pid,
+         "zero group argument selects the target PID");
+    TEST(ptab[!target].p_pgrp == 7,"other process group remains unchanged");
+    return 0;
+}
+
+static int case_setpgid_valid(uint16_t group)
+{
+    setup_groups();
+    udata.u_argn1 = group;
+    TEST(_setpgid() == 0 && !udata.u_error && ptab[0].p_pgrp == group,
+         "valid group ID is accepted");
+    return 0;
+}
+
+static int case_setpgid_invalid(arg_t group)
+{
+    setup_groups();
+    udata.u_argn = 42;
+    udata.u_argn1 = group;
+    TEST(_setpgid() == -1 && udata.u_error == EINVAL &&
+         ptab[0].p_pgrp == 7 && ptab[1].p_pgrp == 7,
+         "invalid group ID is rejected without changing either group");
+    return 0;
+}
+
+static int case_setpgid_session(int foreign_group)
+{
+    setup_groups();
+    udata.u_argn = 42;
+    udata.u_argn1 = 10;
+    if (foreign_group) {
+        ptab[2].p_pid = 43;
+        ptab[2].p_pgrp = 10;
+        ptab[2].p_session = 8;
+    } else
+        ptab[1].p_session = 8;
+    TEST(_setpgid() == -1 && udata.u_error == EPERM &&
+         ptab[1].p_pgrp == 7,"existing session checks are preserved");
+    return 0;
+}
+
+static int case_maximum_group_wait(void)
+{
+    setup_groups();
+    udata.u_argn = 42;
+    udata.u_argn1 = 32767;
+    TEST(_setpgid() == 0,"maximum group ID is accepted");
+    udata.u_argn = -32767;
+    udata.u_argn1 = 0;
+    udata.u_argn2 = WNOHANG;
+    TEST(_waitpid() == 0 && !udata.u_error,
+         "maximum group matches a negative waitpid selector");
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
 if (argc != 2) return 2;
 if (!strcmp(argv[1], "minimum-pid")) return case_minimum_pid();
+if (!strcmp(argv[1], "setpgid-self-zero")) return case_setpgid_zero(0);
+if (!strcmp(argv[1], "setpgid-target-zero")) return case_setpgid_zero(1);
+if (!strcmp(argv[1], "setpgid-minimum")) return case_setpgid_valid(1);
+if (!strcmp(argv[1], "setpgid-maximum")) return case_setpgid_valid(32767);
+if (!strcmp(argv[1], "setpgid-32768")) return case_setpgid_invalid(32768);
+if (!strcmp(argv[1], "setpgid-65535")) return case_setpgid_invalid(65535);
+if (!strcmp(argv[1], "setpgid-negative")) return case_setpgid_invalid(-1);
+if (!strcmp(argv[1], "setpgid-foreign-target")) return case_setpgid_session(0);
+if (!strcmp(argv[1], "setpgid-foreign-group")) return case_setpgid_session(1);
+if (!strcmp(argv[1], "maximum-group-wait")) return case_maximum_group_wait();
 if (!strcmp(argv[1], "nohang")) return case_nohang();
 if (!strcmp(argv[1], "stopped")) return case_stopped();
 if (!strcmp(argv[1], "unmatched")) return case_unmatched();

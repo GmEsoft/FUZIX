@@ -128,6 +128,11 @@ arg_t _setpgid(void)
 	uint16_t ses = udata.u_ptab->p_session;
 	uint16_t n = npgid;
 
+	if (n > 32767) {
+		udata.u_error = EINVAL;
+		return -1;
+	}
+
 	/* pid 0 means "self" */
 	if (npid == 0)
 		t = udata.u_ptab;

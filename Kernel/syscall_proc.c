@@ -334,8 +334,8 @@ arg_t _waitpid(void)
 		found = 0;
 		for (p = ptab; p < ptab_end; ++p) {
 			if (p->p_status && p->p_pptr == udata.u_ptab) {
-				if (pid == -1 || (pid > 0 && p->p_pid == pid) ||
-					(pid <= 0 && p->p_pgrp == -(uarg_t)pid)) {
+				if (pid == -1 || p->p_pid == pid ||
+					p->p_pgrp == -pid) {
 					found = 1;
 					if (p->p_status == P_ZOMBIE) {
 						if (statloc)

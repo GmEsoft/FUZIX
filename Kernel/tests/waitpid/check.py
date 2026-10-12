@@ -7,7 +7,10 @@ import re
 import subprocess
 import tempfile
 
-CASES = ['nohang', 'stopped', 'unmatched', 'zombie', 'process-group', 'group-nohang', 'null-status', 'minimum-pid']
+CASES = ['nohang', 'stopped', 'unmatched', 'zombie', 'process-group', 'group-nohang', 'null-status', 'minimum-pid',
+         'setpgid-self-zero', 'setpgid-target-zero', 'setpgid-minimum',
+         'setpgid-maximum', 'setpgid-32768', 'setpgid-65535', 'setpgid-negative',
+         'setpgid-foreign-target', 'setpgid-foreign-group', 'maximum-group-wait']
 VARIANTS = [('default', [])]
 
 
