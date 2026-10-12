@@ -199,6 +199,13 @@ void swapper2(register ptptr p, uint16_t map)
 	p->p_flags &= ~PFL_BATCH;
 }
 
+static void swapload(ptptr p)
+{
+	uint16_t map = p->p_page2;
+	pagemap_alloc(p);
+	swapper2(p, map);
+}
+
 #ifndef CONFIG_SWAPPER
 
 /*
@@ -208,10 +215,7 @@ void swapper2(register ptptr p, uint16_t map)
  */
 void swapper(register ptptr p)
 {
-        uint16_t map = p->p_page2;
-	pagemap_alloc(p);	/* May cause a swapout. May also destroy
-                                   the old value of p->page2 */
-	swapper2(p, map);
+	swapload(p);
 }
 
 #else
@@ -227,6 +231,7 @@ void swapper(register ptptr p)
  */
 
 ptptr swapproc;
+static ptptr swapnext;
 
 /* We are always run as the next task if swapout is needed and we are never
    paged out */
@@ -259,7 +264,7 @@ void swaptask(void)
         irqrestore(irqf);
         /* Swap in the task we need. If needed it'll also swap out
            a task to make room */
-        swapper(p);
+        swapload(p);
     }
 }
 
