@@ -15,7 +15,10 @@ char *fgets(char *s, size_t count, FILE * f)
 	register int ch;
 	char *ret = s;
 
-	while (i-- != 0) {
+	if (i == 0)
+		return NULL;
+
+	while (--i != 0) {
 		if ((ch = getc(f)) == EOF) {
 			if (s == ret)
 				return NULL;
