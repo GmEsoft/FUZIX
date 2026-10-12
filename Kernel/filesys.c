@@ -830,8 +830,13 @@ void oft_deref(uint_fast8_t of)
 
 int_fast8_t uf_alloc_n(uint_fast8_t base)
 {
-    register uint8_t *p = udata.u_files;
+    register uint8_t *p;
 
+    if (base >= UFTSIZE) {
+        udata.u_error = EINVAL;
+        return -1;
+    }
+    p = udata.u_files + base;
     while(p < udata.u_files + UFTSIZE) {
         if(*p == NO_FILE)
             return p - udata.u_files;
