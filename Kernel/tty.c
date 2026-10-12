@@ -782,7 +782,7 @@ int tty_inproc_bad(uint_fast8_t minor, uint_fast8_t ch)
 
 int tty_inproc_full(uint_fast8_t minor, uint_fast8_t ch)
 {
-	if (ch == '\377' && (ttydata[minor].termios.c_iflag & (PARMRK|ISTRIP)) != PARMRK)
+	if (ch == 0xFF && (ttydata[minor].termios.c_iflag & (PARMRK|ISTRIP)) == PARMRK)
 		insq(ttyinq + minor, ch);
 	return tty_inproc(minor, ch);
 }
