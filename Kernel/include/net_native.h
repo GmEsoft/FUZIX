@@ -1,4 +1,5 @@
 #ifndef _DEV_NET_NET_NATIVE_H
+#define _DEV_NET_NET_NATIVE_H
 #ifdef CONFIG_NET_NATIVE
 
 /* These are by socket and each one is
