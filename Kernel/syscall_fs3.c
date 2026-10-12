@@ -288,12 +288,12 @@ arg_t _fcntl(void)
 	case F_GETFL:
 		return *acc;
 	case F_GETFD:
-		return udata.u_cloexec & (1 << fd) ? O_CLOEXEC : 0;
+		return udata.u_cloexec & (1U << fd) ? O_CLOEXEC : 0;
 	case F_SETFD:
 		if (data & O_CLOEXEC)
-			udata.u_cloexec |= (1 << fd);
+			udata.u_cloexec |= (1U << fd);
 		else
-			udata.u_cloexec &= (1 << fd);
+			udata.u_cloexec &= ~(1U << fd);
 		return 0;
 	case F_DUPFD:
 		/* The input fd is in argn and valid, the rest is the
