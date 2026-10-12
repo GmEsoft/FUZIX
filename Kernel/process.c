@@ -707,7 +707,7 @@ static uint_fast8_t chksigset(struct sigbits *sb, uint_fast8_t b)
 				/* Yes: we could be in P_SLEEP on a close race
 				   with do_psleep() */
 				udata.u_ptab->p_status = P_STOPPED;
-				udata.u_ptab->p_event = j;
+				udata.u_ptab->p_event = j + (b << 4);
 				sb->s_pending &= ~m;	// unset the bit
 				/* Defer if we are in interrupt state, we
 				   will pick up the reschedule instead */
@@ -741,7 +741,7 @@ static uint_fast8_t chksigset(struct sigbits *sb, uint_fast8_t b)
 				udata.u_ptab->p_status = P_RUNNING;
 				nready++;
 			}
-			doexit(dump_core(j));
+			doexit(dump_core(j + (b << 4)));
 		} else if (*svec != SIG_IGN) {
 			/* Arrange to call the user routine at return */
 			sb->s_pending &= ~m;	// unset the bit
