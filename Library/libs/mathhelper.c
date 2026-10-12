@@ -1,10 +1,10 @@
 #include "libm.h"
 
-#ifndef FORCE_EVAL
 void __force_eval(float f)
 {
+    volatile float result = f;
+    (void)result;
 }
-#endif
 
 #if defined(NO_64BIT) && !defined(double)
 
