@@ -361,7 +361,7 @@ arg_t _flock(void)
 	lock = lockop & ~LOCK_NB;
 	self = 0;
 
-	if (lock > LOCK_UN) {
+	if (lock != LOCK_SH && lock != LOCK_EX && lock != LOCK_UN) {
 		udata.u_error = EINVAL;
 		return -1;
 	}
@@ -389,7 +389,7 @@ arg_t _flock(void)
 
 
 	/* Unlock - drop the locks, mark us not a lock holder. Doesn't block */
-	if (lockop == LOCK_UN) {
+	if (lock == LOCK_UN) {
 		/* deflock needs the ownership bit to release the inode lock. */
 		deflock(o);
 		o->o_access &= ~O_FLOCK;
@@ -402,11 +402,11 @@ arg_t _flock(void)
 			c = CFLEX;
 			goto done;
 		}
-		if (c < CFMAX) {
+		if (lock == LOCK_SH && c < CFMAX) {
 			c++;
 			goto done;
 		}
-		if (c == CFMAX) {
+		if (lock == LOCK_SH && c == CFMAX) {
 			udata.u_error = ENOLCK;
 			return -1;
 		}
