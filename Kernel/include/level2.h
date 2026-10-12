@@ -36,7 +36,7 @@ extern int tcsetpgrp(struct tty *tty, char *data);
    turns the whole thing into a constant 32bit comparison with a fixed
    or global register memory address */
 #define limit_exceeded(l, v) \
-	(udata.u_rlimit[(l)] < (v))
+	(udata.u_rlimit[(l)].rlim_cur < (v))
 
 /* Job control requires SIGCONT is sendable to anyone in our process group.
    Untidy but we are stuck with it
