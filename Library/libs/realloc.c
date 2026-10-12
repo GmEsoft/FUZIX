@@ -48,7 +48,7 @@ void *realloc(void *ptr, size_t size)
 	np = malloc(size);
 	if (np == NULL)
 		return NULL;
-	memcpy(np, ptr, mh->size * sizeof(struct memh));
+	memcpy(np, ptr, (mh->size - 1) * sizeof(struct memh));
 	free(ptr);
 	return np;
 }
