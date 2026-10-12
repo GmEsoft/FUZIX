@@ -54,7 +54,7 @@ static blkno_t bfetch(uint16_t dev, blkno_t blk, unsigned off, unsigned rwflg)
 
         if (bp == NULL) {
             corrupt_fs(dev);
-            return 0;
+            return NULLBLK;
         }
         off *= sizeof(blkno_t);
 
@@ -86,6 +86,8 @@ blkno_t bmap(register inoptr ip, blkno_t bn, unsigned rwflg)
         return ifetch(ip, bn, rwflg);
     bn -= 18;
     if (bn & 0xFF00) {
+        /* The single-indirect range precedes the double-indirect tree. */
+        bn -= 256;
         blk = ifetch(ip, 19, rwflg);
         if (blk == NULLBLK)
             return blk;
