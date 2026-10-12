@@ -11,7 +11,11 @@ typedef intptr_t arg_t;
 typedef uintptr_t uarg_t, uaddr_t, uptr_t;
 #define clock_t kernel_clock_t
 typedef uint32_t clock_t;
-typedef unsigned usize_t;
+#if TEST_USIZE_BITS == 16
+typedef uint16_t usize_t;
+#else
+typedef uint32_t usize_t;
+#endif
 typedef int irqflags_t;
 typedef uint16_t blkno_t;
 #define staticfast static
@@ -38,7 +42,7 @@ struct cinode node;
 #define HDIO_TRIM_KERNEL 123
 static int result;
 static unsigned reads,trims;
-static blkno_t trimmed[4];
+static blkno_t trimmed[128];
 static uint16_t swappage;
 static int device_read(unsigned minor,unsigned raw,unsigned flags){reads++;return result;}
 static struct {int(*dev_read)(unsigned,unsigned,unsigned);} dev_tab[1]={{device_read}};
@@ -77,6 +81,26 @@ result=0;TEST(pageread(0,10,0,0,7)==0&&!trims,"zero-length read trims nothing");
 return 0;
 }
 
+/* Model the signed 16-bit byte-count return used by 8-bit targets. */
+static int case_large_read(usize_t bytes)
+{
+#if TEST_USIZE_BITS == 16
+result=(int16_t)bytes;
+#else
+result=bytes;
+#endif
+TEST(pageread(0,10,bytes,0,7)==result&&reads==1,
+     "large completed read returns the driver byte-count bits");
+#ifdef CONFIG_TRIM
+TEST(trims==(bytes>>BLKSHIFT)&&trimmed[0]==10&&
+     trimmed[trims-1]==10+trims-1,
+     "large completed read discards the complete image");
+#else
+TEST(!trims,"TRIM-disabled large read requests no discard");
+#endif
+return 0;
+}
+
 int main(int argc,char **case_argv)
 {
 if(argc!=2)return 2;
@@ -84,5 +108,7 @@ if(!strcmp(case_argv[1],"failed-read"))return case_failed_read();
 if(!strcmp(case_argv[1],"short-read"))return case_short_read();
 if(!strcmp(case_argv[1],"complete-read"))return case_complete_read();
 if(!strcmp(case_argv[1],"zero-read"))return case_zero_read();
+if(!strcmp(case_argv[1],"large-read"))return case_large_read(32768);
+if(!strcmp(case_argv[1],"max-16bit-read"))return case_large_read(65024);
 return 2;
 }

@@ -7,8 +7,10 @@ import re
 import subprocess
 import tempfile
 
-CASES = ['failed-read', 'short-read', 'complete-read', 'zero-read']
-VARIANTS = [('trim', ['-DCONFIG_TRIM']), ('no-trim', [])]
+CASES = ['failed-read', 'short-read', 'complete-read', 'zero-read', 'large-read', 'max-16bit-read']
+VARIANTS = [(str(bits) + '-' + label, ['-DTEST_USIZE_BITS=' + str(bits)] + flags)
+            for bits in (16, 32)
+            for label, flags in [('trim', ['-DCONFIG_TRIM']), ('no-trim', [])]]
 
 
 def function(text, name, variant):
