@@ -7,7 +7,10 @@ import re
 import subprocess
 import tempfile
 
-CASES = ['failed-immediate', 'retry-immediate', 'failed-sync', 'retry-sync', 'delayed', 'clean-sync', 'short-write']
+CASES = ['failed-immediate', 'short-immediate', 'complete-immediate',
+         'failed-sync', 'short-sync', 'complete-sync', 'no-repeat-sync',
+         'delayed', 'clean-sync', 'failed-eviction', 'short-eviction',
+         'complete-eviction', 'sync-flush-clears-error']
 VARIANTS = [('default', [])]
 
 
