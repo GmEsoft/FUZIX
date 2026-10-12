@@ -502,7 +502,7 @@ int16_t (*func)();
 struct sigbits *sigbits(uint16_t *m)
 {
 	register struct sigbits *sb = udata.u_ptab->p_sig;
-	if (sig < 1 || sig > NSIGS) {
+	if (sig < 1 || sig >= NSIGS) {
 		udata.u_error = EINVAL;
 		return NULL;
 	}
@@ -531,6 +531,7 @@ arg_t _signal(void)
 	} else {
 		if (func != SIG_DFL && !valaddr_r((uint8_t *) func, 1)) {
 			udata.u_error = EFAULT;
+			irqrestore(irq);
 			return -1;
 		}
 		sb->s_ignored &= ~m;
