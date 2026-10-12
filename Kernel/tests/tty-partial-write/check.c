@@ -28,14 +28,26 @@ typedef int irqflags_t;
 #define need_reschedule() 0
 static uint8_t sent[8];
 static unsigned sent_count, capacity, signal_pending, disconnect_after_byte;
+static unsigned stop_after_byte, interrupt_on_sleep;
+#ifdef CONFIG_LEVEL_2
+static unsigned job_error, job_after_bytes;
+uint8_t jobcontrol_out(uint8_t minor, struct tty *t)
+{
+    if (!job_error || udata.u_done < job_after_bytes)
+        return 0;
+    udata.u_error = job_error;
+    if (!udata.u_done)
+        udata.u_done = (usize_t)-1;
+    return 1;
+}
+#endif
 unsigned valaddr_r(const void *p, unsigned size) { return size; }
 uint8_t _ugetc(const void *p) { return *(const uint8_t *)p; }
 int chksigs(void) { return signal_pending; }
 irqflags_t di(void) { return 0; }
 void irqrestore(irqflags_t flags) {}
-void psleep(void *p) { CHECK(0); }
+void psleep(void *p) { CHECK(interrupt_on_sleep); signal_pending = 1; }
 void switchout(void) { CHECK(0); }
-int psleep_flags_io(void *p, uint_fast8_t flags) { CHECK(0); return -1; }
 void tty_sleeping(uint_fast8_t minor) { CHECK(0); }
 ttyready_t tty_writeready(uint_fast8_t minor)
 {
@@ -47,6 +59,8 @@ void tty_putc(uint_fast8_t minor, uint_fast8_t c)
     sent[sent_count++] = c;
     if (disconnect_after_byte)
         ttydata[minor].flag |= TTYF_DEAD;
+    if (stop_after_byte)
+        ttydata[minor].flag |= TTYF_STOP;
 }
 
 /* KERNEL_FUNCTIONS */
@@ -95,8 +109,40 @@ int main(int argc, char **argv)
         CHECK(!udata.u_done);
     } else if (!strcmp(argv[1], "disconnect")) {
         disconnect_after_byte = 1;
+        CHECK(tty_write(1, 1, flags) == 1);
+        CHECK(!udata.u_error && sent_count == 1 && udata.u_done == 1);
+    } else if (!strcmp(argv[1], "disconnect-empty")) {
+        ttydata[1].flag = TTYF_DEAD;
         CHECK(tty_write(1, 1, flags) == -1);
-        CHECK(udata.u_error == ENXIO && sent_count == 1);
+        CHECK(udata.u_error == ENXIO && !sent_count && !udata.u_done);
+    } else if (!strncmp(argv[1], "flow-", 5)) {
+        unsigned partial = strstr(argv[1], "partial") != NULL;
+        unsigned interrupted = strstr(argv[1], "interrupted") != NULL;
+        if (partial)
+            stop_after_byte = 1;
+        else
+            ttydata[1].flag = TTYF_STOP;
+        interrupt_on_sleep = interrupted;
+        CHECK(tty_write(1, 1, interrupted ? 0 : flags) == (partial ? 1 : -1));
+        CHECK(sent_count == partial);
+        if (partial)
+            CHECK(udata.u_done == 1 && !udata.u_error);
+        else
+            CHECK(udata.u_done == (usize_t)-1 &&
+                  udata.u_error == (interrupted ? EINTR : EAGAIN));
+#ifdef CONFIG_LEVEL_2
+    } else if (!strncmp(argv[1], "job-", 4)) {
+        unsigned partial = strstr(argv[1], "partial") != NULL;
+        job_error = strstr(argv[1], "eintr") ? EINTR : EIO;
+        job_after_bytes = partial;
+        capacity = 2;
+        CHECK(tty_write(1, 1, flags) == (partial ? 1 : -1));
+        CHECK(sent_count == partial);
+        if (partial)
+            CHECK(udata.u_done == 1 && !udata.u_error);
+        else
+            CHECK(udata.u_done == (usize_t)-1 && udata.u_error == job_error);
+#endif
     } else {
         CHECK(0);
     }

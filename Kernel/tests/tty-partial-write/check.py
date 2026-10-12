@@ -8,7 +8,12 @@ import subprocess
 import tempfile
 
 FUNCTIONS = ['tty_putc_maywait', 'tty_write']
-CASES = ['partial', 'empty', 'interrupted-partial', 'interrupted-empty', 'full', 'onlcr-partial', 'onlcr-empty', 'disconnect']
+CASES = ['partial', 'empty', 'interrupted-partial', 'interrupted-empty', 'full',
+         'onlcr-partial', 'onlcr-empty', 'disconnect', 'disconnect-empty',
+         'flow-empty', 'flow-partial', 'flow-interrupted-empty',
+         'flow-interrupted-partial']
+JOB_CASES = ['job-eio-empty', 'job-eio-partial', 'job-eintr-empty', 'job-eintr-partial']
+VARIANTS = [('level1', []), ('level2', ['-DCONFIG_LEVEL_2'])]
 CHAR_MODES = ['signed-char']
 
 
@@ -38,7 +43,8 @@ def main():
     args = parser.parse_args()
     kernel = args.kernel_dir.resolve()
     source = (kernel / 'tty.c').read_text()
-    bodies = ''.join(function(source, name) for name in FUNCTIONS)
+    bodies = function((kernel / 'devio.c').read_text(), 'psleep_flags_io')
+    bodies += ''.join(function(source, name) for name in FUNCTIONS)
     if 'parity' in FUNCTIONS:
         table = re.search(r'static uint8_t paritytab\[16\] = \{[\s\S]*?\};', source)
         if table is None:
@@ -58,20 +64,22 @@ def main():
         directory = Path(directory)
         generated = directory / 'check.c'
         generated.write_text(fixture)
-        for char_mode in CHAR_MODES:
-            binary = directory / char_mode
-            subprocess.run([args.cc, '-std=c99', '-g', '-Wall', '-Wextra',
-                            '-Werror', '-Wno-unused-parameter',
-                            '-fsanitize=address,undefined', '-f' + char_mode,
-                            '-I' + str(kernel / 'include'), str(generated),
-                            '-o', str(binary)], check=True)
-            for case in CASES:
-                result = subprocess.run([str(binary), case], timeout=5,
-                                        env=dict(os.environ, ASAN_OPTIONS='detect_leaks=0'))
-                passed = result.returncode == 0
-                print(('PASS' if passed else 'FAIL') + ' ' + char_mode + ' ' + case,
-                      flush=True)
-                failed |= not passed
+        for label, flags in VARIANTS:
+            for char_mode in CHAR_MODES:
+                binary = directory / (label + '-' + char_mode)
+                subprocess.run([args.cc, '-std=c99', '-g', '-Wall', '-Wextra',
+                                '-Werror', '-Wno-unused-parameter', *flags,
+                                '-fsanitize=address,undefined', '-f' + char_mode,
+                                '-I' + str(kernel / 'include'), str(generated),
+                                '-o', str(binary)], check=True)
+                cases = CASES + (JOB_CASES if label == 'level2' else [])
+                for case in cases:
+                    result = subprocess.run([str(binary), case], timeout=5,
+                                            env=dict(os.environ, ASAN_OPTIONS='detect_leaks=0'))
+                    passed = result.returncode == 0
+                    print(('PASS' if passed else 'FAIL') + ' ' + label + ' ' + case,
+                          flush=True)
+                    failed |= not passed
     return int(failed)
 
 
