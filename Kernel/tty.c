@@ -751,7 +751,7 @@ static uint8_t paritytab[16] = {
 uint_fast8_t parity(uint8_t ch)
 {
 	ch &= 0x7F;	/* Strip parity bit */
-	return paritytab[ch >> 4] & (1 << (ch & 7));
+	return paritytab[ch >> 3] & (1 << (ch & 7));
 }
 
 /* Do 7X1 7X2 parity */
@@ -764,7 +764,10 @@ uint8_t tty_add_parity(uint_fast8_t minor, uint8_t ch)
 			if (t->c_cflag & PARODD)
 				ch |= 0x80;
 		} else {
-			ch |= parity(ch) ? 0x00 : 0x80;
+			uint_fast8_t p = parity(ch) ? 0x80 : 0x00;
+			if (t->c_cflag & PARODD)
+				p ^= 0x80;
+			ch |= p;
 		}
 	}
 	return ch;
@@ -793,18 +796,18 @@ int tty_inproc_softparity(uint_fast8_t minor, uint_fast8_t ch)
 		return tty_inproc_full(minor, ch);
 
 	if (!(t->c_cflag & CMSPAR))
-		p = parity(ch) ? 0x00 : 0x80;
+		p = parity(ch) ? 0x80 : 0x00;
 	if (t->c_cflag & PARODD)
 		p ^= 0x80;
 
 	/* We only handle 7 bit not weird stuff like 6bit parity */
-	if (p ^ ch ^ 0x80) {
+	if ((p ^ ch) & 0x80) {
 		/* Bad parity */
-		if (t->c_cflag & IGNPAR)
+		if (t->c_iflag & IGNPAR)
 			return 0;
-		return tty_inproc_bad(minor,ch);
+		return tty_inproc_bad(minor, ch & 0x7F);
 	}
-	return tty_inproc_full(minor, ch);
+	return tty_inproc_full(minor, ch & 0x7F);
 }
 
 void tty_break_event(uint_fast8_t minor)
