@@ -139,7 +139,7 @@ static int run_sockfunc(sockfunc_t func, uint8_t n, uint8_t flags)
 arg_t _netcall(void)
 {
 	uint_fast8_t flags = 0;
-	uint_fast8_t cn;
+	uarg_t cn;
 	register arg_t *ap;
 	register uint_fast8_t op;
 	usize_t s;
@@ -151,16 +151,18 @@ arg_t _netcall(void)
 		udata.u_error = EFAULT;
 		return -1;
 	}
-	uget(argptr, udata.u_net.args, sizeof(udata.u_net.args));
+	if (uget(argptr, udata.u_net.args, sizeof(udata.u_net.args)))
+		return -1;
 	ap = udata.u_net.args;
 
 	cn = *ap++;
-	op = ncall_tab[cn];
 
 	if (cn >= NUM_NETCALL) {
 		udata.u_error = ENOSYS;
 		return -1;
 	}
+
+	op = ncall_tab[cn];
 
 	udata.u_done = 0;
 	udata.u_error = 0;
@@ -189,12 +191,12 @@ arg_t _netcall(void)
 	   address buffer. It must be big enough to be meaningful but fit */
 	if (op & N_ADDR_IN) {
 		if (*ap) {
-			udata.u_net.addrlen = ap[1];
-			if (udata.u_net.addrlen < MIN_SOCKADDR ||
-			    udata.u_net.addrlen > MAX_SOCKADDR) {
+			if ((uarg_t)ap[1] < MIN_SOCKADDR ||
+			    (uarg_t)ap[1] > MAX_SOCKADDR) {
 				udata.u_error = EINVAL;
 				return -1;
 			}
+			udata.u_net.addrlen = ap[1];
 			/* Put the buffer into the kernel */
 			if (uget((void *) *ap, &udata.u_net.addrbuf,
 			     udata.u_net.addrlen)) {
