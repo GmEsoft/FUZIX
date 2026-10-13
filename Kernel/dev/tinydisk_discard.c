@@ -13,6 +13,10 @@
 #include <tinydisk.h>
 #include "mbr.h"
 
+#if CONFIG_TD_MAX_PART < 4
+#error "Minimum 4 partition slots required"
+#endif
+
 #ifdef CONFIG_DYNAMIC_SWAP
 
 static void swap_found(uint_fast8_t minor, partition_table_entry_t * pe)
