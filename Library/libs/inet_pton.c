@@ -25,7 +25,7 @@ static const char *quad(const char *p, uint8_t *r)
 		if (valid > 3)
 			return NULL;
 	}
-	if (val > 255)
+	if (val > 255 || !valid)
 		return NULL;
 	*r = val;
 	if (*p == '.')
@@ -50,7 +50,7 @@ int inet_pton(int af, const char *src, void *dst)
 	src = quad(src, p++);
 	src = quad(src, p++);
 	src = quad(src, p);
-	if (src == NULL || *src)
+	if (src == NULL || *src || src[-1] == '.')
 		return 0;
 	return 1;
 }
