@@ -350,6 +350,9 @@ bool emptydir(register inoptr wd)
         udata.u_base  = (uint8_t *)&curentry;
         udata.u_sysio = true;
         readi(wd, 0);
+        /* On media error assume the directory is full so we fail safe */
+        if (udata.u_error)
+            return false;
 
         /* Read until EOF or name is found.  readi() advances udata.u_offset */
         if (*curentry.d_name)
@@ -378,6 +381,8 @@ void namecpy(register uint8_t *to, register uint8_t *from, unsigned len)
         *to++ = 0;
 }
 
+/* TODO: we should cache the first free node seen during a directory walk
+   so we can speed up insertions after checking for a name ? */
 bool ch_link(register inoptr wd, uint8_t *oldname, uint8_t *newname, inoptr nindex)
 {
     struct direct curentry;
@@ -411,39 +416,42 @@ bool ch_link(register inoptr wd, uint8_t *oldname, uint8_t *newname, inoptr nind
         readi(wd, 0);
 
         /* Read until EOF or name is found.  readi() advances udata.u_offset */
-        if(udata.u_done == 0 || namecomp(oldname, curentry.d_name))
+        if (udata.u_error || udata.u_done == 0 || namecomp(oldname, curentry.d_name))
             break;
     }
 
-    if(udata.u_done == 0 && *oldname) {
+    /* Drop out and hand back the media error */
+    if (udata.u_error)
+        return false;
+
+    if (udata.u_done == 0 && *oldname) {
         udata.u_error = ENOENT;
         return false;                  /* Entry not found */
     }
 
     namecpy(curentry.d_name, newname, FILENAME_LEN);
 
-    if(nindex)
+    if (nindex)
         curentry.d_ino = nindex->c_num;
     else
         curentry.d_ino = 0;
 
     /* If an existing slot is being used, we must back up the file offset */
-    if(udata.u_done){
+    if (udata.u_done)
         udata.u_offset -= DIR_LEN;
-    }
 
     udata.u_count = DIR_LEN;
     udata.u_base  = (unsigned char*)&curentry;
     udata.u_sysio = true;
     writei(wd, 0);
 
-    if(udata.u_error)
+    if (udata.u_error)
         return false;
 
     setftime(wd, A_TIME|M_TIME|C_TIME);     /* Sets CDIRTY */
 
     /* Update file length to next block */
-    if(BLKOFF(wd->c_node.i_size))
+    if (BLKOFF(wd->c_node.i_size))
         wd->c_node.i_size += BLKSIZE - BLKOFF(wd->c_node.i_size);
 
     return true; // success
@@ -457,11 +465,9 @@ bool ch_link(register inoptr wd, uint8_t *oldname, uint8_t *newname, inoptr nind
  */
 bool namecomp(register uint8_t *n1, register uint8_t *n2) // return true if n1 == n2
 {
-    uint_fast8_t n; // do we have enough variables called n?
+    register uint_fast8_t n = FILENAME_LEN;
 
-    n = FILENAME_LEN;
-    while(*n1 && *n1 != '/')
-    {
+    while(*n1 && *n1 != '/') {
         if(*n1++ != *n2++)
             return false; // mismatch
         n--;
