@@ -43,4 +43,7 @@ void device_init(void)
 #ifdef CONFIG_TD_SD
   sd_probe();
 #endif
+#ifdef CONFIG_NET
+  sock_init();
+#endif
 }
