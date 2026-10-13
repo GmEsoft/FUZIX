@@ -1,0 +1,17 @@
+;	FUZIX mnemonics for memory addresses etc
+;
+;
+;	The U_DATA address. If we are doing a normal build this is the start
+;	of common memory. We do actually have a symbol for udata so
+;	eventually this needs to go away
+;
+U_DATA__TOTALSIZE           .equ 0x200        ; 256+256 bytes @ F000
+;
+PROGBASE		    .equ 0x0000
+PROGLOAD		    .equ 0x0100
+Z180_IO_BASE		    .equ 0x00
+U_DATA_STASH		    .equ 0xDE00	      ; DE00-DFFF
+;
+;	The number of disk buffers. Must match config.h
+;
+NBUFS			    .equ 5
