@@ -8,6 +8,8 @@
 
 int strncasecmp(register const char *s, register const char *d, size_t l)
 {
+   /* For length 0 return 0. This is an undefined case but our internal
+      users depend on it returning 0 */
    while(l>0)
    {
       if( *s != *d )
