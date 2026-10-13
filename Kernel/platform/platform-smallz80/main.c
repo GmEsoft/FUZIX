@@ -4,11 +4,13 @@
 #include <printf.h>
 #include <devtty.h>
 #include <rtc.h>
+#include "smallz80.h"
 
 uint16_t ramtop = PROGTOP;
 uint16_t swap_dev = 0xFFFF;
 uint8_t num_banks;
 uint16_t ide_base;
+
 /*
  *	This routine is called continually when the machine has nothing else
  *	it needs to execute. On a machine with entirely interrupt driven
@@ -37,7 +39,7 @@ void plt_idle(void)
 
 static uint8_t irqct;
 
-#define RTC_D	0x2D
+#define RTC_D	(rtc_base + 0x0D)
 #define GPREG	0xF8
 
 void plt_interrupt(void)
@@ -74,10 +76,13 @@ struct blkbuf *bufpool_end = bufpool + NBUFS;
  */
 void plt_discard(void)
 {
-#if 0
-	uint16_t discard_size = 0xFFFF - (uint16_t)bufpool_end;
+	uint16_t discard_size = 0xFFFF;
 	bufptr bp = bufpool_end;
 
+	if (sys_cpu_feat == 6)	/* Z180 version. Common at E000 upwards */
+		discard_size = 0xDFFF;
+
+	discard_size -= (uint16_t)bufpool_end;
 	discard_size /= sizeof(struct blkbuf);
 
 	kprintf("%d buffers added\n", discard_size);
@@ -90,5 +95,4 @@ void plt_discard(void)
 		bp->bf_dev = NO_DEVICE;
 		bp->bf_busy = BF_FREE;
 	}
-#endif
 }

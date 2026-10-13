@@ -1,4 +1,4 @@
-# 1 "smallz80.S"
+# 1 "../platform-smallz80/smallz80.S"
 ;
 ;	SmallZ80 support
 ;
@@ -18,7 +18,7 @@
 	.export _plt_monitor
 	.export _plt_reboot
 	.export outchar
-# 1 "kernelu.def"
+# 1 "../platform-smallz80/kernelu.def"
 ;	FUZIX mnemonics for memory addresses etc
 ;
 ;
@@ -42,13 +42,13 @@ Z180_IO_BASE		    .equ 0x00
 ;	The number of disk buffers. Must match config.h
 ;
 NBUFS			    .equ 5
-# 1 "../../cpu-z80u/kernel-z80.def"
+# 1 "../platform-smallz80/../../cpu-z80u/kernel-z80.def"
  
 # 26
  
 # 44
  
-# 1 "../../cpu-z180/z180.def"
+# 1 "../platform-smallz80/../../cpu-z180/z180.def"
 ; ASCI serial ports
 ASCI_CNTLA0                 .equ Z180_IO_BASE+0x00     ; ASCI control register A channel 0
 ASCI_CNTLA1                 .equ Z180_IO_BASE+0x01     ; ASCI control register A channel 1
@@ -136,7 +136,7 @@ Z182_ROMBR                  .equ 0xE8                   ; ROM boundary register
 ; Debugging
 DEBUGBANK   .equ 0
 DEBUGCOMMON .equ 0
-# 26 "smallz80.S"
+# 26 "../platform-smallz80/smallz80.S"
 ;
 ; Buffers (we use asm to set this up as we need them in a special segment
 ; so we can recover the discard memory into the buffer pool
@@ -249,6 +249,7 @@ init_hardware:
 old_board:
 	ld	(_rtc_base),a	; Set RTC infop
 	add	a,0x0D		; set up pointer for RTC config
+	ld	c,a
 
 	xor	a
 	out	(c),a		; hold off, weirdness off

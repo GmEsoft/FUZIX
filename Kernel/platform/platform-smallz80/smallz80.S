@@ -135,6 +135,7 @@ init_hardware:
 old_board:
 	ld	(_rtc_base),a	; Set RTC infop
 	add	a,0x0D		; set up pointer for RTC config
+	ld	c,a
 
 	xor	a
 	out	(c),a		; hold off, weirdness off

@@ -1,4 +1,4 @@
-# 1 "crt0.S"
+# 1 "../platform-smallz80/crt0.S"
 
 	; Common comes first so this is at 0x0100
 
