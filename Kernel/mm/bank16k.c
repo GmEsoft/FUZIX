@@ -246,7 +246,7 @@ uint8_t get_common(void)
 	/* No free pages so swap something out */
 	/* and return it's common */
 	swapneeded(p, 0);
-	return pfree[--pfptr];
+	return *--pfptr;
 }
 
 /* Finish swapping in rest of task p, using page as it's common
