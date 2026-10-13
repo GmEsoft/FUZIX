@@ -164,7 +164,6 @@ int sys_ioctl(uint_fast8_t minor, uarg_t request, char *data)
 	default:
 		return -1;
 	}
-	return 0;
 }
 
 int sys_close(uint_fast8_t minor)
