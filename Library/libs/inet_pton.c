@@ -34,14 +34,14 @@ static const char *quad(const char *p, uint8_t *r)
 		return p;
 	return NULL;
 }
-		
+
 int inet_pton(int af, const char *src, void *dst)
 {
 	uint8_t *p = dst;
 
 	if (af != AF_INET) {
 		errno = EAFNOSUPPORT;
-		return 0;
+		return -1;
 	}
 
 	/* Unlike the legacy interfaces this one requires decimal and four
