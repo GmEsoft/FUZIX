@@ -14,24 +14,16 @@
 ;
 U_DATA__TOTALSIZE           .equ 0x200        ; 256+256 bytes @ F000
 ;
-;	Space for the udata of a switched out process within the bank of
-;	memory that it uses. Normally placed at the very top
-;
-U_DATA_STASH		    .equ 0xBE00	      ; BE00-BFFF
-;
-;	We can't run CP/M stuff in emulation as our banks are in odd places
-;
-PROGBASE		    .equ 0x4000
-PROGLOAD		    .equ 0x4000
-;
 ;	For special platforms that have external memory protection hardware
 ;	Just say 0.
 ;
 
-;
-;	Set this if the platform has swap enabled in config.h
-;
 
+PROGBASE		    .equ 0x4000
+PROGLOAD		    .equ 0x4000
+
+U_DATA_STASH		    .equ 0xBE00	      ; BE00-BFFF
+Z180_IO_BASE		    .equ 0x00
 ;
 ;	The number of disk buffers. Must match config.h
 ;
@@ -108,6 +100,7 @@ __uputc:
 	ld l,a
 	call map_proc_always
 	ld (hl), e
+	ld hl, 0
 	jp map_kernel			; map the kernel back below common
 
 __uputw:
@@ -125,6 +118,7 @@ __uputw:
 	ld (hl), e
 	inc hl
 	ld (hl), d
+	ld hl, 0
 	jp map_kernel
 
 __ugetc:
@@ -203,8 +197,9 @@ __uzero:
 	ldir
 popout:
 	pop bc
+	ld hl,0
 	jp map_kernel
-# 21 "tricks.S"
+# 22 "tricks.S"
 ;
 ;	The when it all works you can consider following this example and
 ;	optimizing it hard.
@@ -565,7 +560,7 @@ bouncebuffer:
 _swapstack:
 _need_resched:	.byte 0
 fork_proc_ptr: .word 0 ; (C type is struct p_tab *) -- address of child process p_tab entry
-# 29 "tricks.S"
+# 30 "tricks.S"
 ;
 ;	We want to provide our own optimized direct 32K bank to bank
 ;	copy. This is slightly crazy stuff. The fastest Z80 copy is to use

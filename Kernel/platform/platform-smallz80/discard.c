@@ -47,9 +47,16 @@ void map_init(void)
  */
 void pagemap_init(void)
 {
-	uint8_t i;
-	for (i = 1; i <= 15; i++)
-		pagemap_add(i);
+	unsigned i;
+
+	/* Z180 ? */
+	if (sys_cpu_feat != 6) {
+		for (i = 1; i <= 15; i++)
+			pagemap_add(i);
+	} else {
+		for (i = 0x10; i <= 0xF2; i += 0x0E)
+			pagemap_add(i);
+	}
 }
 
 /*

@@ -74,6 +74,7 @@ struct blkbuf *bufpool_end = bufpool + NBUFS;
  */
 void plt_discard(void)
 {
+#if 0
 	uint16_t discard_size = 0xFFFF - (uint16_t)bufpool_end;
 	bufptr bp = bufpool_end;
 
@@ -89,4 +90,5 @@ void plt_discard(void)
 		bp->bf_dev = NO_DEVICE;
 		bp->bf_busy = BF_FREE;
 	}
+#endif
 }

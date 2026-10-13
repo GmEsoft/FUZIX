@@ -10,17 +10,6 @@
 	.export init_early
 	.export init_hardware
 	.export _program_vectors
-	.export map_buffers
-	.export map_kernel
-	.export map_kernel_di
-	.export map_kernel_restore
-	.export map_proc
-	.export map_proc_a
-	.export map_proc_always
-	.export map_proc_always_di
-	.export map_save_kernel
-	.export map_restore
-	.export map_for_swap
 	.export plt_interrupt_all
 	.export _kernel_flag
 	.export _int_disabled
@@ -39,24 +28,16 @@
 ;
 U_DATA__TOTALSIZE           .equ 0x200        ; 256+256 bytes @ F000
 ;
-;	Space for the udata of a switched out process within the bank of
-;	memory that it uses. Normally placed at the very top
-;
-U_DATA_STASH		    .equ 0xBE00	      ; BE00-BFFF
-;
-;	We can't run CP/M stuff in emulation as our banks are in odd places
-;
-PROGBASE		    .equ 0x4000
-PROGLOAD		    .equ 0x4000
-;
 ;	For special platforms that have external memory protection hardware
 ;	Just say 0.
 ;
 
-;
-;	Set this if the platform has swap enabled in config.h
-;
 
+PROGBASE		    .equ 0x4000
+PROGLOAD		    .equ 0x4000
+
+U_DATA_STASH		    .equ 0xBE00	      ; BE00-BFFF
+Z180_IO_BASE		    .equ 0x00
 ;
 ;	The number of disk buffers. Must match config.h
 ;
@@ -67,7 +48,95 @@ NBUFS			    .equ 5
  
 # 44
  
-# 35 "smallz80.S"
+# 1 "../../cpu-z180/z180.def"
+; ASCI serial ports
+ASCI_CNTLA0                 .equ Z180_IO_BASE+0x00     ; ASCI control register A channel 0
+ASCI_CNTLA1                 .equ Z180_IO_BASE+0x01     ; ASCI control register A channel 1
+ASCI_CNTLB0                 .equ Z180_IO_BASE+0x02     ; ASCI control register B channel 0
+ASCI_CNTLB1                 .equ Z180_IO_BASE+0x03     ; ASCI control register B channel 0
+ASCI_STAT0                  .equ Z180_IO_BASE+0x04     ; ASCI status register    channel 0
+ASCI_STAT1                  .equ Z180_IO_BASE+0x05     ; ASCI status register    channel 1
+ASCI_TDR0                   .equ Z180_IO_BASE+0x06     ; ASCI transmit data reg, channel 0
+ASCI_TDR1                   .equ Z180_IO_BASE+0x07     ; ASCI transmit data reg, channel 1
+ASCI_RDR0                   .equ Z180_IO_BASE+0x08     ; ASCI receive data reg,  channel 0
+ASCI_RDR1                   .equ Z180_IO_BASE+0x09     ; ASCI receive data reg,  channel 0
+ASCI_ASEXT0                 .equ Z180_IO_BASE+0x12     ; ASCI extension register channel 0
+ASCI_ASEXT1                 .equ Z180_IO_BASE+0x13     ; ASCI extension register channel 1
+ASCI_ASTC0L                 .equ Z180_IO_BASE+0x1A     ; ASCI time constant register channel 0 low
+ASCI_ASTC0H                 .equ Z180_IO_BASE+0x1B     ; ASCI time constant register channel 0 high
+ASCI_ASTC1L                 .equ Z180_IO_BASE+0x1C     ; ASCI time constant register channel 1 low
+ASCI_ASTC1H                 .equ Z180_IO_BASE+0x1D     ; ASCI time constant register channel 1 high
+
+; Z180 MMU
+MMU_CBR                     .equ Z180_IO_BASE+0x38     ; common1 base register
+MMU_BBR                     .equ Z180_IO_BASE+0x39     ; bank base register
+MMU_CBAR                    .equ Z180_IO_BASE+0x3A     ; common/bank area register
+
+; Z180 DMA engine
+DMA_SAR0L                   .equ Z180_IO_BASE+0x20     ; DMA source address reg, channel 0L
+DMA_SAR0H                   .equ Z180_IO_BASE+0x21     ; DMA source address reg, channel 0H
+DMA_SAR0B                   .equ Z180_IO_BASE+0x22     ; DMA source address reg, channel 0B
+DMA_DAR0L                   .equ Z180_IO_BASE+0x23     ; DMA dest address reg,   channel 0L
+DMA_DAR0H                   .equ Z180_IO_BASE+0x24     ; DMA dest address reg,   channel 0H
+DMA_DAR0B                   .equ Z180_IO_BASE+0x25     ; DMA dest address reg,   channel 0B
+DMA_BCR0L                   .equ Z180_IO_BASE+0x26     ; DMA byte count reg,     channel 0L
+DMA_BCR0H                   .equ Z180_IO_BASE+0x27     ; DMA byte count reg,     channel 0H
+DMA_MAR1L                   .equ Z180_IO_BASE+0x28     ; DMA memory address reg, channel 1L
+DMA_MAR1H                   .equ Z180_IO_BASE+0x29     ; DMA memory address reg, channel 1H
+DMA_MAR1B                   .equ Z180_IO_BASE+0x2A     ; DMA memory address reg, channel 1B
+DMA_IAR1L                   .equ Z180_IO_BASE+0x2B     ; DMA I/O address reg,    channel 1L
+DMA_IAR1H                   .equ Z180_IO_BASE+0x2C     ; DMA I/O address reg,    channel 1H
+DMA_BCR1L                   .equ Z180_IO_BASE+0x2E     ; DMA byte count reg,     channel 1L
+DMA_BCR1H                   .equ Z180_IO_BASE+0x2F     ; DMA byte count reg,     channel 1H
+DMA_DSTAT                   .equ Z180_IO_BASE+0x30     ; DMA status register
+DMA_DMODE                   .equ Z180_IO_BASE+0x31     ; DMA mode register
+DMA_DCNTL                   .equ Z180_IO_BASE+0x32     ; DMA/WAIT control register
+
+; Z180 Timer
+TIME_TMDR0L                 .equ Z180_IO_BASE+0x0C     ; Timer data register,    channel 0L
+TIME_TMDR0H                 .equ Z180_IO_BASE+0x0D     ; Timer data register,    channel 0H
+TIME_RLDR0L                 .equ Z180_IO_BASE+0x0E     ; Timer reload register,  channel 0L
+TIME_RLDR0H                 .equ Z180_IO_BASE+0x0F     ; Timer reload register,  channel 0H
+TIME_TCR                    .equ Z180_IO_BASE+0x10     ; Timer control register
+TIME_TMDR1L                 .equ Z180_IO_BASE+0x14     ; Timer data register,    channel 1L
+TIME_TMDR1H                 .equ Z180_IO_BASE+0x15     ; Timer data register,    channel 1H
+TIME_RLDR1L                 .equ Z180_IO_BASE+0x16     ; Timer reload register,  channel 1L
+TIME_RLDR1H                 .equ Z180_IO_BASE+0x17     ; Timer reload register,  channel 1H
+TIME_FRC                    .equ Z180_IO_BASE+0x18     ; Timer Free running counter
+
+; CSIO
+CSIO_CNTR		    .equ Z180_IO_BASE+0x0A     ; CSIO control/status register
+CSIO_TRDR		    .equ Z180_IO_BASE+0x0B     ; CSIO transmit/receive data register
+
+; Z180 Interrupts
+INT_IL                      .equ Z180_IO_BASE+0x33     ; Interrupt vector low register
+INT_ITC                     .equ Z180_IO_BASE+0x34     ; Interrupt vector low register
+
+; Refresh control
+MEM_RCR			    .equ Z180_IO_BASE+0x36	; Refresh control
+
+; ESCC serial ports (Z80182)
+ESCC_CTRL_A                 .equ 0xE0                   ; ESCC Channel A control register
+ESCC_DATA_A                 .equ 0xE1                   ; ESCC Channel A data register
+ESCC_CTRL_B                 .equ 0xE2                   ; ESCC Channel B control register
+ESCC_DATA_B                 .equ 0xE3                   ; ESCC Channel B data register
+
+PORT_A_DDR                  .equ 0xED                   ; Port A data direction register
+PORT_A_DATA                 .equ 0xEE                   ; Port A data register
+PORT_B_DDR                  .equ 0xE4                   ; Port B data direction register
+PORT_B_DATA                 .equ 0xE5                   ; Port B data register
+PORT_C_DDR                  .equ 0xDD                   ; Port C data direction register
+PORT_C_DATA                 .equ 0xDE                   ; Port C data register
+
+Z182_SYSCONFIG              .equ 0xEF                   ; System Configuration Register
+Z182_RAMUBR                 .equ 0xE6                   ; RAM upper boundary register
+Z182_RAMLBR                 .equ 0xE7                   ; RAM lower boundary register
+Z182_ROMBR                  .equ 0xE8                   ; ROM boundary register
+
+; Debugging
+DEBUGBANK   .equ 0
+DEBUGCOMMON .equ 0
+# 26 "smallz80.S"
 ;
 ; Buffers (we use asm to set this up as we need them in a special segment
 ; so we can recover the discard memory into the buffer pool
@@ -123,7 +192,20 @@ pmwait:
 ;
 _plt_reboot:
 	di
+	ld	a,(_sys_cpu)
+	cp	6			; Z180 ?
+	jr	nz, gpio_reboot
+	ld	a,(_uart_base + 1)
+	add	a,4
+	ld	c,a
 	xor	a
+	; Ensure the ROM is off in all forms, and hit the switch
+	out	(c),a
+	.z180
+	out0	(MMU_BBR),a
+	.z80
+	rst	0
+gpio_reboot:
 	out	(0xF8),a
 	rst	0
 
@@ -158,10 +240,6 @@ init_early:
 ;	program up support hardware like PIO and CTC devices here.
 ;
 init_hardware:
-	ld	hl,544			; 512 + 32
-	ld	(_ramsize), hl
-	ld	hl,480
-	ld	(_procmem), hl
 
 	ld	a,(0xFFC2)	; Where is the primary serial ?
 	cp	0x10
@@ -197,6 +275,23 @@ old_board:
 	ld	(_num_banks),a
 	;	Ignore the expansion board info for now (floppy etc)
 
+	cp	30	; 	30 banks is the Z180 board
+	jr	nz, is_z80
+	.z180
+	ld	a,0xE0
+	out0	(MMU_CBAR),a
+	.z80
+	ld	hl,1024
+	ld	(_ramsize), hl
+	ld	hl,960
+	ld	(_procmem), hl
+	jr	setup
+is_z80:
+	ld	hl,544			; 512 + 32
+	ld	(_ramsize), hl
+	ld	hl,480
+	ld	(_procmem), hl
+setup:
 	; set up interrupt vectors for the kernel (also sets up common memory in page 0x000F which is unused)
 	ld	hl, 0
 	push	hl
@@ -212,9 +307,6 @@ old_board:
 ;	always available.
 ;
 	.commondata
-
-mapsave:
-	.byte	0	; Saved copy of the previous map (see map_save)
 
 _kernel_flag:
 	.byte	1	; We start in kernel mode
@@ -248,106 +340,7 @@ _program_vectors:
 	ld	hl, null_handler   ;   to Our Trap Handler
 	ld	(0x0001), hl
 
-	; and fall into map_kernel
-
-;
-;	Mapping set up for the SmallZ80
-;
-;	The low 16K and high 16K are fixed, the middle 16K is switchable
-;	and holds kernel or user code. The high 16K holds our common
-;	(we could use either but for reboot common needs to switch in ROM
-;	so it's easier to use the top)
-;
-;	We know the ROM mapping is already off
-;
-;	The _di versions of the functions are called when we know interrupts
-;	are definitely off. In our case it's not useful information so both
-;	symbols end up at the same code.
-;
-map_buffers:
-	   ; for us no difference. We could potentially use a low 32K bank
-	   ; for buffers but it's not clear it would gain us much value
-map_kernel_restore:
-map_kernel_di:
-map_kernel:
-	push	af
-	in	a,(0xF8)
-	and	0xF0		; bank 0 is kernel
-	out	(0xF8),a
-	pop	af
-	ret
-	; map_proc is called with HL either NULL or pointing to the
-	; page mapping. Unlike the other calls it's allowed to trash AF
-map_proc:
-	ld	a, h
-	or	l
-	jr	z, map_kernel
-map_proc_hl:
-	ld	a, (hl)			; and fall through
-	;
-	; With a simple bank switching system you need to provide a
-	; method to switch to the bank in A without corrupting any
-	; other registers. The stack is safe in common memory.
-	; For swap you need to provide what for simple banking is an
-	; identical routine.
-map_for_swap:
-map_proc_a:			; used by bankfork
-	push	af
-	push	bc
-	ld	b,a
-	in	a, (0xF8)
-	and	0xF0
-	or	b
-	out	(0xF8), a
-	pop	bc
-	pop	af
-	ret
-
-	;
-	; Map the current process into memory. We do this by extracting
-	; the bank value from u_page.
-	;
-map_proc_always_di:
-map_proc_always:
-	push af
-	push hl
-	ld hl, _udata + 2     
-	call map_proc_hl
-	pop hl
-	pop af
-	ret
-
-	;
-	; Save the existing mapping and switch to the kernel.
-	; The place you save it to needs to be in common memory as you
-	; have no idea what bank is live. Alternatively defer the save
-	; until you switch to the kernel mapping
-	;
-map_save_kernel:
-	push	af
-	in	a, (0xF8)
-	and	0x0F
-	ld	(mapsave), a
-	in	a, (0xF8)
-	and	0xF0		; kernel bank 0
-	out	(0xF8), a
-	pop	af
-	ret
-	;
-	; Restore the saved bank. Note that you don't need to deal with
-	; stacking of banks (we never recursively use save/restore), and
-	; that we may well call save and decide not to call restore.
-	;
-map_restore:
-	push	af
-	push	hl
-	ld	hl, mapsave
-	in	a, (0xF8)
-	or	(hl)
-	out	(0xF8), a
-	pop	hl
-	pop	af
-	ret
+	jp	map_kernel
 
 	;
 	; Used for low level debug. Output the character in A without
