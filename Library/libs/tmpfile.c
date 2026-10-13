@@ -2,13 +2,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 FILE *tmpfile(void)
 {
-  char name[] = "/tmp/tmpfileXXXXXX";
+  char name[19];
   FILE *fp;
   int saved_errno;
-  int fd = mkstemp(name);
+  int fd;
+
+  memcpy(name, "/tmp/tmpfileXXXXXX", sizeof(name));
+  fd = mkstemp(name);
   if (fd == -1)
     return NULL;
   if (unlink(name) == -1) {

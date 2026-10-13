@@ -76,8 +76,11 @@ int _vfnprintf(FILE * op, size_t maxlen, const char *fmt, va_list ap)
 	unsigned long val;
 #ifdef BUILD_LIBM
 	/* Fixed format includes leading/trailing zeroes outside ecvt's digits. */
-	char tmp[(sizeof(double) == sizeof(float) ?
-	    FLT_MAX_10_EXP + FLT_MANT_DIG : DBL_MAX_10_EXP + DBL_MANT_DIG) + 32];
+#if defined(double) || defined(NO_64BIT)
+	char tmp[FLT_MAX_10_EXP + FLT_MANT_DIG + 32];
+#else
+	char tmp[DBL_MAX_10_EXP + DBL_MANT_DIG + 32];
+#endif
 #else
 	char tmp[64];
 #endif
