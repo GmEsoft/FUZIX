@@ -3,17 +3,13 @@
 #include <string.h>
 #include <ctype.h>
 
-char *strcasestr(const char *needle, register const char *haystack)
+char *strcasestr(register const char *haystack, register const char *needle)
 {
   size_t s = strlen(needle);
-  char c = tolower(needle[0]);
 
-  while(*haystack) {
-    /* check the lead byte here for speed */
-    if (tolower(*haystack) == c) {
+  while (*haystack) {
       if (strncasecmp(needle, haystack, s) == 0)
         return (char *)haystack;
-    }
     haystack++;
   }
   return NULL;
