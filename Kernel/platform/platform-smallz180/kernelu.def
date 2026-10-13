@@ -5,7 +5,7 @@
 ;	of common memory. We do actually have a symbol for udata so
 ;	eventually this needs to go away
 ;
-U_DATA__TOTALSIZE           .equ 0x200        ; 256+256 bytes @ F000
+U_DATA__TOTALSIZE           .equ 0x200        ; 256+256 bytes @ E000
 ;
 PROGBASE		    .equ 0x0000
 PROGLOAD		    .equ 0x0100
