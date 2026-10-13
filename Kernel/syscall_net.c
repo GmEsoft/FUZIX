@@ -146,13 +146,9 @@ arg_t _netcall(void)
 	int n;
 	inoptr ino = NULL;
 
-	if (valaddr_r(argptr, sizeof(udata.u_net.args)) !=
-	    sizeof(udata.u_net.args)) {
-		udata.u_error = EFAULT;
-		return -1;
-	}
 	if (uget(argptr, udata.u_net.args, sizeof(udata.u_net.args)))
 		return -1;
+
 	ap = udata.u_net.args;
 
 	cn = *ap++;
@@ -181,7 +177,7 @@ arg_t _netcall(void)
 	   in some protocols */
 	if (op & N_DATAIO) {
 		udata.u_base = (void *) *ap;
-		s = valaddr((void *) *ap, ap[1], !!(op & N_DATAI));
+		s = valaddr((void *) *ap, ap[1], 1, !!(op & N_DATAI));
 		if (s == 0 && ap[1])
 			return -1;
 		ap += 3;
@@ -199,10 +195,8 @@ arg_t _netcall(void)
 			udata.u_net.addrlen = ap[1];
 			/* Put the buffer into the kernel */
 			if (uget((void *) *ap, &udata.u_net.addrbuf,
-			     udata.u_net.addrlen)) {
-				udata.u_error = EFAULT;
+			     udata.u_net.addrlen))
 				return -1;
-			}
 		} else
 			udata.u_net.addrlen = 0;
 	}
@@ -234,10 +228,8 @@ arg_t _netcall(void)
 				/* Copy the buffer, oe less if truncated by size */
 				if (s > udata.u_net.addrlen)
 					s = udata.u_net.addrlen;
-				if (uput(&udata.u_net.addrbuf, (void *) *ap, s) < 0) {
-					udata.u_error = EFAULT;
+				if (uput(&udata.u_net.addrbuf, (void *) *ap, s) < 0)
 					return -1;
-				}
 			}
 		}
 		return udata.u_retval;

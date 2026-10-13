@@ -338,9 +338,8 @@ arg_t _utime(void)
 	if (buf) {
 	        if (ino->c_node.i_uid != udata.u_euid && esuper())
 			goto out;
-		if (!valaddr_r(buf, 2 * sizeof(time_t)))
+		if (uget(buf, t, 2 * sizeof(time_t)))
 			goto out2;
-		uget(buf, t, 2 * sizeof(time_t));
 	} else {
 	        if (!(getperm(ino) & OTH_WR))
 			goto out;
@@ -380,8 +379,6 @@ arg_t _acct(void)
         inoptr inode;
         if (esuper())
                 return -1;
-        if (acct_fh != -1)
-                oft_deref(acct_fh);
         if (fd != -1) {
                 if ((inode = getinode(fd)) == NULLINODE)
                         return -1;
@@ -393,9 +390,11 @@ arg_t _acct(void)
 			udata.u_error = EROFS;
 			return -1;
 		}
-        	acct_fh = udata.u_files[fd];
-        	++of_tab[acct_fh].o_refs;
+                ++of_tab[udata.u_files[fd]].o_refs;
         }
+        if (acct_fh != -1)
+                oft_deref(acct_fh);
+        acct_fh = fd == -1 ? -1 : udata.u_files[fd];
 	return 0;
 #else
         udata.u_error = EINVAL;

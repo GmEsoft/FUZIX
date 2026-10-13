@@ -22,8 +22,6 @@ static const uint16_t mouse_init[] = {
     FAIL|0xFA,
     FAIL|0xAA,
     FAIL|0x00,
-    SEND|0xF3,
-    FAIL|0xFA,
     STOP
     /* May bee followed by an FA or FE */
 };
@@ -54,11 +52,11 @@ static const uint16_t mouse_fivetest[] = {
     FAIL|0xFA,
     SEND|0xF3,
     FAIL|0xFA,
-    SEND|0x64,
+    SEND|0xC8,
     FAIL|0xFA,
     SEND|0xF3,
     FAIL|0xFA,
-    SEND|0x64,
+    SEND|0x50,
     FAIL|0xFA,
     SEND|0xF2,			/* Should now reply to get ID */
     FAIL|0xFA,
@@ -124,19 +122,17 @@ static void ps2mouse_event(void)
     /* Event code and button bits */
     event[0] = MOUSE_REL;
     event[1] = packet[0] & 7;
-    event[1] = packet[1] >> 1;	/* Scale down and add sign */
+    event[2] = packet[1] >> 1;	/* Scale down and add sign */
     if (packet[0] & 0x10)
-        event[1] |= 0x80;
-    /* On a classic this byte is always 0 in our buffer so we do the
-       right thing */
-    event[2] = packet[2] >> 1;
-    if (packet[0] & 0x20)
         event[2] |= 0x80;
-    event[3] = packet[3] << 5;	/* Only 3 bits are used so scale up */
+    /* The four-byte input ABI carries buttons, X and Y deltas. */
+    event[3] = packet[2] >> 1;
+    if (packet[0] & 0x20)
+        event[3] |= 0x80;
     /* These bits may have other stuff in them on a non 5 button protocol
        mouse so we check the type */
     if (fivebutton)
-        event[1] |= (packet[3] & 0x18);
+        event[1] |= (packet[3] & 0x30) >> 1;
     /* The rest is up to the platform */
     plt_ps2mouse_event(event);
 }

@@ -131,24 +131,24 @@ int gfx_ioctl(uint_fast8_t minor, uarg_t arg, char *ptr)
 		return 0;
 	case GFX_WRITE:
 		len = gfx_valid(ptr);
-		if (len == 0 || valaddr(ptr, len, 0))
+		if (len == 0 || valaddr_r(ptr, len, len))
 			return -1;
 		return gfx_write(ptr);
 	case GFX_READ:
 		len = gfx_valid(ptr);
-		if (len == 0 || valaddr(ptr, len, 1))
+		if (len == 0 || valaddr_w(ptr, len, len))
 			return -1;
 		return gfx_read(ptr);
 	case GFX_EXG:
 		len = gfx_valid(ptr);
-		if (len == 0 || valaddr(ptr, len, 1))
+		if (len == 0 || valaddr_w(ptr, len, len))
 			return -1;
 		return gfx_exg(ptr);
 	case GFX_DRAW:
 		if (gfxtype == 0)
 			return -1;
 		len = ugetw(ptr);
-		if (valaddr(ptr, len, 0))
+		if (valaddr_r(ptr, len, len))
 			return -1;
 		if (ugetw(ptr + 2) > 239 || ugetw(ptr + 4) > 79) {
 			udata.u_error = ERANGE;

@@ -132,15 +132,18 @@ static void claim_data_regions(struct proc_map *m, uint8_t owner)
 static uint8_t need_zeros(uint8_t *addr, uint8_t n)
 {
 	uint8_t ct = 0;
-	while(*addr == 0 && ct++ < n);
+	while (ct < n && addr < pagemap + NUM_PAGES && *addr == 0) {
+		addr++;
+		ct++;
+	}
 	return ct;
 }
 
 static uint8_t *skip_used(uint8_t *p)
 {
-	while(*p && p < &pagemap[NUM_PAGES])
+	while (p < &pagemap[NUM_PAGES] && *p)
 		p++;
-	return p;
+	return p == &pagemap[NUM_PAGES] ? NULL : p;
 }
 
 /* Finds the space but doesn't book it out - so we can look for slack and if
@@ -157,6 +160,9 @@ static page_t alloc_data(uint8_t dataneed, uint8_t stackneed)
 	uint8_t y;
 
 	while(addr = skip_used(addr)) {
+		if (dataneed + stackneed > PAGES_64K ||
+		    addr > pagemap + NUM_PAGES - PAGES_64K)
+			return 0;
 		x = need_zeros(addr, dataneed);
 		y = need_zeros(addr + PAGES_64K - stackneed, stackneed);
 		if (x == dataneed) {
@@ -232,15 +238,32 @@ static void copy_pages(page_t to, page_t from, uint16_t len)
 {
 	uint16_t ts = page_to_segment(to);
 	uint16_t fs = page_to_segment(from);
-	while(len--)
-		do_copy_page(ts++, fs++);
+	/* A page is 256 paragraphs, and upward overlapping moves must
+	   copy the last page first. */
+	if (to > from) {
+		ts += len << (PAGESHIFT - 4);
+		fs += len << (PAGESHIFT - 4);
+		while (len--) {
+			ts -= 1U << (PAGESHIFT - 4);
+			fs -= 1U << (PAGESHIFT - 4);
+			do_copy_page(ts, fs);
+		}
+	} else {
+		while (len--) {
+			do_copy_page(ts, fs);
+			ts += 1U << (PAGESHIFT - 4);
+			fs += 1U << (PAGESHIFT - 4);
+		}
+	}
 }
 
 static void zero_pages(page_t to, uint16_t len)
 {
 	uint16_t ts = page_to_segment(to);
-	while(len--)
-		do_zero_page(ts++);
+	while (len--) {
+		do_zero_page(ts);
+		ts += 1U << (PAGESHIFT - 4);
+	}
 }
 
 /*
@@ -386,17 +409,19 @@ usize_t pagemap_mem_used(void)
 	return r;
 }
 
-/* ktop is a page number as is ramtop */
-void pagemap_init_range(page_t ktop, page_t ramtop)
+/* ktop and ramtop are in KiB, as supplied by the platform boot code. */
+void pagemap_init_range(uint16_t ktop, uint16_t ramtop)
 {
-	/* FIXME: should round _up_ on ktop! */
-	ktop >>= (PAGESHIFT - 10);
+	/* The boot caller supplies KiB, not page numbers. */
+	ktop = (ktop + (1U << (PAGESHIFT - 10)) - 1) >> (PAGESHIFT - 10);
 	ramtop >>= (PAGESHIFT - 10);
+	if (ktop > ramtop || ramtop > NUM_PAGES)
+		panic("invalid page range");
 	/* Reserve the kernel */
 	memset(pagemap, 0xFE, ktop);
 	memset(pagemap + ktop, 0, ramtop - ktop);
 	/* Reserve any memory below 640K if we are say a 512K machine */
-	memset(pagemap + ramtop, 0xFE, ramtop - NUM_PAGES);
+	memset(pagemap + ramtop, 0xFE, NUM_PAGES - ramtop);
 	total_pages = ramtop - ktop;
 	free_pages = total_pages;
 }

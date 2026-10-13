@@ -390,7 +390,7 @@ static pgnum_t make_present(pgnum_t page, pgnum_t s, unsigned swap)
 		n = s;
 		m = mem + n;
 	}
-	if (swap) 
+	if (swap)
 		swap_in_page(n, page);
 	m->page = page;
 	m->age = 0x80;
@@ -493,7 +493,7 @@ void realloc_map(unsigned low, unsigned high, unsigned oldshared)
 #ifdef DEBUG
 	kprintf("realloc map %d %d (top %d)\n", low, high, top_bank);
 #endif
-	
+
 	for (i = 0; i < low; i++) {
 		if (*mp == NO_PAGE)
 			*mp = alloc_page();
@@ -734,7 +734,7 @@ int pagemap_realloc(struct exec *hdr, usize_t size)
 	/* Stack map range. Cache for valaddr */
 	m->stacktop = PAGE_ADDR(top_bank) - 1;
 	m->stackbot = PAGE_ADDR(top_bank - nh);
-	
+
 	/* Tell the execve() code to build the stack in the top of
 	   our memory space we allocated */
 	udata.u_top = PAGE_ADDR(top_bank) - sizeof(struct u_block);
@@ -756,7 +756,7 @@ unsigned remap_sp(unsigned sp)
 }
 
 /*
- *	Caculate the number of pages of memory used. 
+ *	Caculate the number of pages of memory used.
  */
 usize_t pagemap_mem_used(void)
 {
@@ -775,7 +775,7 @@ usize_t pagemap_mem_used(void)
  *	An address is valid if it lies between the start of the code
  *	and the brk address or between the bottom and top of the stack.
  */
-usize_t valaddr(const uint8_t * pp, usize_t l, uint_fast8_t is_write)
+usize_t valaddr(const uint8_t * pp, usize_t l, usize_t need, uint_fast8_t is_write)
 {
 	struct meminfo *m = meminfo + udata.u_page;
 	usize_t n = 0;
@@ -788,23 +788,24 @@ usize_t valaddr(const uint8_t * pp, usize_t l, uint_fast8_t is_write)
 		/* Stack (high) */
 		else if (p >= m->stackbot && p <= m->stacktop)
 			n = m->stacktop - p;
-		if (n > l)
-			n = l;
-		if (n)
+		if (n >= need) {
+			if (n > l)
+				return l;
 			return n;
+		}
 	}
 	udata.u_error = EFAULT;
 	return 0;
 }
 
-usize_t valaddr_r(const uint8_t *pp, usize_t l)
+usize_t valaddr_r(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, 0);
+	return valaddr(pp, l, n, 0);
 }
 
-usize_t valaddr_w(const uint8_t *pp, usize_t l)
+usize_t valaddr_w(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, 1);
+	return valaddr(pp, l, n, 1);
 }
 
 #endif
@@ -861,7 +862,7 @@ void pagemap_setup(uaddr_t base, unsigned len)
 	/* Set up the udata pointer ready */
 	udata_ptr = (struct u_data *)(PAGE_ADDR(top_bank) - sizeof(struct u_block));
 	udata_shadow = udata_ptr;
-#endif	
+#endif
 	/* Mark rest of the map used */
 	set_range(rmap + 2, SWAPPED, NPAGE - 2);
 	/* The one page already in use */

@@ -35,7 +35,7 @@ static uint_fast8_t check_sane(struct atari_bootblock *br,
 			if (!ap->start || !ap->length)
 				return 0;
 			if (ap->start >= br->size
-			    || ap->start + ap->length >= br->size)
+			    || ap->length > br->size - ap->start)
 				return 0;
 			if ((ap->id[0] | ap->id[1] | ap->id[2]) & 0x80)
 				return 0;
@@ -67,7 +67,7 @@ static uint_fast8_t ahdi_extended_partition(struct atari_partition *bap,
 
 	do {
 		if (!blk_op.blkdev->transfer())
-			return next;
+			break;
 
 		ap = ext->part;
 
@@ -83,7 +83,8 @@ static uint_fast8_t ahdi_extended_partition(struct atari_partition *bap,
 			break;
 
 		/* Ok looks believable */
-		/* TODO : check we don't overrun table */
+		if (next >= MAX_PARTITIONS)
+			break;
 		blk_op.blkdev->lba_first[next] = bap->start + ap->start;
 		blk_op.blkdev->lba_count[next] = ap->length;
 		next++;
@@ -102,9 +103,9 @@ static uint_fast8_t ahdi_install(struct atari_partition *ap,
 {
 	uint_fast8_t i;
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < n && next < MAX_PARTITIONS; i++) {
 		if (ap->flags & 1) {
-			/* TODO : check we don't overrun table */
+			/* The loop bounds the partition table writes. */
 			blk_op.blkdev->lba_first[next] = ap->start;
 			blk_op.blkdev->lba_count[next] = ap->length;
 			next++;
@@ -140,7 +141,7 @@ void ahdi_parse(uint_fast8_t letter)
 	if (!blk_op.blkdev->transfer())
 		goto none;
 
-	if (!check_sane(br, br->part, 8))
+	if (!check_sane(br, br->part, 4))
 		goto none;
 	/* Probably a valid partition table */
 	next = ahdi_install(br->part, 4, next, letter);

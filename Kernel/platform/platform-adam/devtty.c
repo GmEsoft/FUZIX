@@ -306,7 +306,7 @@ int vdptty_ioctl(uint8_t minor, uarg_t arg, char *ptr)
 		vdp_setup(map);
 		return 0;
 #if 0
-	/* For now - needs a custom rop/wop handler */		
+	/* For now - needs a custom rop/wop handler */
 	case VDPIOC_READ:
 		is_wr = 1;
 	case VDPIOC_WRITE:
@@ -322,10 +322,8 @@ int vdptty_ioctl(uint8_t minor, uarg_t arg, char *ptr)
 			return -1;
 		size = rw.lines * rw.cols;
 		addr = (uint8_t *)rw.data;
-		if (valaddr(addr, size, is_wr) != size) {
-			udata.u_error = EFAULT;
+		if (valaddr(addr, size, size, is_wr))
 			return -1;
-		}
 		if (arg == VDPIOC_READ)
 			udata.u_error = vdp_rop(&rw);
 		else
@@ -334,7 +332,7 @@ int vdptty_ioctl(uint8_t minor, uarg_t arg, char *ptr)
 			return -1;
 		return 0;
 	}
-#endif	
+#endif
 	case VTBORDER:
 		c = ugetc(ptr);
 		tmsborder[inputtty]  = igrb_to_msx(c & 0x1F);

@@ -39,7 +39,7 @@ C1SRCS =  devio.c kdata.c
 C1SRCS += inode.c tty.c
 C2SRCS =  syscall_proc.c process.c mm/malloc.c
 C2SRCS += mm/simple.c mm/bank8k.c mm/bank16k.c mm/bank16k_low.c mm/bank32k.c
-C3SRCS = mm/bankfixed.c mm/bank65c816.c mm/flat.c mm/flat_mem.c mm/buddy.c kmod.c
+C3SRCS = mm/bankfixed.c mm/bank65c816.c mm/flat.c mm/buddy.c kmod.c
 C2SRCS += mm/bank8086.c mm/bank16kfc.c mm/banksplit.c mm/flat_small.c
 C4SRCS = filesys.c version.c blk400.c blk512.c
 #
@@ -250,8 +250,6 @@ filesys.o: include/kernel.h include/panic.h include/sysinfoblk.h
 filesys.o: include/kdata.h include/printf.h
 mm/flat.o: include/kernel.h include/panic.h include/sysinfoblk.h include/kdata.h
 mm/flat.o: include/printf.h
-mm/flat_mem.o: include/kernel.h include/panic.h include/sysinfoblk.h
-mm/flat_mem.o: include/kdata.h include/printf.h include/flat_mem.h
 inode.o: include/kernel.h include/panic.h include/sysinfoblk.h
 inode.o: include/kdata.h include/printf.h include/tty.h include/netdev.h
 kdata.o: include/kernel.h include/panic.h include/sysinfoblk.h

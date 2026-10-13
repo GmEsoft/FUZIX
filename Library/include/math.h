@@ -264,7 +264,7 @@ extern float truncf(float);
 extern float y0f(float);
 extern float y1f(float);
 extern float ynf(int, float);
-extern unsigned int __float_bits(float);
+extern uint32_t __float_bits(float);
 extern int __fpclassifyf(float);
 extern int __signbitf(float);
 

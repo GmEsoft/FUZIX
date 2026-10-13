@@ -60,7 +60,7 @@ static void buddy_unpin(uint16_t node)
 
 /* Free a block and propogate both free and ownership information updates */
 static void buddy_free(uint16_t node, uint8_t sizeshift)
-{	
+{
 	uint16_t n = 1 << sizeshift;	/* How many blocks to free */
 	uint16_t i;
 
@@ -188,25 +188,4 @@ void *kmalloc(size_t size, uint8_t owner)
 	return buddy_node2addr(node);
 }
 
-#if 0
-/* For now use default flat one */
-usize_t valaddr(const char *pp, usize_t lw)
-{
-	uint16_t node = buddy_addr2node(pp);
-	uint16_t base = pp - buddy_node2addr(node);
-	int32_t l = lw;
-
-	while(l > 0) {
-		if (buddy[node] != udata.u_page) {
-			if (lw == l)
-				udata.u_error = EFAULT;
-			return lw - l;
-		l -= (1 << BUDDY_NODESHIFT) - base;
-		base = 0;
-	}
-	return lw;
-}
-
 #endif
-#endif
-

@@ -49,6 +49,7 @@ SECTIONS {
 		*(.data)
 		*(.data1)
 		*(.data.*)
+		. = ALIGN(4);
 		__data_end = .;
 	} > data : data
 
@@ -65,6 +66,14 @@ SECTIONS {
 		*(COMMON)
 		__bss_end = .;
 	} > data : bss
+
+	/* The executable header stores section sizes in 16-bit fields. */
+	ASSERT(__text_end - __text_start <= 0xffff,
+	       "text section exceeds the executable header size limit")
+	ASSERT(__data_end - __data_start <= 0xffff,
+	       "data section exceeds the executable header size limit")
+	ASSERT(__bss_end - __bss_start <= 0xffff,
+	       "bss section exceeds the executable header size limit")
 
 	/* DWARF debug sections.
 	   Symbols in the DWARF debugging sections are relative to the beginning

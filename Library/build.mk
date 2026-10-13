@@ -10,7 +10,6 @@ libc-functions.localsrcs += \
 	assert.c \
 	atexit.c \
 	atoi.c \
-	atof.c \
 	atol.c \
 	bcmp.c \
 	bcopy.c \
@@ -30,7 +29,6 @@ libc-functions.localsrcs += \
 	creat.c \
 	crypt.c \
 	ctime.c \
-	difftime.c \
 	err.c \
 	errno.c \
 	error.c \
@@ -39,7 +37,6 @@ libc-functions.localsrcs += \
 	execvp.c \
 	exit.c \
 	fclose.c \
-	fflush.c \
 	fgetc.c \
 	fgetgrent.c \
 	fgetpos.c \
@@ -51,7 +48,6 @@ libc-functions.localsrcs += \
 	fputc.c \
 	fputs.c \
 	fread.c \
-	free.c \
 	fscanf.c \
 	fsetpos.c \
 	ftell.c \

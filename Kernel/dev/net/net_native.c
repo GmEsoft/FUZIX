@@ -672,7 +672,7 @@ int netproto_find_local(struct ksockaddr *ka)
  */
 int netproto_autobind(struct socket *s)
 {
-	memcpy(&s->dst_addr, &udata.u_net.addrbuf, sizeof(struct ksockaddr));
+	memcpy(&s->src_addr, &udata.u_net.addrbuf, sizeof(struct ksockaddr));
 	return netn_synchronous_event(s, SS_BOUND);
 }
 
@@ -685,7 +685,7 @@ int netproto_autobind(struct socket *s)
  */
 int netproto_bind(struct socket *s)
 {
-	memcpy(&s->dst_addr, &udata.u_net.addrbuf, sizeof(struct ksockaddr));
+	memcpy(&s->src_addr, &udata.u_net.addrbuf, sizeof(struct ksockaddr));
 	return netn_synchronous_event(s, SS_BOUND);
 }
 
