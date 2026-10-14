@@ -16,6 +16,8 @@ __uputc:
 	jsr map_proc_always
 	stab 0,x
 	jsr map_kernel
+	clra
+	clrb
 	jmp __cleanup4
 
 __uputw:
@@ -27,6 +29,8 @@ __uputw:
 	staa 0,x
 	stab 1,x
 	jsr map_kernel
+	clra
+	clrb
 	jmp __cleanup4
 
 __ugetc:
