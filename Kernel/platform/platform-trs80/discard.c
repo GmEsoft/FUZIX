@@ -93,14 +93,20 @@ static void hyper_pagemap_init(void)
 
 void pagemap_init(void)
 {
-	uint8_t i = nbanks - 1;
+	unsigned i = nbanks - 1;
 	if (banktype == 2) {
 		hyper_pagemap_init();
 		return;
-	}
-	while (i) {
-		pagemap_add(i);	/* Mode 3, U64K low 32K mapped as low 32K */
-		pagemap_add(i | 0x80);	/* Mode 3, U64K high 32K mapped as low 32K */
-		i--;
+	} else if (banktype == 3) {
+		/* We have a choice - 5 x 48K processes or 4 x 56K for now go with
+		   56K using 64K spacing */
+		   for (i = 0x40; i < 0x80; i += 0x10)
+			pagemap_add(i);
+	} else {
+		while (i) {
+			pagemap_add(i);	/* Mode 3, U64K low 32K mapped as low 32K */
+			pagemap_add(i | 0x80);	/* Mode 3, U64K high 32K mapped as low 32K */
+			i--;
+		}
 	}
 }
