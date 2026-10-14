@@ -185,7 +185,7 @@ int blkdev_ioctl(uint_fast8_t minor, uarg_t request, char *data)
                     /* This will always be properly aligned from the kernel */
                     blk_op.lba = *(blkno_t *)data;
                 } else {
-                    if (!valaddr_r((uint8_t *)data, sizeof(uint16_t), sizeof(uint16_t))
+                    if (!valaddr_r((uint8_t *)data, sizeof(uint16_t), sizeof(uint16_t)))
                         return -1;
                     blk_op.lba = ugetw(data);
                 }
