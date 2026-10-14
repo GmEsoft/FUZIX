@@ -194,6 +194,8 @@ __uzero:
 	ld	d, h
 	inc	de
 	ldir
+	ld	h,b		; BC is now 0 so set HL to 0
+	ld	l,b
 pop_out:
 	pop	bc
 	jp	map_kernel_restore
@@ -219,6 +221,7 @@ __uputc:
 	ld	(hl), e
 uputc_out:
 	pop	bc
+	ld	hl,0
 	jp	map_kernel_restore	; map the kernel back below common
 
 __uputw:
