@@ -525,11 +525,11 @@ static int do_netproto_bind(struct socket *s)
 		/* We keep ports net endian so don't byte swap */
 		w5x00_bwrite(SOCK2BANK_C(i), Sn_PORT0, &s->src_addr.sa.sin.sin_port, 2);
 		break;
-#ifdef CONFIG_NET_W5100		
+#ifdef CONFIG_NET_W5100
 	case W5100_RAW:
 		w5x00_writesb(i, Sn_PROTO, s->s_protocol);
 		r = SOCK_IPRAW;
-#endif		
+#endif
 	}
 	/* Make an open request to open the socket */
 	w5x00_cmd(i, OPEN);
@@ -741,9 +741,9 @@ struct socktype {
 static struct socktype socktype[4] = {
 	{ AF_INET, SOCK_STREAM, IPPROTO_TCP, W5100_TCP },
 	{ AF_INET, SOCK_DGRAM, IPPROTO_UDP, W5100_UDP },
-#ifdef CONFIG_NET_W5100	
+#ifdef CONFIG_NET_W5100
 	{ AF_INET, SOCK_RAW, 0, W5100_RAW },
-#endif	
+#endif
 	{ 0, }
 };
 
@@ -908,6 +908,7 @@ int netproto_read(struct socket *s)
 		set_iflags(s, SI_DATA);
 
 		memcpy(&udata.u_net.addrbuf, &s->dst_addr, sizeof(struct ksockaddr));
+		udata.u_net.addrbuf.sa.sin.sin_family = AF_INET;
 
 		off = w5x00_readsw(i, Sn_RX_RD0) & RX_MASK;
 
@@ -990,7 +991,7 @@ arg_t netproto_write(struct socket *s, struct ksockaddr *ka)
 		}
 		n = min(room, udata.u_count);
 		w5x00_queue_u(i, n, udata.u_base);
-		w5x00_writesw(i, Sn_TX_WR0, 
+		w5x00_writesw(i, Sn_TX_WR0,
 			     w5x00_readsw(i, Sn_TX_WR0) + n);
 		w5x00_cmd(i, SEND);
 		break;
@@ -1112,7 +1113,7 @@ void netdev_init(void)
 	iga = ntohl(0xC0A800FE);
 	igm = ntohl(0xFFFFFF00);
 
-	w5x00_setup();	
+	w5x00_setup();
 
 #ifdef VERSIONR
 	if (w5x00_readcb(VERSIONR) == VERSION_ID) {
