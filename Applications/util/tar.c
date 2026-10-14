@@ -310,6 +310,7 @@ static void storedir(char *name)
 	char cname[100];
 	uint32_t count = 0;
 	uint16_t rem;
+	char *aname;
 
 	/* stat file */
 	ret = stat(name, &s);
@@ -335,7 +336,14 @@ static void storedir(char *name)
 	bzero(h.name, sizeof(h));
 	memset(h.mode, '0', 57);
 	memset(h.major, '0', 16);
-	strcpy(h.name, name);
+	/* Archive member names never carry leading slashes; the file
+	 * itself is still opened by its given path. */
+	aname = name;
+	while (*aname == '/')
+		aname++;
+	if (*aname == 0)
+		aname = ".";
+	strcpy(h.name, aname);
 	b8put(s.st_mode & 07777, h.mode + 8);
 	b8put(s.st_uid, h.uid + 8);
 	b8put(s.st_gid, h.gid + 8);
@@ -348,7 +356,7 @@ static void storedir(char *name)
 	case S_IFDIR:
 		h.type = '5';
 		if (S_ISDIR(s.st_mode))
-			h.name[strlen(name)] = '/';
+			h.name[strlen(aname)] = '/';
 		break;
 	case S_IFCHR:
 		h.type = '3';
@@ -664,9 +672,6 @@ static void create(char *argv[])
 		/* remove any trailing / */
 		if (s[strlen(s) - 1] == '/')
 			s[strlen(s) - 1] = 0;
-		/* remove any leading / */
-		if (s[0] == '/')
-			s = s + 1;
 		storedir(s);
 	}
 	/* write out 2 zero blocks */
