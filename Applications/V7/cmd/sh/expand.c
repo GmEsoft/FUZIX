@@ -13,7 +13,6 @@
 #include	"defs.h"
 #include 	<dirent.h>
 #include	<sys/types.h>
-#define DIRSIZ 31
 #include	<sys/stat.h>
 
 /* We can't detect Fuzix yet --- this will do for now. */
@@ -42,8 +41,12 @@ int expand(char *as, int rflg)
 	ARGPTR schain = gchain;
 	STATBUF statb;
 #ifdef FUZIX_INTERNAL_DIR_API
-	/* Use the internal API to avoid sucking in readdir and thus malloc */
-	struct __dirent entry;
+	/* Use the internal API to avoid sucking in readdir and thus malloc.
+	   Read into a buffer with one spare byte: the kernel does not
+	   NUL terminate a full length (FILENAME_LEN) name and struct
+	   __dirent has no room for the terminator. */
+	unsigned char direntbuf[sizeof(struct __dirent) + 1];
+	struct __dirent *entry = (struct __dirent *) direntbuf;
 	int dirf;
 #else
 	struct dirent* entry;
@@ -54,10 +57,6 @@ int expand(char *as, int rflg)
 		return (0);
 
 	s = cs = as;
-	/* FIXME: overruns */
-#ifdef FUZIX_INTERNAL_DIR_API
-	entry.d_name[DIRSIZ - 1] = 0;	/* to end the string */
-#endif
 
 	/* check for meta chars */
 	{
@@ -126,11 +125,14 @@ int expand(char *as, int rflg)
 		/* We don't want to use opendir as it uses calloc and sucks in malloc so we get
 		   down and dirty */
 		#ifdef FUZIX_INTERNAL_DIR_API
-			while (_getdirent(dirf, (void *) &entry, 32) == 32 && (trapnote & SIGSET) == 0) {
-				if (entry.d_ino == 0 || (*entry.d_name == '.' && *cs != '.'))
+			while (_getdirent(dirf, (void *) direntbuf,
+				sizeof(struct __dirent)) == sizeof(struct __dirent)
+				&& (trapnote & SIGSET) == 0) {
+				direntbuf[sizeof(struct __dirent)] = 0;
+				if (entry->d_ino == 0 || (*entry->d_name == '.' && *cs != '.'))
 					continue;
-				if (gmatch(entry.d_name, cs)) {
-					addg(s, entry.d_name, rescan);
+				if (gmatch(entry->d_name, cs)) {
+					addg(s, entry->d_name, rescan);
 					count++;
 				}
 			}
