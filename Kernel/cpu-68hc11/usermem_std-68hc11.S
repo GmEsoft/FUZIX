@@ -13,6 +13,8 @@ _uputc:
 	ldx 2,x
 	jsr map_proc_always
 	stab 0,x
+	clra
+	clrb
 	jmp map_kernel
 
 _uputw:
@@ -20,6 +22,8 @@ _uputw:
 	ldx 2,x
 	jsr map_proc_always
 	std 0,x
+	clra
+	clrb
 	jmp map_kernel
 
 _ugetc:
