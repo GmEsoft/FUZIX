@@ -24,6 +24,8 @@
 	.export map_proc_always_di
 	.export map_save_kernel
 	.export map_restore
+	.export map_io_slow
+	.export map_kernel_fast
 	.export _opreg
 	.export _modout
 
@@ -44,6 +46,10 @@ init_hardware:
 	out0	(MMU_BBR), a	; ensure main memory then
 	ld	a,0xE0		; set the high/low memory divide
 	out0	(MMU_CBAR), a
+	ld	a,0x83		; 80 cycle refresh
+	out	(MEM_RCR), a
+	ld	a,0x10		; 1 I/O WAIT 0 RAM WAIT
+	out	(DMA_DCNTL), a
 	ld	hl,320		; We don't use the extended main if present TODO
         ld	(_ramsize), hl
 	ld	de, 64		; for kernel
@@ -70,6 +76,7 @@ init_hardware:
         ret
 
 
+
 	.commondata
 
 opsave:
@@ -84,10 +91,16 @@ _modout:
 
 	.common
 
+map_kernel_fast:
+	push	af
+	ld	a,0x10	;  1 I/O wait state, 0 memory
+	out	(DMA_DCNTL),a
+	jr	map_kernel_2
 map_kernel:
 map_kernel_di:
 map_kernel_restore:
 	push	af
+map_kernel_2:
 	ld	a, (_opreg)
 	and	0x8C		; keep video bits
 	or	0x03		; map 2, base memory, no I/O
@@ -98,8 +111,14 @@ map_kernel_restore:
 	pop	af
 	ret
 
+map_io_slow:
+	push	af
+	ld	a,0x50		; 1 RAM wait, 1 I/O wait (for keyboard)
+	out	(DMA_DCNTL),a
+	jr	map_io_2
 map_io:
 	push	af
+map_io_2:
 	ld	a, (_opreg)
 	and	0x8C		; keep video bits
 	or	0x02		; map 2, base memory with I/O
@@ -110,9 +129,7 @@ map_io:
 	pop	af
 	ret
 ;
-;	Userspace mapping is mode 3, U64K/L32 mapped at L64K/L32
-;	Mapping codes 0x63 / 0x73. 0x94 on a bank expanded TRS80 then
-;	selects how the upper bank decodes
+;	User space mappings we use the XLR8R RAM
 ;
 map_proc:
 map_proc_di:
@@ -122,7 +139,7 @@ map_proc_di:
 map_proc_hl:
 	ld	a, (_opreg)
 	and	0x8C
-	or	0x63
+	or	0x03
 	ld	(_opreg), a
 	out	(0x84), a
 	ld	a, (hl)	
@@ -135,7 +152,7 @@ map_proc_a:			; used by bankfork
 	ld	b, a
 	ld	a, (_opreg)
 	and	0x8C
-	or	0x63
+	or	0x03
 	ld	(_opreg), a
 	out	(0x84), a
 	ld	a, b

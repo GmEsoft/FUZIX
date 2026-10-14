@@ -18,7 +18,7 @@
 
 	.export _bufpool
 
-#include "kernelu.def"
+#include "../../build/kernelu.def"
 #include "../../cpu-z80u/kernel-z80.def"
 
 	.buffers
@@ -200,7 +200,7 @@ xfer_out_wait:				; busy wait after OTIR
 
 _keyscan:
 	push	bc
-	call	map_io
+	call	map_io_slow
 	ld	b,8
 	ld	hl,0xF401
 	ld	de,_keyin
@@ -211,13 +211,13 @@ scank:
 	sla	l
 	djnz	scank
 	pop	bc
-	jp	map_kernel
+	jp	map_kernel_fast
 
 _anykey:
-	call	map_io
+	call	map_io_slow
 	ld	a,(0xF4FF)
 	ld	l,a
-	jp	map_kernel
+	jp	map_kernel_fast
 
 
 ;

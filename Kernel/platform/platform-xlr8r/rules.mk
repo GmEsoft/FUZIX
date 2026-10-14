@@ -1,2 +1,1 @@
-export CROSS_CCOPTS += -Os -I$(FUZIX_ROOT)/Kernel/platform/platform-trs80
-
+export CROSS_CCOPTS += -Os

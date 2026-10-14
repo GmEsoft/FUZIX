@@ -24,6 +24,8 @@
 	.export map_proc_always_di
 	.export map_save_kernel
 	.export map_restore
+	.export map_io_slow
+	.export map_kernel_fast
 	.export _opreg
 	.export _modout
 
@@ -198,6 +200,7 @@ no_hyper:
 ;	We pack these early in common space so they land below F400 as
 ;	F400-FFFF will disappear during screen and keyboard checks
 ;
+map_kernel_fast:
 map_kernel:
 map_kernel_di:
 map_kernel_restore:
@@ -211,6 +214,7 @@ map_kernel_restore:
 	ret
 
 map_io:
+map_io_slow:
 	push	af
 	ld	a, (_opreg)
 	and	0x8C		; keep video bits
