@@ -16,6 +16,8 @@ __uputc:
 	ldx 4,x
 	jsr map_proc_always
 	stab 0,x
+	clra
+	clrb
 	jmp map_kernel
 
 __uputw:
@@ -24,6 +26,8 @@ __uputw:
 	ldx 4,x
 	jsr map_proc_always
 	std 0,x
+	clra
+	clrb
 	jmp map_kernel
 
 __ugetc:
@@ -52,6 +56,7 @@ uzerolp:
 	inx
 	subd #1
 	bne uzerolp
+	; D is already zero at this point
 	jmp map_kernel
 
 __uget:
