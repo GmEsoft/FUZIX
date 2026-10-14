@@ -296,10 +296,6 @@ arg_t _fcntl(void)
 			udata.u_cloexec &= ~(1U << fd);
 		return 0;
 	case F_DUPFD:
-		if (data < 0 || data >= UFTSIZE) {
-			udata.u_error = EINVAL;
-			return -1;
-		}
 		if ((newd = uf_alloc_n(data)) == -1)
 			return -1;
 		udata.u_files[newd] = udata.u_files[fd];
