@@ -165,10 +165,10 @@ static void mem_copy(struct mem *to, struct mem *from)
 
    We make a copy of the pages in the memory, but we don't actually create
    anything useful because the copy can't be mapped at the right address
-   
+
    p is the process we are going to create maps for, udata.u_ptab is our
    own process. init is a special case!
-   
+
 */
 
 int pagemap_alloc(ptptr p)
@@ -500,7 +500,7 @@ arg_t _memfree(void)
  *	what happens to be a join of two banks. We could fix this but it's not
  *	clear it would be wise!
  */
-usize_t valaddr(const uint8_t *pp, usize_t l, uint_fast8_t is_write)
+usize_t valaddr(const uint8_t *pp, usize_t l, usize_t need, uint_fast8_t is_write)
 {
 	const void *p = pp;
 	const void *e = p + l;
@@ -512,7 +512,7 @@ usize_t valaddr(const uint8_t *pp, usize_t l, uint_fast8_t is_write)
 	/* First block is R/O */
 	if (is_write)
 		n++;
-#endif		
+#endif
 	while (n < MAX_BLOCKS) {
 		/* Found the right block ? */
 		if (m->start && p >= m->start && p < m->end) {
@@ -523,7 +523,12 @@ usize_t valaddr(const uint8_t *pp, usize_t l, uint_fast8_t is_write)
 			if (e == p)
 				break;
 			/* Return the size we can copy */
-			return e - p;
+			n = e - p;
+			if (n < need)
+				break;
+			if (n > l)
+				return l;
+			return n;
 		}
 /*		if (m->start)
 			kprintf("%p not in %p to %p\n",
@@ -535,14 +540,14 @@ usize_t valaddr(const uint8_t *pp, usize_t l, uint_fast8_t is_write)
 	return 0;
 }
 
-usize_t valaddr_r(const uint8_t *pp, usize_t l)
+usize_t valaddr_r(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, 0);
+	return valaddr(pp, l, n, 0);
 }
 
-usize_t valaddr_w(const uint8_t *pp, usize_t l)
+usize_t valaddr_w(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, 1);
+	return valaddr(pp, l, n, 1);
 }
 
 #ifdef CONFIG_LEVEL_2		/* Coredump support */

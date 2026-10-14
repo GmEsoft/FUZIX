@@ -881,7 +881,7 @@ void acctexit(ptptr p)
 	udata.u_count = 48;	/* Includes some spare for expansion */
 
 	/* Append to the end of the file */
-	oftp->o_ptr = ino->c_node.i_size;
+	udata.u_offset = ino->c_node.i_size;
 	writei(ino, 0);
 }
 #endif
@@ -971,8 +971,9 @@ void doexit(uint16_t val)
 		if (p->p_pptr == udata.u_ptab) {
 			p->p_pptr = ptab;	/* ptab is always init */
 			/* Figure out if we are signalling init or just
-			   blowing the slot away */
-			signal_parent(p);
+			   blowing the slot away for dead stuff */
+			if (p->p_status == P_ZOMBIE)
+				signal_parent(p);
 		}
 		/* Send SIGHUP to any pgrp members and remove
 		   them from our pgrp */

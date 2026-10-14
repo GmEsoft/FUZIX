@@ -13,6 +13,10 @@
 #include <tinydisk.h>
 #include "mbr.h"
 
+#if CONFIG_TD_MAX_PART < 4
+#error "Minimum 4 partition slots required"
+#endif
+
 #ifdef CONFIG_DYNAMIC_SWAP
 
 static void swap_found(uint_fast8_t minor, partition_table_entry_t * pe)
@@ -25,7 +29,7 @@ static void swap_found(uint_fast8_t minor, partition_table_entry_t * pe)
 	swap_dev = minor;	/* major is 0 */
 	off = le32_to_cpu(pe->lba_count);
 
-	while (off > SWAP_SIZE && n < MAX_SWAPS) {
+	while (off >= SWAP_SIZE && n < MAX_SWAPS) {
 		off -= SWAP_SIZE;
 		n++;
 	}
@@ -63,8 +67,10 @@ uint_fast8_t tinydisk_setup(uint16_t dev)
 	/* Platform custom partitions */
 #ifdef CONFIG_TD_CUSTOMPART
 	n = td_plt_setup(dev, lba, (void *)br);
-	if (n < 2)
+	if (n < 2) {
+		tmpfree(br);
 		return n;
+	}
 #endif
 	udata.u_block = 0;
 	udata.u_nblock = 1;

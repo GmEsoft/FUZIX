@@ -31,7 +31,7 @@ void rp5c01_nvram_write(uint8_t addr, uint8_t value)
 
     /* store 4 msb in mode 10 regs, 4 lsb in mode 01 regs */
     rp5c01_write_reg(MODE_SEL, TIMER_ENABLE | MODE10);
-    rp5c01_write_reg(addr, value & 0xF0 >> 4);
+    rp5c01_write_reg(addr, (value & 0xF0) >> 4);
     rp5c01_write_reg(MODE_SEL, TIMER_ENABLE | MODE11);
     rp5c01_write_reg(addr, value & 0x0F);
 }
@@ -41,7 +41,7 @@ uint8_t rp5c01_nvram_read(uint8_t addr)
     uint8_t val, data;
 
     if (addr > 0xC)
-	return;
+	return 0;
 
     /* read 4 msb from mode 10 regs, 4 lsb from mode 01 regs */
     rp5c01_write_reg(MODE_SEL, TIMER_ENABLE | MODE10);

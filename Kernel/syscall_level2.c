@@ -105,7 +105,7 @@ arg_t _setrlimit(void)
 	o->rlim_cur = r.rlim_cur;
 	o->rlim_max = r.rlim_max;
 	return 0;
-bad:	
+bad:
 	udata.u_error = EINVAL;
 	return -1;
 }
@@ -127,6 +127,11 @@ arg_t _setpgid(void)
 	ptptr p, t = NULL;
 	uint16_t ses = udata.u_ptab->p_session;
 	uint16_t n = npgid;
+
+	if (n >= MAXPID) {
+		udata.u_error = EINVAL;
+		return -1;
+	}
 
 	/* pid 0 means "self" */
 	if (npid == 0)

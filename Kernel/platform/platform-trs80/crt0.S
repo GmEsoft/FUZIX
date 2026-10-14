@@ -16,10 +16,14 @@ start:
 	ldir
 	; then the discard
 ; Discard can just be linked in but is next to the buffers
-; FIXME switch to lddr
 	ld	de, __discard
-	ld	bc, __discard_size
-	ldir
+	ld	bc, __discard_size-1
+	add	hl,bc
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
+	inc	bc
+	lddr
 	; then zero the data area
 	ld	hl, __bss
 	ld	de, __bss + 1

@@ -58,6 +58,7 @@ static int mntparse(char *p, char **t, char *def)
 			} else
 				*d++ = *s++;
 		}
+		*d = 0;
 	}
 	if (t)
 		*t = ds;

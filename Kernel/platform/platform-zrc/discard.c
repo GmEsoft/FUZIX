@@ -80,6 +80,9 @@ void device_init(void)
 	ide_probe();
 	pio_setup();
 	sd_probe();
+#ifdef CONFIG)_NET
 	if (machtype == 0)
 		sock_init();
+#endif
+
 }

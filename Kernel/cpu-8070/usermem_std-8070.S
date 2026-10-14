@@ -14,6 +14,7 @@ __uputc:
 	ld	a,2,p1
 	jsr	map_proc_always
 	st	a,0,p2
+	ld	ea,=0
 	jmp	map_kernel
 
 __uputw:
@@ -22,6 +23,7 @@ __uputw:
 	ld	ea,2,p1
 	jsr	map_proc_always
 	st	ea,0,p2
+	ld	ea,=0
 	jmp	map_kernel
 
 __ugetc:

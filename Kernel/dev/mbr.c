@@ -121,6 +121,8 @@ void mbr_parse(uint_fast8_t letter)
 		    goto out;
 #endif
 		case 0:
+		    if (seen == 0)
+		        next++;
 		    break;
 		case 0x05:
 		case 0x0f:

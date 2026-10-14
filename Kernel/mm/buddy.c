@@ -59,16 +59,14 @@ static void buddy_unpin(uint16_t node)
 }
 
 /* Free a block and propogate both free and ownership information updates */
-static uint8_t buddy_free(uint16_t node, uint8_t sizeshift)
-{	
+static void buddy_free(uint16_t node, uint8_t sizeshift)
+{
 	uint16_t n = 1 << sizeshift;	/* How many blocks to free */
 	uint16_t i;
 
-	node <<= depth;		/* Turn our node into the leftmost base node of
-				   the level we need */
 	/* Unpin all our blocks from the bottom up */
 	for (i = 0; i < n; i++)
-		buddy_upin(node++);
+		buddy_unpin(node++);
 	inuse -= n;
 }
 
@@ -77,18 +75,19 @@ static int16_t buddy_alloc(uint8_t sizeshift, uint8_t owner)
 {
 	/* There are n slots at offset n: isn't that neat */
 
+	uint16_t n = BUDDY_SIZE >> sizeshift;
 	uint16_t ct = n;
 	uint16_t node = n;
-	uint16_t n = BUDDY_SIZE >> sizeshift;
+	uint16_t blocks = 1U << sizeshift;
 
 	while(ct--) {
 		if (buddy[node] == NODE_FREE) {
 			/* Found a free node at our level. Turn it to base
 			 * */
 			node <<= sizeshift;
-			for (ct = 0; ct < n; ct++)
-				pin(node + ct, owner);
-			inuse += n;
+			for (ct = 0; ct < blocks; ct++)
+				buddy_pin(node + ct, owner);
+			inuse += blocks;
 			return node;
 		}
 		node++;
@@ -117,12 +116,12 @@ uint8_t buddy_evict(uint16_t base, uint8_t sizeshift)
 
 static uint8_t *buddy_node2addr(uint16_t node)
 {
-	return buddy_ram + node << BUDDY_NODESHIFT;
+	return buddy_ram + ((size_t)(node - BUDDY_SIZE) << BUDDY_NODESHIFT);
 }
 
-static uint8_t buddy_addr2node(uint16_t *p)
+static uint16_t buddy_addr2node(uint8_t *p)
 {
-	size_t n = (p - buddy_ram) >> BUDDY_NODESHIFT;
+	return BUDDY_SIZE + ((p - buddy_ram) >> BUDDY_NODESHIFT);
 }
 
 /* There are faster ways to do this using ffs on some processors or and
@@ -145,10 +144,14 @@ static uint8_t buddy_sizetoshift(uint32_t n)
 
 void buddy_init(uint16_t start, uint16_t end)
 {
+	if (start < BUDDY_SIZE || end > 2 * BUDDY_SIZE || start > end)
+		panic("buddy range");
+	memset(buddy, NODE_UNAVAIL, sizeof(buddy));
+	total = 0;
 	/* It starts with everything owned by 0 */
 	while (start < end) {
 		total++;
-		buddy_upin(start);
+		buddy_unpin(start++);
 	}
 	inuse = 0;
 }
@@ -158,47 +161,31 @@ void buddy_init(uint16_t start, uint16_t end)
 
 unsigned long kmemavail(void)
 {
-	return (total - inuse) << BUDDY_NODESHIFT;
+	return (unsigned long)(total - inuse) << BUDDY_NODESHIFT;
 }
 
 unsigned long kmemused(void)
 {
-	return inuse << BUDDY_NODESHIFT;
+	return (unsigned long)inuse << BUDDY_NODESHIFT;
 }
 
 void kfree_s(void *p, size_t size)
 {
+	if (p == NULL)
+		return;
 	buddy_free(buddy_addr2node(p), buddy_sizetoshift(size));
 }
 
 void *kmalloc(size_t size, uint8_t owner)
 {
 	/* We will need to pass owners around eventually to both allocators */
-	int16_t node = buddy_alloc(buddy_sizetoshift(size), owner);
+	int16_t node;
+	if (size == 0 || size > ((uint32_t)BUDDY_SIZE << BUDDY_NODESHIFT) || owner == NODE_FREE)
+		return NULL;
+	node = buddy_alloc(buddy_sizetoshift(size), owner);
 	if (node < 0)
 		return NULL;
-	return buddy_node2addr(p);
-}
-
-#if 0
-/* For now use default flat one */
-usize_t valaddr(const char *pp, usize_t lw)
-{
-	uint16_t node = buddy_addr2node(pp);
-	uint16_t base = pp - buddy_node2addr(node);
-	int32_t l = lw;
-
-	while(l > 0) {
-		if (buddy[node] != udata.u_page) {
-			if (lw == l)
-				udata.u_error = EFAULT;
-			return lw - l;
-		l -= (1 << BUDDY_NODESHIFT) - base;
-		base = 0;
-	}
-	return lw;
+	return buddy_node2addr(node);
 }
 
 #endif
-#endif
-

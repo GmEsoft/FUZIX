@@ -113,13 +113,10 @@ done:
 	/* For signed cases check that even if we didn't unsigned overflow
 	   our final return will not break */
 	if (!uns) {
-		if (number == LONG_MIN && negative) {
+		unsigned long limit = (unsigned long)LONG_MAX + negative;
+		if (number > limit) {
 			errno = ERANGE;
-			return LONG_MIN;
-		}
-		if (number > LONG_MAX) {
-			errno = ERANGE;
-			number = LONG_MAX;
+			return negative ? LONG_MIN : LONG_MAX;
 		}
 	}
 	/* All done */

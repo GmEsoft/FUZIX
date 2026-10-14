@@ -51,6 +51,7 @@ __uputc:
 	ld l,a
 	call map_proc_always
 	ld (hl), e
+	ld hl, 0
 	jp map_kernel			; map the kernel back below common
 
 __uputw:
@@ -68,6 +69,7 @@ __uputw:
 	ld (hl), e
 	inc hl
 	ld (hl), d
+	ld hl, 0
 	jp map_kernel
 
 __ugetc:
@@ -146,4 +148,5 @@ __uzero:
 	ldir
 popout:
 	pop bc
+	ld hl,0
 	jp map_kernel

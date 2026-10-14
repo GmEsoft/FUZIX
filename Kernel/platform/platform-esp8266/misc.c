@@ -9,7 +9,7 @@ uaddr_t pagemap_base(void)
 }
 
 /* This checks to see if a user-supplied address is legitimate */
-usize_t valaddr(const uint8_t *base, usize_t size, uint_fast8_t is_write)
+usize_t valaddr(const uint8_t *base, usize_t size, usize_t need, uint_fast8_t is_write)
 {
 	if (base + size < base)
 		size = MAXUSIZE - (usize_t)base + 1;
@@ -17,19 +17,21 @@ usize_t valaddr(const uint8_t *base, usize_t size, uint_fast8_t is_write)
 		size = 0;
 	else if (base + size > (const uint8_t *)(size_t)udata.u_top)
 		size = (uint8_t *)(size_t)udata.u_top - base;
-	if (size == 0)
+	if (size < need) {
 		udata.u_error = EFAULT;
+		return 0;
+	}
 	return size;
 }
 
-usize_t valaddr_r(const uint8_t *pp, usize_t l)
+usize_t valaddr_r(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, 0);
+	return valaddr(pp, l, n, 0);
 }
 
-usize_t valaddr_w(const uint8_t *pp, usize_t l)
+usize_t valaddr_w(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, 1);
+	return valaddr(pp, l, n, 1)
 }
 
 void swap_blocks(void* p1, void* p2, size_t len)

@@ -8,12 +8,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 void *calloc(size_t elm, size_t sz)
 {
-	/* FIXME: a modern calloc should probably trap overflows and NULL */
-	size_t v = elm * sz;
-	void *ptr = malloc(v);
+	size_t v;
+	void *ptr;
+	if (sz && elm > (size_t)-1 / sz) {
+		errno = ENOMEM;
+		return NULL;
+	}
+	v = elm * sz;
+	ptr = malloc(v);
 
 	if (ptr)
 		memset(ptr, 0, v);

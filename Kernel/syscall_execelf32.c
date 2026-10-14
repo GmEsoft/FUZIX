@@ -207,6 +207,11 @@ arg_t _execve(void)
 		if ((ph->p_type == PT_LOAD) && ph->p_flags) {
 			uaddr_t ssize = (uaddr_t)ALIGNUP(ph->p_filesz);
 			uaddr_t base = PROGLOAD + ph->p_vaddr;
+			/* A zero-length image needs no validation or
+			 * reading; its BSS tail (if any) is cleared below.
+			 * (valaddr legitimately reports 0 for an empty
+			 * range, which must not read as failure.) */
+			if (ssize) {
 			udata.u_offset = ph->p_offset;
 			udata.u_count = ssize;
 			udata.u_base = (uint8_t*) base;
@@ -216,7 +221,7 @@ arg_t _execve(void)
 			kprintf("loading %p bytes from %p to %p\n", ssize, udata.u_offset, udata.u_base);
 #endif
 
-			if (valaddr_r(udata.u_base, udata.u_count) != udata.u_count) {
+			if (valaddr_r(udata.u_base, udata.u_count, udata.u_count) == 0) {
 #ifdef DEBUG
 				kprintf("failed: invalid address range\n");
 #endif
@@ -229,6 +234,7 @@ arg_t _execve(void)
 				kprintf("failed: couldn't read program data\n");
 #endif
 				goto fatal;
+			}
 			}
 
 			if (ph->p_filesz != ph->p_memsz) {

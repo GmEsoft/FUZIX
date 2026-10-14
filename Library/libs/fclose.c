@@ -30,8 +30,10 @@ int fclose(register FILE * fp)
 		register FILE *ptr = __IO_list, *prev = 0;
 
 		fp->mode = 0;
-		while (ptr && ptr != fp)
+		while (ptr && ptr != fp) {
+			prev = ptr;
 			ptr = ptr->next;
+		}
 		if (ptr == fp) {
 			if (prev == 0)
 				__IO_list = fp->next;

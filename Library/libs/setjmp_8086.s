@@ -27,7 +27,7 @@ longjmp:
 	pop	%bx
 	pop	%ax
 	cmpw	$0,%ax
-	je	arg_sane
+	jne	arg_sane
 	incw	%ax
 arg_sane:
 	mov	0(%bx),%cx

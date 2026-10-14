@@ -890,9 +890,9 @@ extern bool validdev(uint16_t dev);
    (with a passable compiler) all the supporting error logic. */
 #ifdef CONFIG_LEVEL_0
 /* Shortcut all the validation */
-#define valaddr(a,b,c)	(b)
-#define valaddr_r(a,b)	(b)
-#define valaddr_w(a,b)	(b)
+#define valaddr(a,b,c,d)	(b)
+#define valaddr_r(a,b,c)	(b)
+#define valaddr_w(a,b,c)	(b)
 #define uget(a,b,c)	_uget(a, b, c)
 #define uput(a,b,c)	_uput(a, b, c)
 #define ugetc(a)	_ugetc(a)
@@ -903,9 +903,9 @@ extern bool validdev(uint16_t dev);
 #define uputl(v, p)	_uputl(v, p)
 #define uzero(a,b)	_uzero(a, b)
 #else
-extern usize_t valaddr(const uint8_t *base, usize_t size, uint_fast8_t is_write);
-extern usize_t valaddr_r(const uint8_t *base, usize_t size);
-extern usize_t valaddr_w(const uint8_t *base, usize_t size);
+extern usize_t valaddr(const uint8_t *base, usize_t size, usize_t need, uint_fast8_t is_write);
+extern usize_t valaddr_r(const uint8_t *base, usize_t size, usize_t need);
+extern usize_t valaddr_w(const uint8_t *base, usize_t size, usize_t need);
 extern int uget(const void *userspace_source, void *dest, usize_t count);
 extern int uput (const void *source,   void *userspace_dest, usize_t count);
 extern int16_t  ugetc(const void *userspace_source);
@@ -1013,6 +1013,10 @@ extern void oft_deref(uint_fast8_t of);
 extern int_fast8_t uf_alloc(void);
 /* returns index of slot, or -1 on failure */
 extern int_fast8_t uf_alloc_n(uint_fast8_t n);
+/* copy one file handle to another for duplication */
+extern void uf_copy(uint_fast8_t oldd, uint_fast8_t newd);
+/* allocate a new handle from base upwards and copy oldd into it */
+extern int uf_alloc_copy(uint_fast8_t oldd, uint_fast8_t base);
 #define i_ref(ino) ((ino)->c_refs++, (ino))
 /* extern void i_ref(inoptr ino); */
 extern void i_deref(inoptr ino);

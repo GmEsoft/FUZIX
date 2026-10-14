@@ -4,7 +4,7 @@ uint64_t __double_bits(double p)
 {
   union {
     double d;
-    unsigned long bits;
+    uint64_t bits;
   } conv;
   
   conv.d = p;

@@ -762,10 +762,8 @@ int mtx_vt_ioctl(uint_fast8_t minor, uarg_t request, char *data)
 			return -1;
 		addr = (uint8_t *)rw.data;
 		size = rw.lines * rw.cols;
-		if (valaddr(addr, size, is_wr) != size) {
-			udata.u_error = EFAULT;
+		if (valaddr(addr, size, size, is_wr))
 			return -1;
-		}
 		if (request == VDPIOC_READ)
 			udata.u_error = vdp_rop(&rw);
 		else

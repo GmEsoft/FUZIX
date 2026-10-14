@@ -9,6 +9,7 @@
 
 /* Select a banked memory set up */
 #define CONFIG_BANK_FIXED
+
 /* This is the number of banks of user memory available (maximum) */
 #define MAX_MAPS	15		/* 512 KByte... minus kernel */
 /* How big is each bank - in our case 32K, 48K is actually more common. This
@@ -43,6 +44,8 @@ extern uint16_t swap_dev;
  *	needed so identity map it.
  */
 #define swap_map(x)	((uint8_t *)(x))
+/* Swap will be set up when a suitably labelled partition is seen */
+#define CONFIG_DYNAMIC_SWAP
 
 /* What is the maximum number of /dev/hd devices we have */
 #define CONFIG_TD_NUM		2
@@ -53,8 +56,6 @@ extern uint16_t swap_dev;
 
 /* We will resize the buffers available after boot. This is the normal setting */
 #define CONFIG_DYNAMIC_BUFPOOL
-/* Swap will be set up when a suitably labelled partition is seen */
-#define CONFIG_DYNAMIC_SWAP
 /* Larger transfers (including process execution) should go directly not via
    the buffer cache. For all small (eg bit) systems this is the right setting
    as it avoids polluting the small cache with data when it needs to be full

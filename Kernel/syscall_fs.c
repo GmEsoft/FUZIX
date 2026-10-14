@@ -65,8 +65,7 @@ arg_t _lseek(void)
 	        goto bad;
 
         o->o_ptr = p;
-	uput(&p, offset, sizeof(n));
-	return 0;
+	return uput(&p, offset, sizeof(n));
 bad:
 	udata.u_error = EINVAL;
 	return (-1);
@@ -161,13 +160,7 @@ arg_t _dup(void)
 	int_fast8_t newd;
 	if (getinode(oldd) == NULLINODE)
 		return (-1);
-	if ((newd = uf_alloc()) == -1)
-		return (-1);
-
-	udata.u_files[newd] = udata.u_files[oldd];
-	++of_tab[udata.u_files[oldd]].o_refs;
-
-	return (newd);
+	return uf_alloc_copy(oldd, 0);
 }
 
 #undef oldd
@@ -183,7 +176,6 @@ arg_t _dup(void)
 
 arg_t _dup2(void)
 {
-
 	if (getinode(oldd) == NULLINODE)
 		return -1;
 
@@ -199,9 +191,7 @@ arg_t _dup2(void)
 	if (udata.u_files[newd] != NO_FILE)
 		doclose(newd);
 
-	udata.u_files[newd] = udata.u_files[oldd];
-	++of_tab[udata.u_files[oldd]].o_refs;
-
+	uf_copy(oldd, newd);
 	return newd;
 }
 
@@ -342,9 +332,7 @@ arg_t _pipe(void)
 	ino->c_writers++;
 
 	// write results to userspace
-	uputi(u1, fildes);
-	uputi(u2, fildes + 1);
-	return (0);
+	return uputi(u1, fildes) | uputi(u2, fildes + 1);
 
       nogood3:
 	i_deref(ino);
@@ -414,10 +402,8 @@ static arg_t readwrite(uint_fast8_t reading)
 	}
 
 	/* Reading from disk is writing to user space and vice versa... */
-	if (valaddr(buf, nbytes, reading) != nbytes) {
-		udata.u_error = EFAULT;
+	if (!valaddr(buf, nbytes, nbytes, reading))
 	        return -1;
-	}
 
 	/* Set up u_base, u_offset, ino; check permissions, file num. */
 	if ((ino = rwsetup(reading, &flag)) == NULLINODE)

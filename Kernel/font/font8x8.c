@@ -1297,7 +1297,7 @@ const unsigned char fontdata_8x8[FONTDATAMAX] = {
 	0xfe, /* 11111110 */
 	0x00, /* 00000000 */
 
-#ifndef CONFIG_FONT8X8SMALL
+#if !defined(CONFIG_FONT8X8SMALL) && !defined(CONFIG_FONT8X8_7BIT)
 	/* 128 0x80 '€' */
 	0x7c, /* 01111100 */
 	0xc6, /* 11000110 */

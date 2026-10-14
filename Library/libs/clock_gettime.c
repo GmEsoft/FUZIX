@@ -14,11 +14,9 @@ static unsigned long div10quickm(unsigned long *tp)
 	q = q + (q >> 16);
 	q >>= 3;
 	r = t - (((q << 2) + q) << 1);
-	t = q + (r >> 9);
-	*tp = t;
-	t <<= 1;
-	t = (t << 2) + t;
-	return *tp - t;
+	q += (r + 6) >> 4;
+	*tp = q;
+	return t - (((q << 2) + q) << 1);
 }
 
 int clock_gettime(clockid_t clk_id, struct timespec *res)

@@ -72,16 +72,18 @@ int blkdev_open(uint_fast8_t minor, uint16_t flags)
     return -1;
 }
 
+/* No risk of blk_op.lba + blk_op.nblock oveflowing. In fact our limit is
+   mostly the device LBA limit as we don't do LBA48 */
 static int translate_lba(uint_fast8_t minor)
 {
     uint_fast8_t partition = minor & 0x0F;
-    if(partition == 0){
+    if (partition == 0) {
 	/* partition 0 is the whole disk and requires no translation */
-	if(blk_op.lba >= blk_op.blkdev->drive_lba_count)
+	if(blk_op.lba + blk_op.nblock > blk_op.blkdev->drive_lba_count)
 	    return 1;
     } else {
 	/* partitions 1+ require us to add in an offset */
-	if(blk_op.lba >= blk_op.blkdev->lba_count[partition-1])
+	if(blk_op.lba + blk_op.nblock > blk_op.blkdev->lba_count[partition-1])
 	    return 1;
 
 	blk_op.lba += blk_op.blkdev->lba_first[partition-1];
@@ -183,12 +185,11 @@ int blkdev_ioctl(uint_fast8_t minor, uarg_t request, char *data)
                     /* This will always be properly aligned from the kernel */
                     blk_op.lba = *(blkno_t *)data;
                 } else {
-                    if (valaddr_r((uint8_t *)data, sizeof(uint16_t)) != sizeof(uint16_t)) {
-                        udata.u_error = EFAULT;
+                    if (!valaddr_r((uint8_t *)data, sizeof(uint16_t), sizeof(uint16_t))
                         return -1;
-                    }
                     blk_op.lba = ugetw(data);
                 }
+                blk_op.nblock = 1;
                 if (translate_lba(minor))
                     return -1;
                 return blk_op.blkdev->trim();

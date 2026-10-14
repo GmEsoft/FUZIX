@@ -18,7 +18,7 @@ _setjmp:
 _longjmp:
 	mov 2(sp),r1
 	mov 4(sp),r0
-	beq r0_ok
+	bne r0_ok
 	inc r0
 r0_ok:	mov (r1)+,r2
 	mov (r1)+,r3
