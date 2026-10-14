@@ -391,7 +391,7 @@ int vfscanf(FILE *fp, const char *fmt, va_list ap)
 	    skip();
 	  strproc:
 	    /* process string */
-	    p = va_arg(ap, unsigned char *);
+	    p = store ? va_arg(ap, unsigned char *) : NULL;
 
 	    /* if the 1st char fails, match fails */
 	    if (width)
