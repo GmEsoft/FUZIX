@@ -858,12 +858,28 @@ int_fast8_t uf_alloc_n(uint_fast8_t base)
     return -1;
 }
 
-
 int_fast8_t uf_alloc(void)
 {
     return uf_alloc_n(0);
 }
 
+void uf_copy(uint_fast8_t oldd, uint_fast8_t newd)
+{
+    udata.u_files[newd] = udata.u_files[oldd];
+    ++of_tab[udata.u_files[oldd]].o_refs;
+    /* Copy the CLOEXEC mask acrosss so dup inherits it */
+    /* doclose means the existing bit state is clear */
+    if (udata.u_cloexec & (1U << oldd))
+	    udata.u_cloexec |= 1U << newd;
+}
+
+int uf_alloc_copy(uint_fast8_t oldd, uint_fast8_t base)
+{
+    int_fast8_t newd = uf_alloc_n(base);
+    if (newd >= 0)
+        uf_copy(oldd, newd);
+    return newd;
+}
 
 /* I_deref decreases the reference count of an inode, and frees it from
  * the table if there are no more references to it.  If it also has no

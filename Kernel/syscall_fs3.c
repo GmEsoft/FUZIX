@@ -296,12 +296,7 @@ arg_t _fcntl(void)
 			udata.u_cloexec &= ~(1U << fd);
 		return 0;
 	case F_DUPFD:
-		if ((newd = uf_alloc_n(data)) == -1)
-			return -1;
-		udata.u_files[newd] = udata.u_files[fd];
-		++of_tab[udata.u_files[fd]].o_refs;
-		udata.u_cloexec &= ~(1U << newd);
-		return newd;
+		return uf_alloc_copy(fd, data);
 	default:
 		udata.u_error = EINVAL;
 		return -1;

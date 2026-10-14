@@ -160,13 +160,7 @@ arg_t _dup(void)
 	int_fast8_t newd;
 	if (getinode(oldd) == NULLINODE)
 		return (-1);
-	if ((newd = uf_alloc()) == -1)
-		return (-1);
-
-	udata.u_files[newd] = udata.u_files[oldd];
-	++of_tab[udata.u_files[oldd]].o_refs;
-
-	return (newd);
+	return uf_alloc_copy(oldd, 0);
 }
 
 #undef oldd
@@ -182,7 +176,6 @@ arg_t _dup(void)
 
 arg_t _dup2(void)
 {
-
 	if (getinode(oldd) == NULLINODE)
 		return -1;
 
@@ -198,9 +191,7 @@ arg_t _dup2(void)
 	if (udata.u_files[newd] != NO_FILE)
 		doclose(newd);
 
-	udata.u_files[newd] = udata.u_files[oldd];
-	++of_tab[udata.u_files[oldd]].o_refs;
-
+	uf_copy(oldd, newd);
 	return newd;
 }
 

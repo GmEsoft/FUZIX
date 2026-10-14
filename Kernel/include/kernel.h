@@ -1013,6 +1013,10 @@ extern void oft_deref(uint_fast8_t of);
 extern int_fast8_t uf_alloc(void);
 /* returns index of slot, or -1 on failure */
 extern int_fast8_t uf_alloc_n(uint_fast8_t n);
+/* copy one file handle to another for duplication */
+extern void uf_copy(uint_fast8_t oldd, uint_fast8_t newd);
+/* allocate a new handle from base upwards and copy oldd into it */
+extern int uf_alloc_copy(uint_fast8_t oldd, uint_fast8_t base);
 #define i_ref(ino) ((ino)->c_refs++, (ino))
 /* extern void i_ref(inoptr ino); */
 extern void i_deref(inoptr ino);
