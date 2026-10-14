@@ -18,7 +18,7 @@
 	.export _plt_reboot
 	.export outchar
 
-#include "kernelu.def"
+#include "../../build/kernelu.def"
 #include "../../cpu-z80u/kernel-z80.def"
 #include "../../cpu-z180/z180.def"
 

@@ -21,4 +21,3 @@ Z180_IO_BASE		    .equ 0x00
 ;	The number of disk buffers. Must match config.h
 ;
 NBUFS			    .equ 5
-
