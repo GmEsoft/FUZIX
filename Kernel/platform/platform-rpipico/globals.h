@@ -55,4 +55,7 @@ struct extended_exception_frame
 	uint32_t psr;
 };
 
+int rpipico_flash_program(uint32_t offset, const uint8_t *data, uint32_t len);
+int rpipico_flash_erase(uint32_t offset, uint32_t len);
+
 #endif

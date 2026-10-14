@@ -82,5 +82,29 @@ struct exec {
 
 
 #endif
+#ifdef CONFIG_EXEC_XIP_AUTO
+/* An installed XIP image. Sizes are relative to PROGLOAD, so the
+ * distance between flash and SRAM never contributes to process allocation. */
+struct exec_xip {
+    uaddr_t entry;
+    usize_t data_size;
+    usize_t bss_size;
+};
+/* Install-on-first-exec XIP: try the file, filling image and table index
+ * for the _execve layout code. The header is an Elf32_Ehdr (void here so
+ * this header stays free of elf.h); the inode is struct cinode (forward
+ * declared: kernel.h includes this file before defining inoptr).
+ * Returns 1 when claimed, 0 to use the ordinary loader, -1 when the
+ * system is busy (caller may yield and retry once; persistent busyness
+ * falls back to RAM). All failure cases report themselves through the
+ * ordinary paths. */
+struct cinode;
+int xip_auto_try(struct cinode *ino, const void *ehdr, uaddr_t himem,
+		 struct exec_xip *image, int *index);
+void xip_auto_load(int index);
+usize_t xip_auto_readable(uaddr_t base, usize_t size);
+void xip_auto_yield(void);
+#endif
+
 #endif
 

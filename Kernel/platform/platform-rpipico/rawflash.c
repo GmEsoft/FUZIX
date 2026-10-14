@@ -51,8 +51,9 @@ int dhara_nand_erase(const struct dhara_nand *n, dhara_block_t b,
 	return 0;
 }
 
-/* Program sources may include kernel constants in flash. Stage them before
- * XIP is disabled. Cooperative I/O serializes use of this buffer. */
+/* Sources may live in flash (kernel constants, or a user process's XIP
+ * text). Stage them into RAM before XIP is disabled. Cooperative I/O
+ * serializes use of this buffer. */
 static uint8_t program_buffer[512];
 
 int dhara_nand_prog(const struct dhara_nand *n, dhara_page_t p,
@@ -78,6 +79,25 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p,
 	if (err)
 		*err = DHARA_E_NONE;
 	return 0;
+}
+
+/* Raw program and erase for the automatic XIP extent store. Offsets are
+ * absolute flash addresses; lengths are multiples of 512 (program) or 4096
+ * (erase), and data must already live in SRAM. Batching a whole run into
+ * one call parks the cores once, which is what keeps USB alive during an
+ * install. */
+int rpipico_flash_program(uint32_t offset, const uint8_t *data, uint32_t len)
+{
+    struct flash_operation op = { offset, data, len };
+    execute_flash_operation(&op);
+    return 0;
+}
+
+int rpipico_flash_erase(uint32_t offset, uint32_t len)
+{
+    struct flash_operation op = { offset, NULL, len };
+    execute_flash_operation(&op);
+    return 0;
 }
 
 /* vim: sw=4 ts=4 et: */

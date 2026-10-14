@@ -13,7 +13,12 @@ usize_t valaddr(const uint8_t *base, usize_t size, usize_t need, uint_fast8_t is
                 if (size > available)
                         size = available;
         } else {
+#ifdef CONFIG_EXEC_XIP_AUTO
+                /* XIP text lives above p_top, in the reserved flash region. */
+                size = is_write ? 0 : xip_auto_readable(address, size);
+#else
                 size = 0;
+#endif
         }
         if (size < need) {
                 udata.u_error = EFAULT;
