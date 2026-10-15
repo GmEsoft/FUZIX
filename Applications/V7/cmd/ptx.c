@@ -61,9 +61,10 @@ const char *outfile;
 FILE *outptr = stdout;
 
 char *sortfile;			/* output of sort program */
-static char sortfilebuf[32];	/* tmpnam() fills the buffer it is
-				   handed; "ptxsXXXXX" was 10 bytes,
-				   tmpnam writes ~15 ("/tmp/NNNNNxxx") */
+static char sortfilebuf[] = "/tmp/ptxXXXXXX";	/* mkstemp() template: it
+						   creates the file mode 0600
+						   itself, so there is no
+						   name to guess and no race */
 char nofold[] = { '-', 'd', 't', TILDE, 0 };
 char fold[] = { '-', 'd', 'f', 't', TILDE, 0 };
 
@@ -523,11 +524,9 @@ int main(int argc, const char *argv[])
 
 	/* open output file for sorting */
 
-	if ((sortfile = tmpnam(sortfilebuf)) == NULL)
-		diag("Cannot generate temp file name:", empty);
-	fd = open(sortfile, O_CREAT | O_EXCL | O_WRONLY, 0600);
-	if (fd < 0)
-		diag("Cannot open output for sorting:", sortfile);
+	sortfile = sortfilebuf;
+	if ((fd = mkstemp(sortfilebuf)) < 0)
+		diag("Cannot open output for sorting:", empty);
 	sortptr = fdopen(fd, "w");
 
 /*	get a line of data and compare each word for
