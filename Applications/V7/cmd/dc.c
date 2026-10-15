@@ -423,6 +423,11 @@ void commnds(void)
 			p = pop();
 			EMPTY;
 			p = scalint(p);
+			fsfile(p);
+			if (length(p) == 0 || sbackc(p) <= 0) {
+				release(p);
+				error("bad input base\n");
+			}
 			release(inbas);
 			inbas = p;
 			continue;
