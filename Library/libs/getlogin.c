@@ -17,9 +17,10 @@ char *getlogin(void)
 int getlogin_r(char *buf, size_t len)
 {
 	char tty[UT_LINESIZE + 6];
-	struct utmp ut, *utp;
+	register struct utmp *utp;
+	struct utmp ut;
 	int err;
-	size_t n;
+	register size_t n;
 	int fd = open("/dev/tty", O_RDONLY | O_NOCTTY);
 
 	if (fd == -1)
