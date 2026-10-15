@@ -58,8 +58,11 @@ int main(int argc, const char *argv[])
 			exit(1);
 		}
 	}
-	while ((i = getc(f)) != EOF)
+	while ((i = getc(f)) != EOF) {
+		if (msize >= (int) sizeof(mesg))
+			break;	/* truncate absurdly long messages */
 		mesg[msize++] = i;
+	}
 	fclose(f);
 	for (i = 0; i < USERS; i++) {
 		p = &utmp[i];
