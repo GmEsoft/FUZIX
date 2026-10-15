@@ -55,7 +55,8 @@ int main(int argc, char *argv[])
 	}
 
 	if(grp->gr_passwd[0] != '\0' && pwd->pw_passwd[0] == '\0') {
-		if(strcmp(grp->gr_passwd, crypt(getpass("Password:"),grp->gr_passwd)) != 0) {
+		char *gp = getpass("Password:");
+		if(gp == NULL || strcmp(grp->gr_passwd, crypt(gp,grp->gr_passwd)) != 0) {
 			printf("Sorry\n");
 			done(pwd->pw_shell);
 		}

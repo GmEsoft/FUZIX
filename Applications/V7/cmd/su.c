@@ -36,6 +36,10 @@ int main(int argc, const char *argv[])
 	if (pwd->pw_passwd[0] == '\0' || getuid() == 0)
 		goto ok;
 	password = getpass("Password:");
+	if (password == NULL) {	/* no tty to ask on */
+		printf("Sorry\n");
+		exit(2);
+	}
 	if (badsw
 	    || (strcmp(pwd->pw_passwd, crypt(password, pwd->pw_passwd)) !=
 		0)) {
