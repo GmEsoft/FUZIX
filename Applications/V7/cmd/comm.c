@@ -39,6 +39,11 @@ int rd(FILE * file, char *buf)
 		*buf = c;
 		if (c == '\n' || i > LB - 2) {
 			*buf = '\0';
+			if (c != '\n')
+				/* line does not fit: drop the rest
+				   of it so records stay one per line */
+				while ((c = getc(file)) != '\n' && c != EOF)
+					;
 			return (0);
 		}
 		i++;
