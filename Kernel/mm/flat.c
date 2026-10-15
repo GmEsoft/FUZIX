@@ -25,8 +25,7 @@
  *	For speed we chunk in 512 byte blocks and use 512 byte wide fast
  *	copier/exchange calls.
  *
- *	TODO: verify split I/D padding on code is zeroed
- *	TODO: veirfy freeing of memalloc blocks across an execve or on exit
+ *	TODO: verify split I/D padding on code is zeroed by loader
  */
 
 #include <kernel.h>
