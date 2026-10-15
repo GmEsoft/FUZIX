@@ -11,12 +11,24 @@ uaddr_t pagemap_base(void)
 /* This checks to see if a user-supplied address is legitimate */
 usize_t valaddr(const uint8_t *base, usize_t size, usize_t need, uint_fast8_t is_write)
 {
-	if (base + size < base)
-		size = MAXUSIZE - (usize_t)base + 1;
-	if (!base || base < (const uint8_t *)DATABASE)
+	uaddr_t address = (uaddr_t)base;
+	usize_t available = 0;
+
+	/*
+	 *	A user process owns [PROGLOAD, u_top). The UDATA_SIZE bytes
+	 *	below PROGLOAD hold the kernel's u_data for the process, so
+	 *	they must not be reachable as a user pointer. Both bounds are
+	 *	tested before any subtraction: a size near MAXUSIZE must not
+	 *	wrap past the check, and an address above u_top must not wrap
+	 *	into range.
+	 */
+	if (address >= PROGLOAD && address < (uaddr_t)udata.u_top) {
+		available = (uaddr_t)udata.u_top - address;
+		if (size > available)
+			size = available;
+	} else {
 		size = 0;
-	else if (base + size > (const uint8_t *)(size_t)udata.u_top)
-		size = (uint8_t *)(size_t)udata.u_top - base;
+	}
 	if (size < need) {
 		udata.u_error = EFAULT;
 		return 0;
