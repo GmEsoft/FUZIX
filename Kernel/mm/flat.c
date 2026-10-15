@@ -378,7 +378,7 @@ int pagemap_realloc(struct exec *a, usize_t unused)
 		mem_free(m, 0);
 		return ENOMEM;
 	}
-	mb->end = mb->start + a->a_text;
+	mb->end = mb->start + csize;
 
 	mb++;
 
