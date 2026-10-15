@@ -135,8 +135,8 @@ static struct mem *mem_clone(struct mem *m, uint8_t owner)
 /* May need to switch owners on objects when we do swap etc */
 static void mem_switch(struct mem *a, struct mem *b)
 {
-	struct memblk *t1 = &a->memblk[0];
-	struct memblk *t2 = &b->memblk[0];
+	struct memblk *t1 = &a->memblk[COPY_BASE];
+	struct memblk *t2 = &b->memblk[COPY_BASE];
 	unsigned int i;
 
 	for (i = COPY_BASE; i < MAX_BLOCKS; i++) {
@@ -150,8 +150,8 @@ static void mem_switch(struct mem *a, struct mem *b)
 
 static void mem_copy(struct mem *to, struct mem *from)
 {
-	struct memblk *t1 = &from->memblk[0];
-	struct memblk *t2 = &to->memblk[0];
+	struct memblk *t1 = &from->memblk[COPY_BASE];
+	struct memblk *t2 = &to->memblk[COPY_BASE];
 	unsigned int i;
 
 	for (i = COPY_BASE; i < MAX_BLOCKS; i++) {
