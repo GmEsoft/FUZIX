@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 unsigned count = 1000;
 int	fnumber;
@@ -35,6 +36,10 @@ int main(int argc, const char *argv[])
 			case '8':
 			case '9':
 				count = atoi(argv[i]+1);
+				if (count == 0)	/* -0 would produce
+						   no output file at all
+						   and spin forever */
+					count = 1;
 				continue;
 			}
 		else if(iflg)
@@ -52,6 +57,10 @@ int main(int argc, const char *argv[])
 		}
 	if(ofil == 0)
 		ofil = "x";
+	if(strlen(ofil) > sizeof(fname) - 4) {
+		fprintf(stderr, "split: output prefix too long\n");
+		exit(1);
+	}
 
 loop:
 	f = 1;
