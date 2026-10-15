@@ -762,7 +762,6 @@ int append(int (*f)(void), int *a)
 		if ((dol-zero)+1 >= nlall) {
 			int *ozero = zero;
 			nlall += 512;
-			free((char *)zero);
 			if ((zero = (int *)realloc((char *)zero, nlall*sizeof(int)))==NULL) {
 				lastc = '\n';
 				zero = ozero;
