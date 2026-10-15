@@ -30,12 +30,22 @@ int compare(char *s, char *t)
 int getword(char *w)
 {
 	register int c;
+	char *wmax = entry + sizeof(entry) - 1;
 	for(;;) {
 		c = getc(dfile);
 		if(c==EOF)
 			return(0);
 		if(c=='\n')
 			break;
+		if(w >= wmax) {	/* over-long dictionary record:
+					   truncate at the buffer, then
+					   skip to the end of the line */
+			while((c = getc(dfile)) != '\n' && c != EOF)
+				;
+			if(c == EOF)
+				return(0);
+			break;
+		}
 		*w++ = c;
 	}
 	*w = 0;
@@ -45,7 +55,13 @@ int getword(char *w)
 void canon(const char *old, char *new)
 {
 	register int c;
+	char *nmax = key + sizeof(key) - 1;	/* canon always targets key */
 	for(;;) {
+		if(new >= nmax) {	/* argument longer than the key
+					   buffer: compare with the head */
+			*new = 0;
+			break;
+		}
 		*new = c = *old++;
 		if(c==0||c==tab) {
 			*new = 0;
