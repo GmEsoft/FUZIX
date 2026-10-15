@@ -1000,9 +1000,13 @@ int dscale(void)
 
 struct blk *removr(struct blk *p, int n)
 {
-	int nn;
+	int nn, neg;
 	register struct blk *q, *s, *r;
 
+	fsfile(p);
+	neg = (sfbeg(p) == 0 && sbackc(p) < 0);
+	if (neg != 0)
+		chsign(p);
 	rewind(p);
 	nn = (n + 1) / 2;
 	q = salloc(nn);
@@ -1021,8 +1025,18 @@ struct blk *removr(struct blk *p, int n)
 		if (sfeof(rem) == 0)
 			sputc(q, sgetc(rem));
 		release(rem);
+		if (neg != 0) {
+			chsign(s);
+			if (length(q) != 0)
+				chsign(q);
+		}
 		irem = q;
 		return (s);
+	}
+	if (neg != 0) {
+		chsign(r);
+		if (length(q) != 0)
+			chsign(q);
 	}
 	irem = q;
 	return (r);
