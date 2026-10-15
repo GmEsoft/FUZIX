@@ -20,7 +20,8 @@ char fbuff[BUFSIZ];
 int bflag, xflag, fflag;
 int half;
 int cp, lp;
-int ll, llh, mustwr;
+long ll, llh, mustwr;	/* line numbers: must stay positive on
+			   16-bit ints, page[] indices are ll % PL */
 int pcp = 0;
 const char *pgmname;
 
@@ -70,7 +71,7 @@ void outc(char c)
 	}
 }
 
-void store(int lno)
+void store(long lno)
 {
 	lno %= PL;
 	if (page[lno] != 0)
@@ -83,7 +84,7 @@ void store(int lno)
 	strcpy(page[lno], lbuff);
 }
 
-void fetch(int lno)
+void fetch(long lno)
 {
 	register char *p;
 
@@ -97,9 +98,9 @@ void fetch(int lno)
 		strcpy(line, page[lno]);
 }
 
-void emit(char *s, int lineno)
+void emit(char *s, long lineno)
 {
-	static int cline = 0;
+	static long cline = 0;
 	register int ncp;
 	register char *p;
 	static int gflag = 0;
