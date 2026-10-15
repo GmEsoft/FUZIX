@@ -175,7 +175,7 @@ int makeuday(int argc, const char *argv[])
 	time(&tm);
 	detail = localtime(&tm);
 	uday = today = detail->tm_yday;
-	uyear = detail->tm_year;
+	uyear = detail->tm_year + 1900;
 	now = detail->tm_hour * 100 + detail->tm_min;
 	if (argc <= 2)
 		return (1);
@@ -237,7 +237,7 @@ void filename(char *dir, int y, int d, int t)
 	register int i;
 
 	for (i = 0;; i += 53) {
-		sprintf(fname, "%s/%02d.%03d.%04d.%02d", dir, y, d, t,
+		sprintf(fname, "%s/%04d.%03d.%04d.%02d", dir, y, d, t,
 			(getpid() + i) % 100);
 		if (access(fname, 0) == -1)
 			return;
