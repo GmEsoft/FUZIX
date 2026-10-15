@@ -326,10 +326,16 @@ void commnds(void)
 			neg = 0;
 			arg1 = pop();
 			EMPTY;
-			if (sunputc(arg1) != 0)
-				error("exp not an integer\n");
 			arg2 = pop();
-			EMPTYR(arg1);
+			if (stkerr != 0) {
+				pushp(arg1);
+				printf(stackempty);
+				continue;
+			}
+			if (sunputc(arg1) != 0) {
+				pushp(arg2);
+				error("exp not an integer\n");
+			}
 			if (sfbeg(arg1) == 0 && sbackc(arg1) < 0) {
 				neg++;
 				chsign(arg1);
