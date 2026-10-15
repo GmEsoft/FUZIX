@@ -24,6 +24,9 @@
  *
  *	For speed we chunk in 512 byte blocks and use 512 byte wide fast
  *	copier/exchange calls.
+ *
+ *	TODO: verify split I/D padding on code is zeroed
+ *	TODO: veirfy freeing of memalloc blocks across an execve or on exit
  */
 
 #include <kernel.h>
@@ -442,7 +445,7 @@ usize_t pagemap_mem_used(void)
 arg_t _memalloc(void)
 {
 	unsigned int proc = udata.u_page;
-	struct memblk *m = &mem[proc]->memblk[0];
+	struct memblk *m = &mem[proc]->memblk[MALLOC_BASE];
 	unsigned nsize;
 	int i;
 
@@ -478,7 +481,7 @@ arg_t _memalloc(void)
 arg_t _memfree(void)
 {
 	unsigned int proc = udata.u_page;
-	struct memblk *m = &mem[proc]->memblk[0];
+	struct memblk *m = &mem[proc]->memblk[MALLOC_BASE];
 	int i;
 
 	for (i = MALLOC_BASE; i < MAX_BLOCKS; i++) {
