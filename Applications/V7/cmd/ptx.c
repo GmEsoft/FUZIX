@@ -34,12 +34,14 @@
 #define MASK	03777
 #define SET	1
 
-#define isabreak(c) (btable[c])
+#define isabreak(c) (btable[(unsigned char)(c)])
 
 int status;
 char *hasht[MAXT];
 char line[LMAX];
-char btable[128];
+unsigned char btable[256];	/* full byte range: break chars come
+					   from getc(), words from high-bit input
+					   must not index btable[-128..-1] */
 int ignore;
 int only;
 int llen = 72;
@@ -59,6 +61,10 @@ const char *outfile;
 FILE *outptr = stdout;
 
 char *sortfile;			/* output of sort program */
+static char sortfilebuf[] = "/tmp/ptxXXXXXX";	/* mkstemp() template: it
+						   creates the file mode 0600
+						   itself, so there is no
+						   name to guess and no race */
 char nofold[] = { '-', 'd', 't', TILDE, 0 };
 char fold[] = { '-', 'd', 'f', 't', TILDE, 0 };
 
@@ -91,7 +97,8 @@ char *getline(void)
 	char *endlinep;
 
 
-	endlinep = line + mlen;
+	endlinep = line + mlen - 1;	/* leave room for the newline
+					   getline() appends at linep+1 */
 	linep = line;
 	/* Throw away leading white space */
 
@@ -332,9 +339,14 @@ void getsort(void)
 
 		case '"':
 			/* put double " for "  */
-			*linep++ = c;
+			if (linep < line + LMAX - 2)
+				*linep++ = c;
+			/* fall through */
 		default:
-			*linep++ = c;
+			/* a word plus its context can exceed LMAX;
+			   truncate rather than overrun line[] */
+			if (linep < line + LMAX - 1)
+				*linep++ = c;
 		}
 	}
 }
@@ -512,10 +524,9 @@ int main(int argc, const char *argv[])
 
 	/* open output file for sorting */
 
-	sortfile = tmpnam("ptxsXXXXX");
-	fd = open(sortfile, O_CREAT | O_EXCL | O_WRONLY, 0600);
-	if (fd < 0)
-		diag("Cannot open output for sorting:", sortfile);
+	sortfile = sortfilebuf;
+	if ((fd = mkstemp(sortfilebuf)) < 0)
+		diag("Cannot open output for sorting:", empty);
 	sortptr = fdopen(fd, "w");
 
 /*	get a line of data and compare each word for
