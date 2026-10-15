@@ -826,13 +826,12 @@ struct blk *div(struct blk *ddivd, struct blk *ddivr)
 	struct blk *ps;
 	register struct blk *p, *divd, *divr;
 
-	rem = 0;
+	rem = salloc(0);
 	p = salloc(0);
 	if (length(ddivr) == 0) {
 		pushp(ddivr);
 		puts("divide by 0");
-		/* Eww... */
-		return (struct blk *)1;
+		return (salloc(0));
 	}
 	divsign = remsign = 0;
 	divr = ddivr;
@@ -1025,6 +1024,15 @@ struct blk *squareroot(struct blk *p)
 	int c, n, nn;
 
 	n = length(p);
+	fsfile(p);
+	while (sfbeg(p) == 0) {
+		if (sbackc(p) != 0)
+			break;
+		truncate(p);
+		n--;
+	}
+	if (n == 0)
+		return(p);
 	fsfile(p);
 	c = sbackc(p);
 	if ((n & 1) != 1)
