@@ -66,7 +66,7 @@ extern struct u_data *udata_shadow;
    we can't */
 static void mem_free(struct mem *m, unsigned base)
 {
-	struct memblk *p = &m->memblk[0];
+	struct memblk *p = &m->memblk[base];
 	int i;
 	if (m->users == 0)
 		panic("mref");
@@ -113,6 +113,8 @@ static struct mem *mem_clone(struct mem *m, uint8_t owner)
 	for (i = 0; i < COPY_BASE; i++) {
 		t->start = p->start;
 		t->end = p->end;
+		t++;
+		p++;
 	}
 	for (i = COPY_BASE; i < MAX_BLOCKS; i++) {
 		if (p->start) {
