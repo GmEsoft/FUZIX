@@ -968,63 +968,40 @@ int f_trunc_blocks(register inoptr ino, uint16_t nblock)
 {
     register uint16_t dev;
     register int_fast8_t j;
-    uint16_t map1 = 0;
-    uint16_t map2 = 0;
+    uint16_t indirect = BLKSIZE / sizeof(blkno_t);
+    uint16_t map1 = 0, map2 = 0;
 
     if (ino->c_flags & CRDONLY) {
         udata.u_error = EROFS;
         return -1;
     }
 
-    /* Block offsets are
-        0-17 direct
-        18 256 blocks (18-273)
-        19 256 * 256 blocks (274-65810)
-
-        (We only allow 65535 block offset in order to keep a lot of stuff
-         uint16_t - FIXME to fix u writei())
-
-        We don't support triple indirect blocks.
-
-        When we are called nblock is the number of blocks that will
-        remain in the file when we truncate it
-
-        We set map1 to the number of blocks we must purge for single
-        indirect. We set map2 for the number of blocks we must purge
-        of double indirect.
-
-        freeblk frees full subblocks above the block passed, and then frees
-        blocks >> 8 on the last iteration to partially clear the last set
-    */
-
-    if (nblock > 17 && nblock < 274)
-        map1 = (nblock - 18) << 8;
-    else if (nblock > 273)
-        map2 = nblock - 273;
+    /* nblock counts retained data blocks: 18 direct, one indirect
+       block, then the double-indirect tree. */
+    if (nblock > 18)
+        map1 = min(nblock - 18, indirect);
+    if (nblock > 18 + indirect)
+        map2 = nblock - 18 - indirect;
     dev = ino->c_dev;
 
-    /* FIXME: ideally zero the indirect pointers before we write the
-       free lists */
-
-    /* First deallocate the double indirect blocks */
     freeblk(dev, ino->c_node.i_addr[19], 2, map2);
-    if (map2 == 0)
+    if (!map2)
         ino->c_node.i_addr[19] = 0;
 
-    /* Also deallocate the indirect blocks */
-    freeblk(dev, ino->c_node.i_addr[18], 1, map1);
-    if (map1 == 0 && map2 == 0)	/* ???? should this just be if map1 */
+    /* A retained double-indirect block implies the whole single
+       indirect range is still live. */
+    if (map1 < indirect)
+        freeblk(dev, ino->c_node.i_addr[18], 1, map1);
+    if (!map1)
         ino->c_node.i_addr[18] = 0;
 
-    /* Finally, free the direct blocks */
-    /* FIXME: use pointers for efficiency ? */
-    /* At this point nblock is definitely < 0x8000 so forcing a signed
-       compare does what we want */
-    for(j = 17; j >= (int)nblock; --j) {
-        freeblk(dev, ino->c_node.i_addr[j], 0, 0);
-        ino->c_node.i_addr[j] = 0;
+    /* Avoid narrowing a large retained count to signed int. */
+    if (nblock < 18) {
+        for (j = 17; j >= (int)nblock; --j) {
+            freeblk(dev, ino->c_node.i_addr[j], 0, 0);
+            ino->c_node.i_addr[j] = 0;
+        }
     }
-
     ino->c_flags |= CDIRTY;
     return 0;
 }
@@ -1049,74 +1026,62 @@ int f_trunc(register inoptr ino)
 
    This is annoying and it would be nice one day to find a clean solution */
 
-#ifdef CONFIG_BLKBUF_EXTERNAL
+/* nblock is the number of data blocks retained below this node. */
 void freeblk(uint16_t dev, blkno_t blk, uint_fast8_t level, uint16_t nblock)
 {
     struct blkbuf *buf;
-    blkno_t bn;
-    int16_t j;
-    int_fast8_t nblock1 = nblock >> 8;
-
-    if(!blk)
-        return;
-
-    if(level){
-        buf = bread(dev, blk, 0);
-        if (buf == NULL) {
-            corrupt_fs(dev);
-            return;
-        }
-        for(j = BLKSIZE / 2 - 1; j >= nblock1; --j) {
-            uint8_t b = 0;
-            if (j == nblock1)
-                b = nblock & 0xFF;
-            blktok(&bn, buf, j * sizeof(blkno_t), sizeof(blkno_t));
-            freeblk(dev, bn, level - 1, b);
-        }
-        brelse(buf);
-    }
-#ifdef CONFIG_TRIM
-    d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blk);
-#endif
-    blk_free(dev, blk);
-}
-
-#else
-
-void freeblk(uint16_t dev, blkno_t blk, uint_fast8_t level, uint16_t nblock)
-{
-    struct blkbuf *buf;
-    register blkno_t *bn;
+    blkno_t child;
+    uint16_t span, first, keep;
     register int16_t j;
-    int_fast8_t nblock1 = nblock >> 8;
+#ifndef CONFIG_BLKBUF_EXTERNAL
+    register blkno_t *entries;
+#endif
 
-    if(!blk)
+    if (!blk)
         return;
-
-    if(level){
+    if (level) {
         buf = bread(dev, blk, 0);
         if (buf == NULL) {
             corrupt_fs(dev);
             return;
         }
-        bn = blkptr(buf, 0, BLKSIZE);
-        for(j = BLKSIZE / 2 - 1; j >= 0; --j) {
-            /* When we hit nblock1 we are doing the final partial clear, so
-               only tell the child freeblk to do a partial clear */
-            uint_fast8_t b = 0;
-            if (j == nblock1)
-                b = nblock & 0xFF;
-            /* FIXME: bn[j] would be better as a pointer */
-            freeblk(dev, bn[j], level-1, b);
+        span = level == 1 ? 1 : BLKSIZE / sizeof(blkno_t);
+        first = nblock / span;
+#ifndef CONFIG_BLKBUF_EXTERNAL
+        entries = blkptr(buf, 0, BLKSIZE);
+#endif
+        for (j = BLKSIZE / sizeof(blkno_t) - 1; j >= 0; --j) {
+            if ((uint16_t)j < first)
+                break;
+            keep = j == first ? nblock % span : 0;
+#ifdef CONFIG_BLKBUF_EXTERNAL
+            blktok(&child, buf, j * sizeof(blkno_t), sizeof(blkno_t));
+#else
+            child = entries[j];
+#endif
+            freeblk(dev, child, level - 1, keep);
+            /* A retained pointer block must not reference freed children. */
+            if (nblock && !keep) {
+#ifdef CONFIG_BLKBUF_EXTERNAL
+                child = 0;
+                blkfromk(&child, buf, j * sizeof(blkno_t), sizeof(blkno_t));
+#else
+                entries[j] = 0;
+#endif
+            }
         }
-        brelse(buf);
+        if (nblock)
+            bawrite(buf);
+        else
+            brelse(buf);
     }
+    if (nblock)
+        return;
 #ifdef CONFIG_TRIM
-    d_ioctl(dev, HDIO_TRIM_KERNEL, (void*)&blk);
+    d_ioctl(dev, HDIO_TRIM_KERNEL, (void *)&blk);
 #endif
     blk_free(dev, blk);
 }
-#endif
 
 /* Validblk panics if the given block number is not a valid
  *  data block for the given device.
