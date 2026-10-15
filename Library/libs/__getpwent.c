@@ -50,14 +50,14 @@ restart:
      syscalls. */
   if ((line_len=read(pwd_fd, line_buff, PWD_BUFFER_SIZE))<=0)
     return NULL;
-  field_begin=strchr(line_buff, '\n');
+  field_begin=memchr(line_buff, '\n', line_len);
   if (field_begin!=NULL)
     lseek(pwd_fd, (long) (1+field_begin-(line_buff+line_len)), SEEK_CUR);
   else /* The line is too long - skip it. :-\ */
     {
       do { if ((line_len=read(pwd_fd, line_buff, PWD_BUFFER_SIZE))<=0)
 	return NULL;
-      } while (!(field_begin=strchr(line_buff, '\n')));
+      } while (!(field_begin=memchr(line_buff, '\n', line_len)));
       lseek(pwd_fd, (long) (field_begin-line_buff)-line_len+1, SEEK_CUR);
       goto restart;
     }
