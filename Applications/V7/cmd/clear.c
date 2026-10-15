@@ -39,5 +39,5 @@ int main(int argc, char *argv[])
 	clear = tgetstr("cl", &clbp);
 	if (clear)
 		tputs(clear, tgetnum("li"), tputchar);
-	exit (clear != (char *) 0);
+	exit (clear == (char *) 0);
 }
