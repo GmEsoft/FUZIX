@@ -76,7 +76,7 @@ struct blk *getdec(struct blk *p, int sc);
 struct blk *morehd(void);
 void release(struct blk *p);
 void putwd(struct blk *p, struct blk *c);
-signed char *nalloc(signed char *p, unsigned nbytes);
+signed char *nalloc(signed char *p, unsigned nbytes, unsigned copylen);
 void redef(struct blk *p);
 void garbage(char *s);
 void ospace(char *s);
@@ -2041,10 +2041,12 @@ struct blk *copy(struct blk *hptr, int size)
 	all++;
 	nbytes += size;
 	sz = length(hptr);
-	ptr = nalloc(hptr->beg, (unsigned) size);
+	if (sz > (unsigned) size)
+		sz = size;
+	ptr = nalloc(hptr->beg, (unsigned) size, sz);
 	if (ptr == 0) {
 		garbage("copy");
-		if ((ptr = nalloc(hptr->beg, (unsigned) size)) == NULL) {
+		if ((ptr = nalloc(hptr->beg, (unsigned) size, sz)) == NULL) {
 			printf("copy size %d\n", size);
 			ospace("copy");
 		}
@@ -2260,13 +2262,16 @@ struct blk *lookwd(struct blk *p)
 	return (*wp->rdw);
 }
 
-signed char *nalloc(signed char *p, unsigned nbytes)
+signed char *nalloc(signed char *p, unsigned nbytes, unsigned copylen)
 {
 	signed char *q, *r;
 	q = r = malloc(nbytes);
 	if (q == 0)
 		return (0);
-	while (nbytes--)
+	nbytes -= copylen;
+	while (copylen--)
 		*q++ = *p++;
+	while (nbytes--)
+		*q++ = '\0';
 	return (r);
 }
