@@ -138,7 +138,10 @@ static int blkdev_transfer(uint_fast8_t minor, uint_fast8_t rawflag)
 
     return count << BLKSHIFT; /* 10/10, would transfer sectors again */
 xferfail:
-    udata.u_error = EIO;
+    /* Default to EIO on a block error but allow more information if
+       provided by driver. Doing so actually will need other work */
+    if (!udata.u_error)
+        udata.u_error = EIO;
     return -1;
 }
 
