@@ -17,7 +17,7 @@
 *	on the hash (called value_____). In particular, this
 *	collects the equivalence classes in file1 together.
 *	Subroutine equiv____  replaces the value of each line in
-*	file0 by the index of the first element of its 
+*	file0 by the index of the first element of its
 *	matching equivalence in (the reordered) file1.
 *	To save space equiv_____ squeezes file1 into a single
 *	array member______ in which the equivalence classes
@@ -32,15 +32,15 @@
 *	of "k-candidates". At step i a k-candidate is a matched
 *	pair of lines x,y (x in file0 y in file1) such that
 *	there is a common subsequence of lenght k
-*	between the first i lines of file0 and the first y 
+*	between the first i lines of file0 and the first y
 *	lines of file1, but there is no such subsequence for
 *	any smaller y. x is the earliest possible mate to y
 *	that occurs in such a subsequence.
 *
 *	Whenever any of the members of the equivalence class of
-*	lines in file1 matable to a line in file0 has serial number 
-*	less than the y of some k-candidate, that k-candidate 
-*	with the smallest such y is replaced. The new 
+*	lines in file1 matable to a line in file0 has serial number
+*	less than the y of some k-candidate, that k-candidate
+*	with the smallest such y is replaced. The new
 *	k-candidate is chained (via pred____) to the current
 *	k-1 candidate so that the actual subsequence can
 *	be recovered. When a member has serial number greater
@@ -62,7 +62,7 @@
 *	The core requirements for problems larger than somewhat
 *	are (in words) 2*length(file0) + length(file1) +
 *	3*(number of k-candidates installed),  typically about
-*	6n words for files of length n. 
+*	6n words for files of length n.
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,16 +108,11 @@ char *empty = "";
 int bflag;
 char buf[512];
 
-char *tempfile;			/*used when comparing against std input */
-static char tempfilebuf[32];	/* tmpnam() writes its generated name
-				   into the buffer handed to it; the
-				   string literal "diffXXXXX" was 9
-				   bytes, names are ~15 */
+static char tempfilebuf[32] = "/tmp/diffXXXXXX";
 char *dummy;			/*used in resetting storage search ptr */
 
 void done(void)
 {
-	unlink(tempfile);
 	exit(status);
 }
 
@@ -221,21 +216,17 @@ void filename(char **pa1, char **pa2)
 		while ((*a1++ = *a2++) != 0)
 			if (*a2 && *a2 != '/' && a2[-1] == '/')
 				a1 = b1;
-	} else if (a1[0] == '-' && a1[1] == 0 && tempfile == 0) {
+	} else if (a1[0] == '-' && a1[1] == 0) {
 		signal(SIGHUP, sdone);
 		signal(SIGINT, sdone);
 		signal(SIGPIPE, sdone);
 		signal(SIGTERM, sdone);
-		if ((*pa1 = tempfile = tmpnam(tempfilebuf)) == NULL) {
-			mesg("cannot create temp name ", "");
+		f = mkstemp(tempfilebuf);
+		if (f < 0) {
+			mesg("cannot create ", tempfilebuf);
 			done();
 		}
-		if ((f =
-		     open(tempfile, O_CREAT | O_EXCL | O_WRONLY,
-			  0600)) < 0) {
-			mesg("cannot create ", tempfile);
-			done();
-		}
+		unlink(tempfilebuf);
 		while ((i = read(0, buf, 512)) > 0)
 			write(f, buf, i);
 		close(f);
@@ -244,7 +235,7 @@ void filename(char **pa1, char **pa2)
 
 /* hashing has the effect of
  * arranging line in 7-bit bytes and then
- * summing 1-s complement in 16-bit hunks 
+ * summing 1-s complement in 16-bit hunks
 */
 
 int readhash(FILE * f)
