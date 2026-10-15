@@ -762,12 +762,19 @@ void commnds(void)
 				if ((*readptr)->rd == (*readptr)->wt)
 					release(*readptr);
 				else {
-					if (readptr++ == &readstk[RDSKSZ]) {
+					if (readptr >= &readstk[RDSKSZ-1]) {
+						release(p);
 						error("nesting depth\n");
 					}
+					readptr++;
 				}
-			} else
+			} else {
+				if (readptr >= &readstk[RDSKSZ-1]) {
+					release(p);
+					error("nesting depth\n");
+				}
 				readptr++;
+			}
 			*readptr = p;
 			if (p != 0)
 				rewind(p);
@@ -777,9 +784,11 @@ void commnds(void)
 			}
 			continue;
 		case '?':
-			if (++readptr == &readstk[RDSKSZ]) {
+			if (readptr >= &readstk[RDSKSZ-1]) {
 				error("nesting depth\n");
+				continue;
 			}
+			++readptr;
 			*readptr = 0;
 			fsave = curfile;
 			curfile = stdin;
@@ -1167,7 +1176,7 @@ void init(int argc, char *argv[])
 	strptr = salloc(0);
 	divxyz = salloc(0);
 	stkbeg = stkptr = &stack[0];
-	stkend = &stack[STKSZ];
+	stkend = &stack[STKSZ-1];
 	stkerr = 0;
 	readptr = &readstk[0];
 	k = 0;
