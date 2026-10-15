@@ -32,6 +32,8 @@ int main(int argc, char *argv[])
 
 	if (fstat(2, &sbuf) < 0)
 		err(1, "cannot stat");
+	if (!isatty(2))
+		errx(1, "not a tty");
 	if (argc < 2) {
 		if (sbuf.st_mode & 02)
 			fprintf(stderr, "is y\n");
