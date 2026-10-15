@@ -45,7 +45,9 @@ int input(int n)		/* get input line and split into fields */
 	pp = ppi[n];
 	if (fgets(bp, BUFSIZ, f[n]) == NULL)
 		return(0);
-	for (i = 0; ; i++) {
+	for (i = 0; i < NFLD; i++) {	/* more fields than NFLD:
+					   split off NFLD and drop the
+					   rest of the line */
 		if (sep1 == ' ')	/* strip multiples */
 			while ((c = *bp) == sep1 || c == sep2)
 				bp++;	/* skip blanks */
@@ -53,13 +55,12 @@ int input(int n)		/* get input line and split into fields */
 			c = *bp;
 		if (c == '\n' || c == '\0')
 			break;
-		*pp++ = bp;	/* record beginning */
+		pp[i] = bp;		/* record beginning */
 		while ((c = *bp) != sep1 && c != '\n' && c != sep2 && c != '\0')
 			bp++;
 		*bp++ = '\0';	/* mark end by overwriting blank */
-			/* fails badly if string doesn't have \n at end */
 	}
-	*pp = 0;
+	pp[i] = 0;
 	return(i);
 }
 
@@ -79,11 +80,14 @@ int output(int on1, int on2)	/* print items from olist */
 		printf("\n");
 	} else {
 		for (i = 0; i < no; i++) {
-			temp = ppi[olistf[i]][olist[i]];
-			if(olistf[i]==F1 && on1<=olist[i] ||
-			   olistf[i]==F2 && on2<=olist[i] ||
-			   *temp==0)
-				temp = null;
+			temp = null;
+			if (olist[i] >= 0 && olist[i] < NFLD &&
+			    !(olistf[i]==F1 && on1<=olist[i]) &&
+			    !(olistf[i]==F2 && on2<=olist[i])) {
+				temp = ppi[olistf[i]][olist[i]];
+				if (*temp == 0)
+					temp = null;
+			}
 			printf("%s", temp);
 			if (i == no - 1)
 				printf("\n");
@@ -116,6 +120,8 @@ int main(int argc, const char *argv[])
 			}
 			break;
 		case 'e':
+			if (argc < 3)
+				errx(1, "usage: join [-jf1 x -jf2 y] [-o list] file1 file2");
 			null = argv[2];
 			argv++;
 			argc--;
@@ -124,6 +130,8 @@ int main(int argc, const char *argv[])
 			sep1 = sep2 = argv[1][2];
 			break;
 		case 'o':
+			if (argc < 3)
+				errx(1, "usage: join [-jf1 x -jf2 y] [-o list] file1 file2");
 			for (no = 0; no < 2*NFLD; no++) {
 				if (argv[2][0] == '1' && argv[2][1] == '.') {
 					olistf[no] = F1;
@@ -138,6 +146,8 @@ int main(int argc, const char *argv[])
 			}
 			break;
 		case 'j':
+			if (argc < 3)
+				errx(1, "usage: join [-jf1 x -jf2 y] [-o list] file1 file2");
 			if (argv[1][2] == '1')
 				jf1 = atoi(argv[2]);
 			else if (argv[1][2] == '2')
@@ -157,6 +167,8 @@ int main(int argc, const char *argv[])
 		errx(1, "usage: join [-jf1 x -jf2 y] [-o list] file1 file2");
 	jf1--;
 	jf2--;	/* everyone else believes in 0 origin */
+	if (jf1 < 0 || jf1 >= NFLD || jf2 < 0 || jf2 >= NFLD)
+		errx(1, "join field out of range");
 	s1 = ppi[F1][jf1];
 	s2 = ppi[F2][jf2];
 	if (argv[1][0] == '-')
