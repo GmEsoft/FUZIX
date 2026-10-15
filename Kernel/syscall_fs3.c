@@ -445,6 +445,7 @@ arg_t _ftruncate(void)
 	register inoptr ino;
 	register struct oft *o;
 	off_t n;
+	uint32_t keep;
 
 	if (uget(offset, &n, sizeof(n)))
 	        return -1;
@@ -454,16 +455,25 @@ arg_t _ftruncate(void)
 
 	o = &of_tab[udata.u_files[file]];
 	if (n < 0 || (HIBYTE32(n) & BLKOVERSIZE32) ||
+	    (uint32_t)n > 65536UL * BLKSIZE ||
 	    O_ACCMODE(o->o_access) == O_RDONLY ||
 	    getmode(ino) != MODE_R(F_REG)) {
 		udata.u_error = EINVAL;
 		return -1;
 	}
 
+	if (ino->c_flags & CRDONLY) {
+		udata.u_error = EROFS;
+		return -1;
+	}
 	if (n == ino->c_node.i_size)
 		return 0;
-	if (n < ino->c_node.i_size)
-		f_trunc_blocks(ino, BLOCK(n + BLKSIZE - 1));
+	if (n < ino->c_node.i_size) {
+		keep = ((uint32_t)n + BLKSIZE - 1) / BLKSIZE;
+		/* 65536 retained blocks must not wrap to zero. */
+		if (keep <= UINT16_MAX && f_trunc_blocks(ino, keep))
+			return -1;
+	}
 	ino->c_node.i_size = n;
 	setftime(ino, M_TIME | C_TIME);
 	wr_inode(ino);
