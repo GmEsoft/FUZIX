@@ -160,8 +160,8 @@ readline$(PLATFORM).lib: $(OBJ_RL)
 	$(AR) rc readline$(PLATFORM).lib $(OBJ_RL)
 	ln -sf readline$(PLATFORM).lib libreadline$(PLATFORM).a
 
-$(OBJ_ASM):%.o: %.s
-	$(CC) $(ASM_OPT) -c -o $@ $(@:.o=.s)
+$(OBJ_ASM):%.o: %.S
+	$(CC) $(ASM_OPT) -c -o $@ $(@:.o=.S)
 
 $(OBJ_CRT0):%.o: %.S
 	$(CC) $(ASM_OPT) -c -o $@ $(@:.o=.S)
