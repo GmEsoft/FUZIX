@@ -67,6 +67,13 @@ void update(struct tbuf *tp, int f)
 		if (j >= 8)
 			break;
 	}
+	if (up >= &ubuf[USIZE]) {
+		/* every slot holds a different name: no room to
+		   record this one, the old code wrote 8 bytes past
+		   ubuf into tbuf instead */
+		fprintf(stderr, "ac: too many users\n");
+		exit(1);
+	}
 	for (j = 0; j < 8; j++)
 		up->uname[j] = ibuf.ut_user[j];
 	tp->userp = up;
