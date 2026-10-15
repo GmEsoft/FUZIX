@@ -58,7 +58,7 @@ arg_t _execve(void)
 	struct s_argblk* abuf = NULL;
 	struct s_argblk* ebuf = NULL;
 
-	if (!(ino = n_open_lock(name, NULLINOPTR)))
+	if (!(ino = n_open_argn()))
 		return (-1);
 
 	if (!((getperm(ino) & OTH_EX) &&
@@ -205,7 +205,7 @@ error:
 		tmpfree(abuf);
 	if (ebuf)
 		tmpfree(ebuf);
-	i_unlock_deref(ino);
+	i_deref(ino);
 	return (-1);
 
 enomem:
