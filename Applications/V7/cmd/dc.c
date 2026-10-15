@@ -1862,8 +1862,11 @@ int command(void)
 	default:
 		sl = line;
 		*sl++ = c;
-		while ((c = readc()) != '\n')
+		while ((c = readc()) != '\n') {
+			if (sl >= line + sizeof(line) - 1)
+				continue;
 			*sl++ = c;
+		}
 		*sl = 0;
 		if ((pid = fork()) == 0) {
 			execl("/bin/sh", "sh", "-c", line, 0);
