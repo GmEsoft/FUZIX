@@ -174,12 +174,16 @@ void tmpfree(void *p)
  */
 static void bdput(register bufptr bp)
 {
+	int res;
+
 	block_s(bp);
 	if (bp->bf_dirty) {
-		bdwrite(bp);
+		res = bdwrite(bp);
 		bp->bf_dirty = false;
 		bunlock_s(bp);
 		d_flush(bp->bf_dev);
+		if (res != BLKSIZE)
+			udata.u_error = EIO;
 	} else
 		bunlock_s(bp);
 }
@@ -273,7 +277,8 @@ bufptr freebuf(void)
 
 	block(oldest);
 	if (oldest->bf_dirty) {
-		bdwrite(oldest);
+		if (bdwrite(oldest) != BLKSIZE)
+			udata.u_error = EIO;
 		oldest->bf_dirty = false;
 	}
 	return oldest;
