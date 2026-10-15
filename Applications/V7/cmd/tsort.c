@@ -161,7 +161,7 @@ int main(int argc, const char *argv[])
 	FILE *input = stdin;
 	register struct nodelist *i, *j;
 	int x;
-	char precedes[50], follows[50];
+	char precedes[51], follows[51];
 	if (argc > 1) {
 		input = fopen(argv[1], "r");
 		if (input == NULL)
