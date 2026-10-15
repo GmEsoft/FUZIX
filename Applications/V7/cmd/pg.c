@@ -39,6 +39,8 @@ int ensure(void)
 			return(BUFMAX-bend-1);
 		if(bptr-bend>=512)
 			return(512);
+		if(hp==cp)
+			return(0);	/* nothing left to discard */
 		losepage();
 	}
 }
@@ -47,10 +49,34 @@ int ensure(void)
 void fillbuf(void)
 {
 	register int r;
-	ensure();
+	register int n;
+
+	n = ensure();
 	if(eof)
 		return;
-	r=read(file,&buf[bend],512);
+	/* Never read past the end of buf. The original ignored ensure()
+	   and read its full 512 bytes into &buf[bend] even when the tail
+	   run was shorter, writing over bptr/bnxt and beyond, then
+	   "wrapped" bend -- silently losing the overhang and corrupting
+	   the buffer bookkeeping. If the tail has nothing to give, move
+	   the write point to the free space at the start of the buffer;
+	   the read point is only ever moved along with it because fillbuf
+	   is entered solely with bnxt==bend. */
+	if(n <= 0) {
+		if(bnxt != bend)
+			return;
+		bend = 0;
+		bnxt = 0;
+		n = 512;
+		if(bptr > 0 && bptr <= 512)
+			losepage();	/* oldest kept page lies under us */
+		if(bptr > 0 && bptr - 1 < n)
+			n = bptr - 1;
+		if(n <= 0)
+			return;
+	} else if(n > 512)
+		n = 512;
+	r=read(file,&buf[bend],n);
 	if(r==-1)
 		return;
 	bend += r; bend &= BUFMAX-1;
@@ -114,6 +140,7 @@ void print(void)
 
 	hp=0; cp=0;
 	bptr=bnxt=bend=0;
+	eof=0;		/* else the second and later files are empty */
 	putchar(CLEAR);
 	for(;;) {
 		setpage();
