@@ -616,10 +616,8 @@ void commnds(void)
 			p = pop();
 			EMPTY;
 			if (c >= ARRAYST) {
-				q = copy(p, PTRSZ);
-				for (n = 0; n < PTRSZ - 1; n++)
-					sputc(q, 0);
-				release(p);
+				q = salloc(PTRSZ);
+				putwd(q, p);
 				p = q;
 			}
 			sp->val = p;
@@ -692,6 +690,8 @@ void commnds(void)
 			}
 			release(q);
 			n = readc() & 0377;
+			s = pop();
+			EMPTY;
 			sptr = stable[n];
 			if (sptr == 0) {
 				sptr = stable[n] = sfree;
@@ -713,8 +713,6 @@ void commnds(void)
 			q = lookwd(p);
 			if (q != NULL)
 				release(q);
-			s = pop();
-			EMPTY;
 			salterwd((struct wblk *) p, s);
 			sptr->val = p;
 			continue;
