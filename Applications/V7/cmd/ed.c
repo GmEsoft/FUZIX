@@ -566,6 +566,8 @@ void filename(char comm)
 		error(Q);
 	p1 = file;
 	do {
+		if (p1 >= file + FNSIZE - 1)
+			error(Q);
 		*p1++ = c;
 		if (c==' ' || c==EOF)
 			error(Q);
