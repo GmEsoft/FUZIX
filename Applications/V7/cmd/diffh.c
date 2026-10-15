@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -199,7 +200,7 @@ int easysynch(void)
 FILE *dopen(const char *f1, const char *f2)
 {
 	FILE *f;
-	char b[100], *bptr;
+	char b[100];
 	const char *eptr;
 	struct stat statbuf;
 	if (cmp(f1, "-") == 0) {
@@ -211,16 +212,17 @@ FILE *dopen(const char *f1, const char *f2)
 	if (stat(f1, &statbuf) == -1)
 		error("can't access ", f1);
 
-	/* FIXME: buffer length is not sanely checked, should
-	   strdup and then modify the copy in situ */
 	if ((statbuf.st_mode & S_IFMT) == S_IFDIR) {
-		for (bptr = b; (*bptr = *f1++) != 0; bptr++);
-		*bptr++ = '/';
+		/* use the basename of f2, like V7 */
 		for (eptr = f2; *eptr != 0; eptr++) {
 			if (*eptr == '/' && eptr[1] != 0 && eptr[1] != '/')
 				f2 = eptr + 1;
 		}
-		while ((*bptr++ = *f2++) != 0);
+		if (strlen(f1) + 1 + strlen(f2) + 1 > sizeof(b))
+			error("path too long ", f1);
+		strcpy(b, f1);
+		strcat(b, "/");
+		strcat(b, f2);
 		f1 = b;
 	}
 	f = fopen(f1, "r");
