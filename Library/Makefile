@@ -4,7 +4,7 @@ CFLAGS += -I../Kernel/include
 
 all: tools/syscall tools/binman tools/syscall_6303 \
      tools/syscall_6502 tools/syscall_68000 tools/syscall_8080 \
-     tools/syscall_6809 tools/syscall-scc6809 tools/syscall_armm4 \
+     tools/syscall_6809 tools/syscall-scc6809 tools/syscall_armm0 tools/syscall_armm4 \
      tools/binman85 \
      tools/liberror tools/relocbin tools/relocbin65 tools/fuzixlib \
      tools/relocbinhc11 tools/relocbin6303 tools/relocbin8080 tools/shlibgen \
@@ -20,7 +20,7 @@ clean:
 	rm -f tools/syscall_pdp11 tools/syscall_8080 tools/syscall_6303 tools/syscall_esp8266 tools/syscall_8086
 	rm -f tools/syscall_6800 tools/syscall_68hc11 tools/syscall_8085 tools/syscall_ns32k
 	rm -f tools/syscall_super8 tools/syscall_tms9995 tools/syscall_wrx6 tools/syscall_z8
-	rm -f tools/relocbin65 tools/relocbinhc11 tools/relocbin8080 tools/syscall_armm4
+	rm -f tools/relocbin65 tools/relocbinhc11 tools/relocbin8080 tools/syscall_armm0 tools/syscall_armm4
 	rm -f tools/ns32ktoaout tools/syscall_riscv32 tools/riscv32toaout
 	rm -f tools/syscall_8070 tools/syscall_tms7000
 
