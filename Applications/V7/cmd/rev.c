@@ -27,6 +27,12 @@ int main(int argc, char *argv[])
 				line[i] = c = getc(input);
 				switch (c) {
 				case EOF:
+					/* final line with no newline:
+					   it is still a line, emit it
+					   reversed (without adding a
+					   newline the input lacked) */
+					while (--i >= 0)
+						putc(line[i], stdout);
 					goto eof;
 				default:
 					continue;
