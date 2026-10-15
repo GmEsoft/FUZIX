@@ -31,7 +31,7 @@ usize_t valaddr_r(const uint8_t *pp, usize_t l, usize_t n)
 
 usize_t valaddr_w(const uint8_t *pp, usize_t l, usize_t n)
 {
-	return valaddr(pp, l, n, 1)
+	return valaddr(pp, l, n, 1);
 }
 
 void swap_blocks(void* p1, void* p2, size_t len)
