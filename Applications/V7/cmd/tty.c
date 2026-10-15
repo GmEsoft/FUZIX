@@ -14,14 +14,14 @@ int main(int argc, char *argv[])
 	const char *p;
 
 	p = ttyname(0);
-	if (p == NULL)
-		p = "not a tty";
 
-	if(argc == 2 && !strcmp(argv[1], "-s"))
-		;
-	else {
+	if (argc == 2 && !strcmp(argv[1], "-s"))
+		exit(p ? 0 : 1);
+
+	if (p != NULL) {
 		puts(p);
-		putchar('\n');
+		exit(0);
 	}
-	exit(p? 0: 1);
+	puts("not a tty");
+	exit(1);
 }
