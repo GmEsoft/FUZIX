@@ -30,7 +30,7 @@ struct block
 static struct block start = { NULL, sizeof(struct block) };
 
 /*
- * Add a memory block to the pool. Must be aligned to the alginment boundary
+ * Add a memory block to the pool. Must be aligned to the alignment boundary
  * in use.
  */
 void kmemaddblk(void *base, size_t size)
@@ -111,6 +111,11 @@ void *kmalloc(size_t size, uint8_t owner)
 {
 	struct block *b;
 
+	/* Cheaper than worrying about a wrap and also cuts out pretty much
+	   all way oversized requests immediately */
+	if (size > mtotal)
+		return NULL;
+
 	used(owner);	/* For now */
 	size = (size_t)ALIGNUP(size) + sizeof(struct block);
 	b = find_smallest(size);
@@ -122,7 +127,7 @@ void *kmalloc(size_t size, uint8_t owner)
 	kprintf("mem: alloc %p+%p\n", b, b->length);
 	kprintf("malloc allocates %p\n", b + 1);
 #endif
-	mfree -= b->length;
+	mfree -= b->length & 0x7FFFFFFFUL;
 	return b + 1;
 }
 
@@ -179,7 +184,7 @@ void kfree(void *p)
 
 	if (UNUSED(b))
 		panic(PANIC_BADFREE);
-	
+
 	b->length &= 0x7fffffff;
 	mfree += b->length;
 	merge_all_blocks();
