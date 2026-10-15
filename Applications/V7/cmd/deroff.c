@@ -36,7 +36,7 @@ int wordflag = NO;
 int inmacro = NO;
 int intable = NO;
 
-char chars[128];		/* SPECIAL, APOS, DIGIT, or LETTER */
+unsigned char chars[256];	/* SPECIAL, APOS, DIGIT, or LETTER */
 
 char line[512];
 char *lp;
@@ -137,8 +137,16 @@ void getfname(void)
 	while (C == ' ');
 
 	for (p = fname;
-	     (*p = c) != '\n' && c != ' ' && c != '\t' && c != '\\'; ++p)
+	     (*p = c) != '\n' && c != ' ' && c != '\t' && c != '\\'; ++p) {
+		if (p >= fname + sizeof(fname) - 1) {
+			/* absurdly long file name: reject the line */
+			fname[0] = '\0';
+			while (c != '\n')
+				C;
+			return;
+		}
 		C;
+	}
 	*p = '\0';
 	while (c != '\n')
 		C;
@@ -165,8 +173,8 @@ void putmac(char *s)
 		while (*s == ' ' || *s == '\t')
 			putchar(*s++);
 		for (t = s; *t != ' ' && *t != '\t' && *t != '\0'; ++t);
-		if (t > s + 2 && chars[s[0]] == LETTER
-		    && chars[s[1]] == LETTER)
+		if (t > s + 2 && chars[(unsigned char) s[0]] == LETTER
+		    && chars[(unsigned char) s[1]] == LETTER)
 			while (s < t)
 				putchar(*s++);
 		else
@@ -185,17 +193,17 @@ void putwords(int macline)
 
 	for (p1 = line;;) {
 		/* skip initial specials ampersands and apostrophes */
-		while (chars[*p1] < DIGIT)
+		while (chars[(unsigned char) *p1] < DIGIT)
 			if (*p1++ == '\0')
 				return;
 		nlet = 0;
-		for (p = p1; (i = chars[*p]) != SPECIAL; ++p)
+		for (p = p1; (i = chars[(unsigned char) *p]) != SPECIAL; ++p)
 			if (i == LETTER)
 				++nlet;
 
 		if ((!macline && nlet > 1)	/* MDM definition of word */
-		    ||(macline && nlet > 2 && chars[p1[0]] == LETTER
-		       && chars[p1[1]] == LETTER)) {
+		    ||(macline && nlet > 2 && chars[(unsigned char) p1[0]] == LETTER
+		       && chars[(unsigned char) p1[1]] == LETTER)) {
 			/* delete trailing ampersands and apostrophes */
 			while (p[-1] == '\'' || p[-1] == '&')
 				--p;
@@ -210,6 +218,8 @@ void putwords(int macline)
 
 void regline(int macline)
 {
+	char *lmax = line + sizeof(line) - 1;
+
 	line[0] = c;
 	lp = line;
 	for (;;) {
@@ -219,6 +229,12 @@ void regline(int macline)
 		}
 		if (c == '\n')
 			break;
+		if (lp >= lmax) {	/* absurdly long line: keep the
+					   head, throw away the tail */
+			while (c != '\n')
+				C;
+			break;
+		}
 		if (intable && c == 'T') {
 			*++lp = C;
 			if (c == '{' || c == '}') {
@@ -386,8 +402,11 @@ void comline(void)
 		macro();
 	else if (c1 == 's' && c2 == 'o') {
 		getfname();
-		if (fname[0])
+		if (fname[0]) {
+			if (filesp >= &files[15] - 1)
+				fatal("Too many nested files %s\n", fname);
 			infile = *++filesp = opn(fname);
+		}
 	} else if (c1 == 'n' && c2 == 'x') {
 		getfname();
 		if (fname[0] == '\0')
