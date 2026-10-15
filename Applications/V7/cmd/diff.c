@@ -109,6 +109,10 @@ int bflag;
 char buf[512];
 
 char *tempfile;			/*used when comparing against std input */
+static char tempfilebuf[32];	/* tmpnam() writes its generated name
+				   into the buffer handed to it; the
+				   string literal "diffXXXXX" was 9
+				   bytes, names are ~15 */
 char *dummy;			/*used in resetting storage search ptr */
 
 void done(void)
@@ -157,6 +161,7 @@ void sort(struct line *a, int n)
 	struct line *ai;
 	register struct line *aim;
 	int k;
+	m = 1;		/* else m /= 2 below reads garbage when n == 0 */
 	for (j = 1; j <= n; j *= 2)
 		m = 2 * j - 1;
 	for (m /= 2; m != 0; m /= 2) {
@@ -209,7 +214,7 @@ void filename(char **pa1, char **pa2)
 	a2 = *pa2;
 	if (stat(a1, &stbuf) != -1
 	    && ((stbuf.st_mode & S_IFMT) == S_IFDIR)) {
-		b1 = *pa1 = talloc(100);
+		b1 = *pa1 = talloc(strlen(a1) + strlen(a2) + 2);
 		while ((*b1++ = *a1++) != 0);
 		b1[-1] = '/';
 		a1 = b1;
@@ -221,7 +226,10 @@ void filename(char **pa1, char **pa2)
 		signal(SIGINT, sdone);
 		signal(SIGPIPE, sdone);
 		signal(SIGTERM, sdone);
-		*pa1 = tempfile = tmpnam("diffXXXXX");
+		if ((*pa1 = tempfile = tmpnam(tempfilebuf)) == NULL) {
+			mesg("cannot create temp name ", "");
+			done();
+		}
 		if ((f =
 		     open(tempfile, O_CREAT | O_EXCL | O_WRONLY,
 			  0600)) < 0) {
