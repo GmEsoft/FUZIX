@@ -57,7 +57,7 @@ image: trs80load.bin hdboot.bin
 	# Kernel lives on the end of the disk (so we can add an fs)
 	dd if=fuzix.bin of=boot.raw skip=256 bs=1 seek=129024 conv=notrunc
 	../../tools/makejv3 -s -t dd40s -d boot.raw boot4p.jv3
-	dd if=hdload.bin of=hdboot.raw bs=256 count=1 conv=notrunc
+	dd if=hdboot.bin of=hdboot.raw bs=256 count=1 conv=notrunc
 	../../tools/makejv3 -s -t dd40s -d hdboot.raw hdboot4p.jv3
 
 trs80load.bin: trs80load.S
