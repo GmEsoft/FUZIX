@@ -566,6 +566,8 @@ void filename(char comm)
 		error(Q);
 	p1 = file;
 	do {
+		if (p1 >= file + FNSIZE - 1)
+			error(Q);
 		*p1++ = c;
 		if (c==' ' || c==EOF)
 			error(Q);
@@ -808,6 +810,7 @@ void quit(int unused)
 		fchange = 0;
 		error(Q);
 	}
+	unlink(tname);
 	exit(0);
 }
 
