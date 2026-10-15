@@ -138,8 +138,8 @@ To flash the image either:
 CMake generates `build/flash-layout.json`, `.h`, `.env` and `.ld` from the SDK
 board's flash size and two settings: `FLASH_FIRMWARE_KIB` (default 96) and
 `FLASH_XIP_KIB` (default 0). Both regions must be aligned to 4 KiB. The remaining
-flash belongs to Dhara. For example, `FLASH_XIP_KIB=256` reserves 256 KiB after
-firmware for future immutable userspace images; it does not enable XIP execution.
+flash belongs to Dhara. `FLASH_XIP_KIB` reserves space after the firmware for
+install-on-first-exec XIP (below); the reservation alone does not enable it.
 
 The flash driver and image tools consume this same geometry. The linker rejects
 firmware that extends beyond its reservation. A SHA-256 layout identifier in the
@@ -254,3 +254,24 @@ There are many, the biggest of which are:
 ## Postscript
 
 dg@cowlark.com
+
+## Install-on-first-exec XIP
+
+`RPIPICO_XIP_AUTO=ON` turns the reserved region (`FLASH_XIP_KIB>0`) into an
+automatic extent store. Ordinary static-PIE binaries whose text is at least
+10 KiB are relocated into it the first time they execute and run from flash
+afterwards; smaller binaries keep loading into RAM. The region holds
+self-describing extents and the kernel rebuilds its table by scanning them.
+
+An install appends one extent: header, relocated text, relocated data image,
+then a valid marker. Identity is device, inode, mtime, size and pool base, so
+editing or replacing a binary installs a fresh extent and ignores the old one.
+The region is only ever appended to; when it is full (or the binary is too
+small to be worth it) the binary simply runs from RAM, never worse than stock.
+
+Flash is mutated only while the system is quiet (no other runnable process),
+and with interrupts disabled across each program or erase, so an install can
+neither begin nor complete concurrently with live I/O; otherwise it falls back
+to RAM. Table hits never program. Because a process may be executing from
+flash, the region is only erased by the boot scan, and only after a torn
+extent left by a power loss. Installs and fallbacks are silent.

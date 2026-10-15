@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the shared firmware / immutable image / Dhara flash geometry."""
+"""Generate the shared firmware / XIP region / Dhara flash geometry."""
 import argparse
 import hashlib
 import json

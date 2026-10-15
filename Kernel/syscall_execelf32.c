@@ -55,6 +55,8 @@ arg_t _execve(void)
 	uaddr_t dynamic;
 	uaddr_t lomem;
 	uaddr_t himem;
+	uaddr_t stacktop;
+	uaddr_t entry;
 	uint_fast8_t mflags;
 
 	himem = ramtop - PROGLOAD;
@@ -99,6 +101,39 @@ arg_t _execve(void)
 #endif
 		goto enoexec;
 	}
+
+#ifdef CONFIG_EXEC_XIP_AUTO
+	struct exec_xip auto_image;
+	int auto_xip = 0;
+	int auto_idx = -1;
+	int auto_try;
+	auto_try = xip_auto_try(ino, &ehdr, himem, &auto_image, &auto_idx);
+	if (auto_try < 0) {
+		/* Busy system, usually a parent that has not reached wait
+		 * yet; try holds nothing across the call, so yielding a
+		 * tick and retrying once is safe. */
+		xip_auto_yield();
+		auto_try = xip_auto_try(ino, &ehdr, himem, &auto_image,
+					&auto_idx);
+		if (auto_try < 0)
+			auto_try = 0;
+	}
+	if (auto_try) {
+		if (auto_image.data_size > himem ||
+		    auto_image.bss_size > himem - auto_image.data_size ||
+		    USERSTACK > himem - auto_image.data_size -
+		    auto_image.bss_size)
+			goto enoexec;
+		dynamic = auto_image.data_size + auto_image.bss_size;
+		stacktop = (uaddr_t)ALIGNUP(dynamic) + USERSTACK;
+		lomem = stacktop;
+		if (stacktop > himem)
+			goto enoexec;
+		entry = auto_image.entry;
+		auto_xip = 1;
+		goto got_layout;
+	}
+#endif
 
 	if (!IS_ELF(ehdr)) {
 #ifdef DEBUG
@@ -165,7 +200,7 @@ arg_t _execve(void)
 	}
 	/* dynamic points at the load address of the relocation data; this is also
 	 * the top of BSS. */
-	uaddr_t stacktop = (uaddr_t)ALIGNUP(dynamic) + USERSTACK;
+	stacktop = (uaddr_t)ALIGNUP(dynamic) + USERSTACK;
 	if ((stacktop > himem) || (lomem > himem)) {
 #ifdef DEBUG
 		kprintf("failed: out of memory (have %p, asked for %p)\n", himem, stacktop);
@@ -175,6 +210,10 @@ arg_t _execve(void)
 	if (stacktop > lomem)
 		lomem = stacktop;
 
+	entry = ehdr.e_entry + PROGLOAD;
+#ifdef CONFIG_EXEC_XIP_AUTO
+got_layout:
+#endif
 	/* We've confirmed that there's room. Now, copy the command line arguments
 	 * into temporary storage because we're about to trash userland. */
 
@@ -199,6 +238,15 @@ arg_t _execve(void)
 	 * executing the program. This call must not block. */
 
 	close_on_exec();
+
+#ifdef CONFIG_EXEC_XIP_AUTO
+	if (auto_xip) {
+		xip_auto_load(auto_idx);
+		goto loaded;
+	}
+	/* Exec from XIP into RAM must drop the old image's readable range. */
+	udata.u_codebase = PROGLOAD;
+#endif
 
 	/* Now, load the data. */
 
@@ -289,6 +337,9 @@ arg_t _execve(void)
 		rel++;
 	}
 
+#ifdef CONFIG_EXEC_XIP_AUTO
+loaded:
+#endif
 #ifdef DEBUG
 	kprintf("himem=%p lomem=%p (%p) dynamic=%p stacktop=%p\n",
 			   himem, lomem, lomem+PROGLOAD, dynamic, stacktop);
@@ -340,7 +391,6 @@ arg_t _execve(void)
 	uget((void *) ugetp(nargv), udata.u_name, 8);
 	memcpy(udata.u_ptab->p_name, udata.u_name, 8);
 
-	uaddr_t entry = ehdr.e_entry + PROGLOAD;
 	if (abuf)
 		tmpfree(abuf);
 	if (ebuf)

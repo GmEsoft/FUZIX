@@ -7,8 +7,8 @@ SWAP_TESTS = $(addprefix swap-test-,$(LIMITS))
 SWAP_CASES = reuse write-error partial-write flush-error read-error partial-read exhausted
 PLATFORM_DIR ?= ..
 
-.PHONY: check check-config check-flash-sync check-esp8266-flash-sync check-kernel-flash clean
-check: $(TESTS) $(SWAP_TESTS) check-config check-flash-sync check-esp8266-flash-sync check-kernel-flash
+.PHONY: check check-config check-xipauto check-flash-sync check-esp8266-flash-sync check-kernel-flash clean
+check: $(TESTS) $(SWAP_TESTS) check-config check-xipauto check-flash-sync check-esp8266-flash-sync check-kernel-flash
 	@set -e; for exe in $(TESTS); do echo $$exe; for test in $(CASES); do ./$$exe $$test; done; done
 	@set -e; for exe in $(SWAP_TESTS); do echo $$exe; for test in $(SWAP_CASES); do ./$$exe $$test; done; done
 	./swap-test-128 large
@@ -44,3 +44,9 @@ check-esp8266-flash-sync:
 
 check-kernel-flash:
 	python3 kernel-flash.py
+
+# The install-on-first-exec XIP logic runs against a synthetic PIE image with
+# the kernel services stubbed, so it needs its own include directory.
+check-xipauto:
+	$(CC) $(CFLAGS) -Ixipauto-include -Iinclude -I../../../include xipauto.c -o /tmp/fuzix-xipauto-host-test
+	/tmp/fuzix-xipauto-host-test

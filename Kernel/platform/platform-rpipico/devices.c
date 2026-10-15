@@ -97,6 +97,9 @@ void device_init(void)
 #endif
     sd_rawinit();
     devsd_init();
+    /* Root is always the on-board flash; preselect it so boot does not stop
+     * for input. A keypress during the pause still gets the prompt. */
+    set_boot_line("hda");
 }
 
 /* vim: sw=4 ts=4 et: */

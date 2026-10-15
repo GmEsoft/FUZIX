@@ -28,7 +28,7 @@ pico_sdk_init()
 # One geometry for the driver, linker checks and offline image tools. Board
 # flash sizes may be SDK arithmetic expressions rather than decimal numbers.
 set(FLASH_FIRMWARE_KIB "96" CACHE STRING "Flash reserved for firmware in KiB")
-set(FLASH_XIP_KIB "0" CACHE STRING "Flash reserved for immutable user images in KiB")
+set(FLASH_XIP_KIB "0" CACHE STRING "Flash reserved for install-on-first-exec XIP in KiB")
 foreach(flash_setting FLASH_FIRMWARE_KIB FLASH_XIP_KIB)
     if(NOT "${${flash_setting}}" MATCHES "^[0-9]+$")
         message(FATAL_ERROR "${flash_setting} must be a nonnegative integer in KiB")
@@ -43,6 +43,16 @@ execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/flash-
     RESULT_VARIABLE FLASH_LAYOUT_RESULT)
 if(NOT FLASH_LAYOUT_RESULT EQUAL 0)
     message(FATAL_ERROR "Invalid FUZIX flash layout")
+endif()
+
+# Install-on-first-exec XIP: ordinary static-PIE binaries are relocated into
+# the reserved region on first exec and run from flash afterwards.
+option(RPIPICO_XIP_AUTO "Install ordinary PIE binaries into flash on first exec" OFF)
+if(RPIPICO_XIP_AUTO)
+    if(NOT FLASH_XIP_KIB GREATER 0)
+        message(FATAL_ERROR "RPIPICO_XIP_AUTO needs a reserved flash region (FLASH_XIP_KIB>0)")
+    endif()
+    add_compile_definitions(CONFIG_EXEC_XIP_AUTO=1)
 endif()
 
 include_directories(
@@ -63,6 +73,7 @@ add_executable(fuzix
 	elf.c 
 	main.c
 	misc.c
+	useraddr.c
 	rawflash.c
 	rawuart.c
 	swapper.c
@@ -124,3 +135,7 @@ pico_set_double_implementation(fuzix none)
 pico_add_extra_outputs(fuzix)
 target_link_options(fuzix PRIVATE "LINKER:-T,${CMAKE_CURRENT_BINARY_DIR}/flash-layout.ld")
 pico_add_link_depend(fuzix ${CMAKE_CURRENT_BINARY_DIR}/flash-layout.ld)
+
+if(RPIPICO_XIP_AUTO)
+    target_sources(fuzix PRIVATE xipauto.c)
+endif()

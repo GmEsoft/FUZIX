@@ -51,31 +51,6 @@ uaddr_t pagemap_base(void)
     return PROGBASE;
 }
 
-usize_t valaddr(const uint8_t *base, usize_t size, usize_t need, uint_fast8_t is_write)
-{
-        if (base + size < base)
-                size = MAXUSIZE - (usize_t)base + 1;
-        if (!base || base < (const uint8_t *)PROGBASE)
-                size = 0;
-        else if (base + size > (const uint8_t *)(size_t)udata.u_ptab->p_top)
-                size = (uint8_t *)(size_t)udata.u_ptab->p_top - base;
-        if (size < need) {
-                udata.u_error = EFAULT;
-                return 0;
-        }
-        return size;
-}
-
-usize_t valaddr_r(const uint8_t *pp, usize_t l, usize_t n)
-{
-	return valaddr(pp, l, n, 0);
-}
-
-usize_t valaddr_w(const uint8_t *pp, usize_t l, usize_t n)
-{
-	return valaddr(pp, l, n, 1);
-}
-
 /* vim: sw=4 ts=4 et: */
 
 
