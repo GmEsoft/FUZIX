@@ -221,13 +221,14 @@ static void exfile(BOOL prof)
 		exitset();
 		if ((flags & prompt) && standin->fstak == 0 && !eof) {
 			if (mailnod.namval
-			    && stat(mailnod.namval, &statb) >= 0
-			    && statb.st_size
-			    && (statb.st_mtime != mailtime)
-			    && mailtime) {
-				prs(mailmsg);
+			    && stat(mailnod.namval, &statb) >= 0) {
+				if (statb.st_size
+				    && (statb.st_mtime != mailtime)
+				    && mailtime) {
+					prs(mailmsg);
+				}
+				mailtime = statb.st_mtime;
 			}
-			mailtime = statb.st_mtime;
 			if (line_input(ps1nod.namval) < 0)
 			{
 				prs(ps1nod.namval);
