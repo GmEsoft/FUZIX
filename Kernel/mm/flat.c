@@ -435,7 +435,6 @@ usize_t pagemap_mem_used(void)
 /* The extra syscalls for the pool allocator */
 
 #define size (uint32_t)udata.u_argn
-#define flags (uint32_t)udata.u_argn1
 
 /*
  *	void *memalloc(size, flags)
@@ -446,9 +445,13 @@ arg_t _memalloc(void)
 {
 	unsigned int proc = udata.u_page;
 	struct memblk *m = &mem[proc]->memblk[MALLOC_BASE];
-	unsigned nsize;
+	usize_t nsize;
 	int i;
 
+	if (size == 0 || size > (usize_t)-1 - 511) {
+		udata.u_error = ENOMEM;
+		return -1;
+	}
 	nsize = (size + 511) & ~511;
 	/* Map 0 and 1 are the image, the user doesn't get to play with that one */
 	for (i = MALLOC_BASE; i < MAX_BLOCKS; i++) {
@@ -469,7 +472,6 @@ arg_t _memalloc(void)
 }
 
 #undef size
-#undef flags
 
 #define base (void *)udata.u_argn
 
