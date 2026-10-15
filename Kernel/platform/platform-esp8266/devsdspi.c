@@ -8,6 +8,7 @@
 #include "esp8266_peri.h"
 #include "globals.h"
 #include "config.h"
+#include "rom.h"
 
 #define RESETPIN 2			/* also change GPF2 and GPC2 below */
 #define CSPIN 	4			/* also change GPF4 and GPC4 below */

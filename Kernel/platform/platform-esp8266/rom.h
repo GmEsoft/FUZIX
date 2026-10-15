@@ -23,6 +23,9 @@ extern void* sdk_flashchip;
 /* And we don't care what this one uses */
 extern void system_restart(void);
 
+/* libgcc helper we take from the mask ROM (see addresses.ld) */
+extern int abs(int);
+
 #define ETS_SLC_INUM        1
 #define ETS_SDIO_INUM       1
 #define ETS_SPI_INUM        2
