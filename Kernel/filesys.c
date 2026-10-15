@@ -997,6 +997,7 @@ int f_trunc_blocks(register inoptr ino, uint16_t nblock)
 
     /* Avoid narrowing a large retained count to signed int. */
     if (nblock < 18) {
+        /* TODO: use a pointer here */
         for (j = 17; j >= (int)nblock; --j) {
             freeblk(dev, ino->c_node.i_addr[j], 0, 0);
             ino->c_node.i_addr[j] = 0;
@@ -1027,6 +1028,12 @@ int f_trunc(register inoptr ino)
    This is annoying and it would be nice one day to find a clean solution */
 
 /* nblock is the number of data blocks retained below this node. */
+
+/* TODO:
+    - split and optimize non BLKBUF_EXTERNAL case to use pointers
+    - possibly split 400 and 512 sized block cases so we can get divisions
+      out of the path here and down to shift and mask
+ */
 void freeblk(uint16_t dev, blkno_t blk, uint_fast8_t level, uint16_t nblock)
 {
     struct blkbuf *buf;
