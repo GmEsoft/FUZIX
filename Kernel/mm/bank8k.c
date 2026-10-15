@@ -178,7 +178,9 @@ int pagemap_alloc(ptptr p)
 	if (needed > pfptr)	/* We have no swap so poof... */
 		return ENOMEM;
 #endif
-
+	/* Fill in any entries below the used ones for clarity */
+	for (i = 0; i < LOBANK; i++)
+		*ptr++ = PAGE_INVALID;
 	/* Allocate the pages upwards */
 	for (i = 0; i < needed; i++)
 		*ptr++ = pfree[--pfptr];
@@ -189,17 +191,16 @@ int pagemap_alloc(ptptr p)
 	 *	common space is right if it is high.
 	 */
 #ifdef CONFIG_SUPERVISOR_SPACE
-	while (i++ < PTNUM - LOBANK)
+	while (i++ < PTNUM)
 		*ptr++ = PAGE_INVALID;
 #else
-	while (i++ < 8 - LOBANK) {
+	while (i++ < 8) {
 		*ptr = ptr[-1];
 		ptr++;
 	}
 #ifdef CONFIG_VIDMAP8
-	ptr += LOBANK;
 	*ptr = PAGE_INVALID;
-#endif	
+#endif
 #endif
 	return 0;
 }
@@ -214,10 +215,11 @@ int pagemap_alloc(ptptr p)
  */
 int pagemap_realloc(struct exec *hdr, usize_t size)
 {
-	int8_t have = maps_needed(udata.u_top);
-	int8_t want = maps_needed(size + MAPBASE);
+	int_fast8_t have = maps_needed(udata.u_top);
+	int_fast8_t want = maps_needed(size + MAPBASE);
 	uint8_t *ptr = (uint8_t *)udata.u_page;
 	int i;
+	uint_fast8_t last;
 
 #ifdef CONFIG_VIDMAP8
 	if (ptr[8] != PAGE_INVALID)
@@ -228,10 +230,12 @@ int pagemap_realloc(struct exec *hdr, usize_t size)
 	if (want == have)
 		return 0;
 
+	/* Skip any slots we don't use */
+	ptr += LOBANK;
 	/* If we are shrinking then free pages and propogate the
 	   common page or invalid into the freed spaces */
 	if (want < have) {
-		uint8_t last = ptr[7 - LOBANK];
+		last = ptr[7];
 		ptr += want - 1;
 		for (i = want; i < have; i++) {
 			pfree[pfptr++] = *ptr;
@@ -253,8 +257,13 @@ int pagemap_realloc(struct exec *hdr, usize_t size)
 		return ENOMEM;
 #endif
 	ptr += have - 1;
+	/* Grab the last page number */
+	last = *ptr;
+	/* Add pages to the map */
 	for (i = have; i < want; i++)
 		*ptr++ = pfree[--pfptr];
+	/* Ensure our last page stays the common page if relevant */
+	*ptr = last;
 
 	udata.u_ptab->p_size = want << 3;
 	program_vectors(&udata.u_page);
@@ -303,7 +312,7 @@ int swapout(ptptr p)
 	uint8_t *pt = (uint8_t *)p->p_page;
 #ifdef CONFIG_VIDMAP8
 	uint8_t pv = pt[8];
-#endif	
+#endif
 
 	if (!page)
 		panic(PANIC_ALREADYSWAP);
@@ -317,6 +326,8 @@ int swapout(ptptr p)
 		return ENOMEM;
 	blk = map * SWAP_SIZE;
 	/* Write the app (and possibly the uarea etc..) to disk */
+	pt += LOBANK;
+
 	for (i = LOBANK; i < HIBANK; i++) {
 		uint8_t pg = *pt++;
 		if (i == HIBANK - 1)
@@ -327,7 +338,7 @@ int swapout(ptptr p)
 #ifdef CONFIG_VIDMAP8
 			if (pg == PAGE_VIDEO)
 				pg = pv;
-#endif				
+#endif
 			swapwrite(SWAPDEV, blk, size << 9, base, pg);
 		}
 		base += 0x2000;
@@ -357,7 +368,7 @@ void swapin(ptptr p, uint16_t map)
 	uint8_t *pt = (uint8_t *)p->p_page;
 #ifdef CONFIG_VIDMAP8
 	uint8_t pv = pt[8];
-#endif	
+#endif
 
 #ifdef DEBUG
 	kprintf("Swapin %x, %x\n", p, p->p_page);
@@ -367,6 +378,8 @@ void swapin(ptptr p, uint16_t map)
 		return;
 	}
 
+	pt += LOBANK;
+
 	for (i = LOBANK; i < HIBANK; i++) {
 		uint8_t pg = *pt++;
 		if (i == HIBANK - 1)
@@ -374,10 +387,10 @@ void swapin(ptptr p, uint16_t map)
 		else
 			size = 0x10;	/* 8K */
 		if (pg != PAGE_INVALID) {
-#ifdef CONFIG_VIDMAP8		
+#ifdef CONFIG_VIDMAP8
 			if (pg == PAGE_VIDEO)
 				pg = pv;
-#endif				
+#endif
 			swapread(SWAPDEV, blk, size << 9, base, pg);
 		}
 		base += 0x2000;
