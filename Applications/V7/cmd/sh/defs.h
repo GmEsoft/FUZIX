@@ -168,7 +168,7 @@ extern NAMNOD ps1nod;
 extern NAMNOD ps2nod;
 
 /* special names */
-extern char flagadr[10];
+extern char flagadr[11];
 extern char * cmdadr;
 extern char * exitadr;
 extern char * dolladr;

@@ -15,7 +15,9 @@
 static const char **copyargs(const char *from[], int n);
 static DOLPTR dolh;
 
-CHAR flagadr[10];
+/* $- string: one byte per option letter plus terminator.
+   Keep in step with flagchar[] (and the extern in defs.h). */
+CHAR flagadr[11];
 
 CHAR flagchar[] = {
 	'x', 'n', 'v', 't', 's', 'i', 'e', 'r', 'k', 'u', 0
