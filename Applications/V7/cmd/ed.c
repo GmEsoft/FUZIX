@@ -809,6 +809,7 @@ void quit(int unused)
 		fchange = 0;
 		error(Q);
 	}
+	unlink(tname);
 	exit(0);
 }
 
