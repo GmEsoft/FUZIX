@@ -517,8 +517,10 @@ usize_t valaddr(const uint8_t *pp, usize_t l, usize_t need, uint_fast8_t is_writ
 
 #ifdef CONFIG_SPLIT_ID
 	/* First block is R/O */
-	if (is_write)
+	if (is_write) {
 		n++;
+		m++;
+	}
 #endif
 	while (n < MAX_BLOCKS) {
 		/* Found the right block ? */
