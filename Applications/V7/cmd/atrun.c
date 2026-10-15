@@ -29,7 +29,7 @@ void makenowtime(void)
 	tp = localtime(&t);
 	nowtime = tp->tm_hour*100 + tp->tm_min;
 	nowdate = tp->tm_yday;
-	nowyear = tp->tm_year;
+	nowyear = tp->tm_year + 1900;
 }
 
 void updatetime(int t)
@@ -56,13 +56,13 @@ void run(char *file)
 		close(i);
 	dup(dup(open("/dev/null", 0)));
 	/* FIXME: cheaper to do the copy inline */
-	sprintf(sbuf, "/bin/mv %.14s %s", file, PDIR);
+	sprintf(sbuf, "/bin/mv %s %s", file, PDIR);
 	system(sbuf);
 	chdir(PDIR);
 	if (stat(file, &stbuf) == -1)
 		exit(1);
-	setgid(stbuf.st_gid);
-	setuid(stbuf.st_uid);
+	if (setgid(stbuf.st_gid) < 0 || setuid(stbuf.st_uid) < 0)
+		exit(1);
 	if ((pid = fork()) != 0) {
 		if (pid == -1)
 			exit(1);
@@ -97,7 +97,8 @@ int main(int argc, const char *argv[])
 	}
 	while ((d = readdir(dirf)) != NULL) {
 		strncpy(file, d->d_name, DIRSIZ);
-		if (sscanf(file, "%2d.%3d.%4d.%2d", &year, &day, &tt, &uniq) != 4)
+		file[DIRSIZ] = '\0';
+		if (sscanf(file, "%4d.%3d.%4d.%2d", &year, &day, &tt, &uniq) != 4)
 			continue;
 		if (nowyear < year)
 			continue;
