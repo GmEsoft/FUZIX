@@ -1,29 +1,25 @@
 #include <libgen.h>
 #include <string.h>
 
-/* Lots of funny cases for SuS compliance. We have to handle trailing / */
-
 char *dirname(char *p)
 {
     register char *s;
-    register char *e = p + strlen(p) - 1;
-    while(*e == '/') {
-        if (e == p)
-            return p;	/* dirname("/") is "/" */
+    register char *e;
+
+    if (p == NULL || *p == 0)
+        return ".";
+    e = p + strlen(p) - 1;
+    while (e > p && *e == '/')
         e--;
-    }
     s = e;
-    while(*s != '/')
-        if (s == p) {
-            /* Our entire path is of the form foo/ or foo */
-            return ".";
+    while (s > p && *s != '/')
         s--;
-    }
-    if (s == p) {
-        /* Path is /foo/ or /foo */
+    if (*s != '/')
+        return ".";
+    while (s > p && s[-1] == '/')
+        s--;
+    if (s == p)
         return "/";
-    }
-    /* Ok we do have a directory element */
     *s = 0;
     return p;
 }
