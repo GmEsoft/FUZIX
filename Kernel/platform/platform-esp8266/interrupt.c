@@ -7,6 +7,9 @@
 #include <devtty.h>
 #include <dev/devsd.h>
 #include <printf.h>
+#ifdef CONFIG_NET_WIZNET
+#include <net_w5x00.h>
+#endif
 #include "globals.h"
 #include "esp8266_peri.h"
 #include "rom.h"
