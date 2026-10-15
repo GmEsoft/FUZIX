@@ -76,7 +76,7 @@ struct blk *getdec(struct blk *p, int sc);
 struct blk *morehd(void);
 void release(struct blk *p);
 void putwd(struct blk *p, struct blk *c);
-signed char *nalloc(signed char *p, unsigned nbytes);
+signed char *nalloc(signed char *p, unsigned nbytes, unsigned copylen);
 void redef(struct blk *p);
 void garbage(char *s);
 void ospace(char *s);
@@ -326,10 +326,16 @@ void commnds(void)
 			neg = 0;
 			arg1 = pop();
 			EMPTY;
-			if (sunputc(arg1) != 0)
-				error("exp not an integer\n");
 			arg2 = pop();
-			EMPTYR(arg1);
+			if (stkerr != 0) {
+				pushp(arg1);
+				printf(stackempty);
+				continue;
+			}
+			if (sunputc(arg1) != 0) {
+				pushp(arg2);
+				error("exp not an integer\n");
+			}
 			if (sfbeg(arg1) == 0 && sbackc(arg1) < 0) {
 				neg++;
 				chsign(arg1);
@@ -417,6 +423,11 @@ void commnds(void)
 			p = pop();
 			EMPTY;
 			p = scalint(p);
+			fsfile(p);
+			if (length(p) == 0 || sbackc(p) <= 0) {
+				release(p);
+				error("bad input base\n");
+			}
 			release(inbas);
 			inbas = p;
 			continue;
@@ -616,10 +627,8 @@ void commnds(void)
 			p = pop();
 			EMPTY;
 			if (c >= ARRAYST) {
-				q = copy(p, PTRSZ);
-				for (n = 0; n < PTRSZ - 1; n++)
-					sputc(q, 0);
-				release(p);
+				q = salloc(PTRSZ);
+				putwd(q, p);
 				p = q;
 			}
 			sp->val = p;
@@ -692,6 +701,8 @@ void commnds(void)
 			}
 			release(q);
 			n = readc() & 0377;
+			s = pop();
+			EMPTY;
 			sptr = stable[n];
 			if (sptr == 0) {
 				sptr = stable[n] = sfree;
@@ -713,8 +724,6 @@ void commnds(void)
 			q = lookwd(p);
 			if (q != NULL)
 				release(q);
-			s = pop();
-			EMPTY;
 			salterwd((struct wblk *) p, s);
 			sptr->val = p;
 			continue;
@@ -762,12 +771,19 @@ void commnds(void)
 				if ((*readptr)->rd == (*readptr)->wt)
 					release(*readptr);
 				else {
-					if (readptr++ == &readstk[RDSKSZ]) {
+					if (readptr >= &readstk[RDSKSZ-1]) {
+						release(p);
 						error("nesting depth\n");
 					}
+					readptr++;
 				}
-			} else
+			} else {
+				if (readptr >= &readstk[RDSKSZ-1]) {
+					release(p);
+					error("nesting depth\n");
+				}
 				readptr++;
+			}
 			*readptr = p;
 			if (p != 0)
 				rewind(p);
@@ -777,9 +793,11 @@ void commnds(void)
 			}
 			continue;
 		case '?':
-			if (++readptr == &readstk[RDSKSZ]) {
+			if (readptr >= &readstk[RDSKSZ-1]) {
 				error("nesting depth\n");
+				continue;
 			}
+			++readptr;
 			*readptr = 0;
 			fsave = curfile;
 			curfile = stdin;
@@ -819,13 +837,12 @@ struct blk *div(struct blk *ddivd, struct blk *ddivr)
 	struct blk *ps;
 	register struct blk *p, *divd, *divr;
 
-	rem = 0;
+	rem = salloc(0);
 	p = salloc(0);
 	if (length(ddivr) == 0) {
 		pushp(ddivr);
 		puts("divide by 0");
-		/* Eww... */
-		return (struct blk *)1;
+		return (salloc(0));
 	}
 	divsign = remsign = 0;
 	divr = ddivr;
@@ -983,9 +1000,13 @@ int dscale(void)
 
 struct blk *removr(struct blk *p, int n)
 {
-	int nn;
+	int nn, neg;
 	register struct blk *q, *s, *r;
 
+	fsfile(p);
+	neg = (sfbeg(p) == 0 && sbackc(p) < 0);
+	if (neg != 0)
+		chsign(p);
 	rewind(p);
 	nn = (n + 1) / 2;
 	q = salloc(nn);
@@ -1004,8 +1025,18 @@ struct blk *removr(struct blk *p, int n)
 		if (sfeof(rem) == 0)
 			sputc(q, sgetc(rem));
 		release(rem);
+		if (neg != 0) {
+			chsign(s);
+			if (length(q) != 0)
+				chsign(q);
+		}
 		irem = q;
 		return (s);
+	}
+	if (neg != 0) {
+		chsign(r);
+		if (length(q) != 0)
+			chsign(q);
 	}
 	irem = q;
 	return (r);
@@ -1018,6 +1049,15 @@ struct blk *squareroot(struct blk *p)
 	int c, n, nn;
 
 	n = length(p);
+	fsfile(p);
+	while (sfbeg(p) == 0) {
+		if (sbackc(p) != 0)
+			break;
+		truncate(p);
+		n--;
+	}
+	if (n == 0)
+		return(p);
 	fsfile(p);
 	c = sbackc(p);
 	if ((n & 1) != 1)
@@ -1167,7 +1207,7 @@ void init(int argc, char *argv[])
 	strptr = salloc(0);
 	divxyz = salloc(0);
 	stkbeg = stkptr = &stack[0];
-	stkend = &stack[STKSZ];
+	stkend = &stack[STKSZ-1];
 	stkerr = 0;
 	readptr = &readstk[0];
 	k = 0;
@@ -1853,8 +1893,11 @@ int command(void)
 	default:
 		sl = line;
 		*sl++ = c;
-		while ((c = readc()) != '\n')
+		while ((c = readc()) != '\n') {
+			if (sl >= line + sizeof(line) - 1)
+				continue;
 			*sl++ = c;
+		}
 		*sl = 0;
 		if ((pid = fork()) == 0) {
 			execl("/bin/sh", "sh", "-c", line, 0);
@@ -2012,10 +2055,12 @@ struct blk *copy(struct blk *hptr, int size)
 	all++;
 	nbytes += size;
 	sz = length(hptr);
-	ptr = nalloc(hptr->beg, (unsigned) size);
+	if (sz > (unsigned) size)
+		sz = size;
+	ptr = nalloc(hptr->beg, (unsigned) size, sz);
 	if (ptr == 0) {
 		garbage("copy");
-		if ((ptr = nalloc(hptr->beg, (unsigned) size)) == NULL) {
+		if ((ptr = nalloc(hptr->beg, (unsigned) size, sz)) == NULL) {
 			printf("copy size %d\n", size);
 			ospace("copy");
 		}
@@ -2231,13 +2276,16 @@ struct blk *lookwd(struct blk *p)
 	return (*wp->rdw);
 }
 
-signed char *nalloc(signed char *p, unsigned nbytes)
+signed char *nalloc(signed char *p, unsigned nbytes, unsigned copylen)
 {
 	signed char *q, *r;
 	q = r = malloc(nbytes);
 	if (q == 0)
 		return (0);
-	while (nbytes--)
+	nbytes -= copylen;
+	while (copylen--)
 		*q++ = *p++;
+	while (nbytes--)
+		*q++ = '\0';
 	return (r);
 }
