@@ -9,46 +9,46 @@ static char tmp[L_cuserid];
 
 char *getlogin(void)
 {
-  if (getlogin_r(tmp, sizeof(tmp)))
-    return NULL;
-  return tmp;
+	if (getlogin_r(tmp, sizeof(tmp)))
+		return NULL;
+	return tmp;
 }
 
 int getlogin_r(char *buf, size_t len)
 {
-  char tty[UT_LINESIZE + 6];
-  struct utmp ut, *utp;
-  int err;
-  size_t n;
-  int fd = open("/dev/tty", O_RDONLY|O_NOCTTY);
+	char tty[UT_LINESIZE + 6];
+	struct utmp ut, *utp;
+	int err;
+	size_t n;
+	int fd = open("/dev/tty", O_RDONLY | O_NOCTTY);
 
-  if (fd == -1)
-    return -1;
-  
-  if (len > UT_NAMESIZE + 1)
-    len = UT_NAMESIZE + 1;
+	if (fd == -1)
+		return -1;
 
-  err = ttyname_r(fd, tty, sizeof(tty));
-  close(fd);
-  if (err)
-    return -1;
-  /* Skip the /dev/ */
-  strncpy(ut.ut_line, tty + 5, sizeof(ut.ut_line));
-  ut.ut_type = USER_PROCESS;
-  setutent();
-  /* FIXME: move to getutline_r once we have it */
-  utp = getutline(&ut);
-  endutent();
-  if (utp == NULL) {
-    errno = ENOENT;
-    return -1;
-  }
-  for (n = 0; n < UT_NAMESIZE && utp->ut_user[n]; n++);
-  if (len <= n) {
-    errno = ERANGE;
-    return -1;
-  }
-  memcpy(buf, utp->ut_user, n);
-  buf[n] = 0;
-  return 0;
+	if (len > UT_NAMESIZE + 1)
+		len = UT_NAMESIZE + 1;
+
+	err = ttyname_r(fd, tty, sizeof(tty));
+	close(fd);
+	if (err)
+		return -1;
+	/* Skip the /dev/ */
+	strncpy(ut.ut_line, tty + 5, sizeof(ut.ut_line));
+	ut.ut_type = USER_PROCESS;
+	setutent();
+	/* FIXME: move to getutline_r once we have it */
+	utp = getutline(&ut);
+	endutent();
+	if (utp == NULL) {
+		errno = ENOENT;
+		return -1;
+	}
+	for (n = 0; n < UT_NAMESIZE && utp->ut_user[n]; n++);
+	if (len <= n) {
+		errno = ERANGE;
+		return -1;
+	}
+	memcpy(buf, utp->ut_user, n);
+	buf[n] = 0;
+	return 0;
 }
