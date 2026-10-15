@@ -3,7 +3,12 @@ set -e
 
 IMG=filesystem.img
 
-rm -f ${IMG}
+rm -f ${IMG} issue
+# /etc/issue is generated from the template with the version filled in, the
+# same way Standalone/filesystem-src/build-filesystem does it.  The old
+# etc-files/issue was replaced by templates/issue in commit a05580d51.
+: ${VERSION:=`sed -n 's/^[[:space:]]*export[[:space:]]*VERSION[[:space:]]*=[[:space:]]*//p' ../../../version.mk`}
+sed -e "s/XXX/${VERSION}/" < ../../../Standalone/filesystem-src/templates/issue > issue
 # Second number here should be slightly less that the logical size reported by
 # mkftl, in sectors.
 ../../../Standalone/mkfs ${IMG} 32 2590
@@ -74,7 +79,7 @@ bget ../../../Applications/util/init init
 chmod 755 init
 
 cd /etc
-bget ../../../Standalone/filesystem-src/etc-files/issue
+bget issue
 bget ../../../Standalone/filesystem-src/etc-files/motd
 bget ../../../Standalone/filesystem-src/etc-files/passwd
 bget ../../../Standalone/filesystem-src/etc-files/inittab
@@ -451,3 +456,5 @@ chmod 0755 cowsay
 EOF
 
 ../../../Standalone/fsck -a ${IMG}
+
+rm -f issue
