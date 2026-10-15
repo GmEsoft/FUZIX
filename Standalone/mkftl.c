@@ -238,6 +238,22 @@ int main(int argc, char* const* argv)
 
     err = DHARA_E_NONE;
     dhara_map_gc(&dhara, &err);
+    if (err != DHARA_E_NONE)
+    {
+        fprintf(stderr, "FTL error %d\n", err);
+        exit(1);
+    }
+
+    /* Checkpoint the journal before dumping the raw image. Pages written
+     * since the last checkpoint are not referenced by the journal and
+     * would be discarded when the image is resumed. */
+    err = DHARA_E_NONE;
+    if (dhara_map_sync(&dhara, &err) < 0)
+    {
+        fprintf(stderr, "FTL error %d\n", err);
+        exit(1);
+    }
+
     uint32_t used = dhara_map_size(&dhara);
     printf("Used space: %dkB (%d sectors)\n", used / 2, used);
 
