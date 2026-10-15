@@ -11,6 +11,10 @@
 #include "globals.h"
 #include "rom.h"
 
+#ifdef CONFIG_NET
+extern void netdev_init(void);
+#endif
+
 struct devsw dev_tab[] =  /* The device driver switch table */
 {
 // minor    open         close        read      write           ioctl
