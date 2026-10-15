@@ -130,12 +130,14 @@ int pagemap_realloc(struct exec *hdr, usize_t size) {
 	if (want == have)
 		return 0;
 	if (have > want) {
+		irq = __hard_di();
 		/* Make a copy of the high vectors in the new low page */
 		pfree[pfptr++] = ptr[1];
+		invalidate_cache((uint16_t)ptr[1]);
 		ptr[1] = *ptr;
-		irq = __hard_di();
 		program_vectors(&udata.u_page);
 		udata.u_ptab->p_page = udata.u_page;
+		udata.u_ptab->p_size = want << 5;
 		__hard_irqrestore(irq);
 		return 0;
 	}
@@ -179,7 +181,7 @@ int pagemap_prepare(struct exec *hdr)
 }
 
 usize_t pagemap_mem_used(void) {
-	return pfptr << 5;
+	return procmem - (pfptr << 5);
 }
 
 /* FIXME: Swap */

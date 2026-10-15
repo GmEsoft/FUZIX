@@ -30,8 +30,10 @@
 
 #ifdef CONFIG_BANK16_LOW
 
-#ifndef CONFIG_LOW_PAGE
+#ifndef CONFIG_HAS_LOW_PAGE
 #define SWAP_SIZE_EXCL_ZP	SWAP_SIZE
+#else
+#define SWAP_SIZE_EXCL_ZP	(SWAP_SIZE - 1)
 #endif
 
 /*
@@ -118,17 +120,17 @@ int pagemap_realloc(struct exec *hdr, uint16_t size)
 	int want = maps_needed(size);
 	uint8_t *ptr = (uint8_t *) & udata.u_page;
 	int i;
-	irqflags_t irq;
 
 	/* If we are shrinking then free pages and propogate the
 	   common page into the freed spaces */
 	if (want == have)
 		return 0;
 	if (have > want) {
-		for (i = want; i < have; i++) {
+		for (i = want; i < have; i++)
 			pfree[pfptr++] = ptr[i];
-			ptr[i] = ptr[3];
-		}
+		for (i = want; i < 4; i++)
+			ptr[i] = ptr[want - 1];
+		udata.u_ptab->p_size = want << 4;
 		udata.u_ptab->p_page = udata.u_page;
 		udata.u_ptab->p_page2 = udata.u_page2;
 		return 0;
@@ -147,6 +149,7 @@ int pagemap_realloc(struct exec *hdr, uint16_t size)
 		ptr[i] = ptr[i-1];
 		i++;
 	}
+	udata.u_ptab->p_size = want << 4;
 	/* Copy the updated allocation into the ptab */
 	udata.u_ptab->p_page = udata.u_page;
 	udata.u_ptab->p_page2 = udata.u_page2;
@@ -190,7 +193,8 @@ int swapout(ptptr p)
 	int16_t map;
 	uint16_t base = SWAPBASE;
 	uint16_t size = (0x4000 - SWAPBASE) >> 9;
-	uint8_t *pt = (uint8_t *)&p->page;
+	uint16_t i;
+	uint8_t *pt = (uint8_t *)&p->p_page;
 
 	if (!page)
 		panic(PANIC_ALREADYSWAP);
@@ -205,7 +209,7 @@ int swapout(ptptr p)
 	blk = map * SWAP_SIZE;
 
 #ifdef CONFIG_HAS_LOW_PAGE
-	swapwrite(SWAPDEV, blk, 1, 0x0000);
+	swapwrite(SWAPDEV, blk, 512, 0x0000, *pt);
 	blk++;
 #endif
 
@@ -213,10 +217,12 @@ int swapout(ptptr p)
 	for (i = 0; i < 4; i ++) {
 		swapwrite(SWAPDEV, blk, size<<9, base, *pt++);
 		base += 0x4000;
+		base &= 0xC000;
+		blk += size;
 		/* Last bank is determined by SWAP SIZE. We do the maths
 		   in 512's (0x60 = 0xC000) */
 		if (i == 2)
-			size = SWAP_SIZE_EXCL_ZP - 0x60;
+			size = SWAP_SIZE_EXCL_ZP + (SWAPBASE >> 9) - 0x60;
 		else
 			size = 0x20;
 	}
@@ -238,8 +244,8 @@ void swapin(ptptr p, uint16_t map)
 	uint16_t blk = map * SWAP_SIZE;
 	uint16_t base = SWAPBASE;
 	uint16_t size = (0x4000 - SWAPBASE) >> 9;
-        uint16_t i;
-	uint8_t *pt = (uint8_t *)&p->page;
+	uint16_t i;
+	uint8_t *pt = (uint8_t *)&p->p_page;
 
 #ifdef DEBUG
 	kprintf("Swapin %x, %d\n", p, p->p_page);
@@ -253,17 +259,19 @@ void swapin(ptptr p, uint16_t map)
 	   we don't want to overwrite the live stack but buffer and fix up
 	   in tricks.s */
 #ifdef CONFIG_HAS_LOW_PAGE
-	swapread(SWAPDEV, blk, 512, 0x0000);
+	swapread(SWAPDEV, blk, 512, 0x0000, *pt);
 	blk++;
 #endif
 
 	for (i = 0; i < 4; i ++) {
 		swapread(SWAPDEV, blk, size<<9, base, *pt++);
 		base += 0x4000;
+		base &= 0xC000;
+		blk += size;
 		/* Last bank is determined by SWAP SIZE. We do the maths
 		   in 512's (0x60 = 0xC000) */
 		if (i == 2)
-			size = SWAP_SIZE_EXCL_ZP - 0x60;
+			size = SWAP_SIZE_EXCL_ZP + (SWAPBASE >> 9) - 0x60;
 		else
 			size = 0x20;	/* 16 K */
 	}

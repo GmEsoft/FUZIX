@@ -144,12 +144,20 @@ int pagemap_realloc(struct exec *hdr, usize_t size)
 	if (want == have)
 		return 0;
 
+#ifdef SWAPDEV
+	while (want > have && want - have > pfptr - pfree)
+		if (swapneeded(udata.u_ptab, 1) == NULL)
+			return ENOMEM;
+#else
+	if (want > have && want - have > pfptr - pfree)
+		return ENOMEM;
+#endif
+
 	/* We don't want to take an interrupt here while our page mappings are
 	   incomplete. We may restore bogus mappings and then take a second IRQ
 	   into hyperspace */
 	irq = __hard_di();
 
-retry:
 	if (have > want) {
 		/* If we are shrinking then free pages and propogate the
 		   common page into the freed spaces */
@@ -167,19 +175,12 @@ retry:
 		i = want - have;
 		ptr += (have - 1);
 		/* This is written this slightly odd way to stop gcc 6809 miscompiling it */
-		pfptr -= i;
 		while(i--)
 			*ptr++ = *--pfptr;
 		update = 1;
 	} else {
-#ifdef SWAPDEV
-		/* Swap someone out except for us */
-		swapout(udata.u_ptab);
-		goto retry;
-#else
 		__hard_irqrestore(irq);
 		return ENOMEM;
-#endif
 	}
 	/* Copy the updated allocation into the ptab */
 	udata.u_ptab->p_page = udata.u_page;
@@ -238,14 +239,15 @@ uint8_t get_common(void)
 		return *--pfptr;
 	}
 	/* otherwise get alloc a page and copy common to it */
-	if (pfptr) {
+	if (pfptr != pfree) {
 		int ret = *--pfptr;
 		copy_common(ret);
 		return ret;
 	}
 	/* No free pages so swap something out */
 	/* and return it's common */
-	swapneeded(p, 0);
+	if (swapneeded(p, 0) == NULL || pfptr == pfree)
+		panic("no common page");
 	return *--pfptr;
 }
 
@@ -257,7 +259,8 @@ uint8_t get_common(void)
 void swap_finish(uint_fast8_t page, register ptptr p)
 {
 	uint16_t map = p->p_page2;
-	pagemap_alloc2(p, page);
+	if (pagemap_alloc2(p, page))
+		panic("swap map allocation");
 	swapper2(p, map);
 }
 
