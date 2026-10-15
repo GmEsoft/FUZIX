@@ -200,7 +200,7 @@ int easysynch(void)
 FILE *dopen(const char *f1, const char *f2)
 {
 	FILE *f;
-	char b[100];
+	char *b = NULL;
 	const char *eptr;
 	struct stat statbuf;
 	if (cmp(f1, "-") == 0) {
@@ -218,16 +218,17 @@ FILE *dopen(const char *f1, const char *f2)
 			if (*eptr == '/' && eptr[1] != 0 && eptr[1] != '/')
 				f2 = eptr + 1;
 		}
-		if (strlen(f1) + 1 + strlen(f2) + 1 > sizeof(b))
-			error("path too long ", f1);
-		strcpy(b, f1);
-		strcat(b, "/");
-		strcat(b, f2);
+		b = malloc(strlen(f1) + strlen(f2) + 2);
+		if (b == NULL)
+			error("out of memory ", f1);
+		stpcpy(stpcpy(stpcpy(b, f1), "/"), f2);
 		f1 = b;
 	}
 	f = fopen(f1, "r");
 	if (f == NULL)
-		error("can't open", f1);
+		error("can't open ", f1);
+	if (b)
+		free(b);
 	return (f);
 }
 
