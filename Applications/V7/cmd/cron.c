@@ -112,22 +112,25 @@ void init(void)
 	register int n;
 
 	freopen(crontab, "r", stdin);
-	if (list) {
-		free(list);
-		list = realloc(list, LISTS);
-	} else
-		list = malloc(LISTS);
+	/* free() then realloc() of the freed pointer is a use after
+	   free; the list is being restarted from scratch anyway. */
+	free(list);
+	list = malloc(LISTS);
+	if (list == NULL)
+		exit(1);
 	listsize = LISTS;
 	cp = list;
 
       loop:
 	if (cp > list + listsize - 100) {
 		char *olist;
+		int coff = cp - list;
 		listsize += LISTS;
-		olist = list;
-		free(list);
-		list = realloc(list, listsize);
-		cp = list + (cp - olist);
+		olist = realloc(list, listsize);
+		if (olist == NULL)
+			exit(1);
+		list = olist;
+		cp = list + coff;
 	}
 	ocp = cp;
 	for (i = 0;; i++) {
