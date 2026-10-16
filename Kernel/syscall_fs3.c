@@ -471,7 +471,7 @@ arg_t _ftruncate(void)
 	if (n < ino->c_node.i_size) {
 		keep = ((uint32_t)n + BLKSIZE - 1) / BLKSIZE;
 		/* 65536 retained blocks must not wrap to zero. */
-		if (keep <= UINT16_MAX && f_trunc_blocks(ino, keep))
+		if (keep <= 0xFFFF && f_trunc_blocks(ino, keep))
 			return -1;
 	}
 	ino->c_node.i_size = n;
