@@ -408,17 +408,3 @@ twait:
 	out (TTY_OUT),a
 	ret
 
-
-
-;
-;	Stub helpers for code compactness: TODO
-
-	.discard
-;
-;	The first two use an rst as a jump. In the reload sp case we don't
-;	have to care. In the pop ix case for the function end we need to
-;	drop the spare frame first, but we know that af contents don't
-;	matter
-;
-
-rstblock:

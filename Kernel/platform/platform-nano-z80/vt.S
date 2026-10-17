@@ -180,6 +180,5 @@ _plot_char:
     ; Y is in E, X in D and char in A
     
     call vt_set_pos
-    ;call vt_charout
     out (TTY_OUT), a
     ret    

@@ -8,7 +8,6 @@
 #define irq_flag_reg 0x79
 
 extern unsigned char irqvector;
-uint16_t swap_dev = 0xFFFF;
 uint16_t ramtop = PROGTOP;
 uint8_t plt_tick_present;
 
