@@ -52,8 +52,6 @@ static uint8_t tbuf4[TTYSIZ];
 static uint8_t tbuf5[TTYSIZ];
 static uint8_t tbuf6[TTYSIZ];
 
-static uint8_t sleeping;
-
 static uint8_t active_vt=0;
 static uint8_t visible_vt=0;
 static uint8_t cleared_vt[3]={0};
@@ -135,7 +133,7 @@ void kputchar(uint_fast8_t c)
 ttyready_t tty_writeready(uint_fast8_t minor)
 {
 	if (minor < TTY_SERA)
-		return (in(vid_tty_busy) & 0x01) ? TTY_READY_SOON : TTY_READY_NOW;
+        return TTY_READY_NOW;
     else if(minor == TTY_SERA) {
         return (in(uart_a_tx_ready) & 0x01) ? TTY_READY_NOW : 
                                               TTY_READY_SOON;  
@@ -225,7 +223,6 @@ void tty_setup(uint_fast8_t minor, uint_fast8_t flags)
  */
 void tty_sleeping(uint_fast8_t minor)
 {
-	sleeping |= (1 << minor);
 }
 
 /*
@@ -244,7 +241,6 @@ int tty_carrier(uint_fast8_t minor)
  */
 void tty_data_consumed(uint_fast8_t minor)
 {
-	used(minor);
 }
 
 /*

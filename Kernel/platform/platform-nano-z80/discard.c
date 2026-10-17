@@ -6,8 +6,6 @@
 #include <tinydisk.h>
 #include <sdxfer.h>
 
-extern int strcmp(const char *, const char *);
-
 /*
  *	Everything in this file ends up in discard which means the moment
  *	we try and execute init it gets blown away. That includes any

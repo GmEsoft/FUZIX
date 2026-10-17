@@ -10,11 +10,11 @@ ASRCS += tricks.S commonmem.S
 
 DISCARD_DSRCS = ../../dev/tinydisk_discard.c
 DSRCS = ../../dev/tinydisk.c ../../dev/mbr.c
-NSRCS = ../../dev/net/net_native.c
+#NSRCS = ../../dev/net/net_native.c
 
 COBJS = $(CSRCS:.c=.o)
 AOBJS = $(ASRCS:.S=.o)
-NOBJS = $(patsubst ../../dev/net/%.c,%.o, $(NSRCS))
+#NOBJS = $(patsubst ../../dev/net/%.c,%.o, $(NSRCS))
 DISCOBJS = $(DISCSRCS:.c=.o)
 DISCARD_DOBJS = $(patsubst ../../dev/%.c,%.o, $(DISCARD_DSRCS))
 DOBJS = $(patsubst ../../dev/%.c,%.o, $(DSRCS))
@@ -37,8 +37,8 @@ $(DOBJS): %.o: ../../dev/%.c
 $(DISCARD_DOBJS): %.o: ../../dev/%.c
 	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
 
-$(NOBJS): %.o: ../../dev/net/%.c                                                
-	$(CROSS_CC) $(CROSS_CCOPTS) -c $<   
+#$(NOBJS): %.o: ../../dev/net/%.c                                                
+#	$(CROSS_CC) $(CROSS_CCOPTS) -c $<   
 
 $(AOBJS): %.o: %.S
 	$(CROSS_AS) $(ASOPTS) $<
@@ -62,10 +62,10 @@ image:
 	../../filesys.o ../../blk512.o ../../process.o \
 	../../inode.o ../../syscall_exec.o ../../syscall_exec16.o \
 	../../syscall_fs.o ../../syscall_fs2.o ../../syscall_fs3.o \
-	../../syscall_proc.o ../../syscall_other.o ../../syscall_net.o \
+	../../syscall_proc.o ../../syscall_other.o \
 	../../dev/tinydisk.o ../../dev/tinydisk_discard.o \
-	../../network.o ../../tty.o ../../mm.o ../../mm/memalloc_none.o \
-	../../mm/bankfixed.o ../../vt.o ../../dev/net/net_native.o \
+	../../tty.o ../../mm.o ../../mm/memalloc_none.o \
+	../../mm/bankfixed.o ../../vt.o \
 	/opt/fcc/lib/z80/libz80.a -m fuzix.tmpmap
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
 	../../tools/pack85 <../../fuzix.map fuzix.bin ../../fuzix.bin
