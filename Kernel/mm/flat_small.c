@@ -924,9 +924,9 @@ arg_t stack_extend(uaddr_t sp)
 	if (sp >= mi->stackbot)
 		return 0;
 
-	nh = (mi->stacktop - sp + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	nh = (sp - page_base) >> PAGE_SHIFT;
 	/* Stack fault - no fix */
-	if (sp <= udata.u_break || nh - mi->high > freepages)
+	if (sp <= udata.u_break || mi->high - nh > freepages)
 		doexit(SIGKILL << 8);
 		/* Won't return */
 	for (i = nh; i < mi->high; i++) {
@@ -935,6 +935,7 @@ arg_t stack_extend(uaddr_t sp)
 	}
 	mi->high = nh;
 	udata.u_ptab->p_size += (nh - mi->high) << (PAGE_SHIFT - 10);
+	mi->stackbot = PAGE_ADDR(nh);
 	map_pages(udata.u_ptab, 1);
 	return 0;
 }
