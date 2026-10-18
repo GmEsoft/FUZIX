@@ -787,7 +787,7 @@ usize_t valaddr(const uint8_t * pp, usize_t l, usize_t need, uint_fast8_t is_wri
 		if (p >= udata.u_codebase && p < udata.u_break)
 			n = udata.u_break - p;
 		/* Stack (high) */
-		else if (p >= m->stackbot && p <= m->stacktop)
+		else if (p >= m->stackbot && p < m->stacktop)
 			n = m->stacktop - p;
 		if (n >= need) {
 			if (n > l)
