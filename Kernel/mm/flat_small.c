@@ -904,8 +904,8 @@ arg_t brk_extend(uaddr_t addr)
 		if (m[i] == NO_PAGE)
 			m[i] = alloc_page();
 	}
-	mi->low = nl;
 	udata.u_ptab->p_size += (nl - mi->low) << (PAGE_SHIFT - 10);
+	mi->low = nl;
 	/* TODO: do we need to unpin first ? */
 	/* and map them */
 	map_pages(udata.u_ptab, 1);
