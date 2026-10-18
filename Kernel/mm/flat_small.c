@@ -348,6 +348,10 @@ static pgnum_t make_present(pgnum_t page, pgnum_t s, unsigned swap)
 	kprintf("make_present %x at %d (%d): ", page, s, swap);
 #endif
 
+	/* All memory is pinned down */
+	if (n == NO_SLOT)
+		panic("allpin");
+
 	/* We are present */
 	if (P_PAGE(m) == page) {
 		m->age |= 0x80;
@@ -369,9 +373,6 @@ static pgnum_t make_present(pgnum_t page, pgnum_t s, unsigned swap)
 #endif
 		return s;
 	}
-	/* All memory is pinned down */
-	if (n == NO_SLOT)
-		panic("allpin");
 
 	/* We are not present. See if we've been handed a free page and
 	   can use it */
