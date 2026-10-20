@@ -459,12 +459,22 @@ vector:
 	tsx
 	lda	0x0104,x
 	and	0x10
-	beq	vector2
+	beq	vector_map
 	jmp	(0x0316)
 
 	.export vector2		; For debugging
 
+vector_map:
+	lda	@mmu
+	sta	@old_mmu
+	ora	#3
+	sta	@mmu		; Remember old MMU state, map in KERNAL
+	bne	vector_do
+
 vector2:
+	lda	@mmu
+	sta	@old_mmu	; Remember existing MMU
+vector_do:
 #if 1
 	cld
 	lda	#>vector3
@@ -480,6 +490,12 @@ vector2:
 #endif
 
 vector3:
+;
+;	Kick EXEC back out if not expected. We'll sort out our mappings
+;	again in the IRQ handler core
+;
+	lda	@old_mmu
+	sta	@mmu
 ;	Save our zero page bits (and thus the C stack etc). The save
 ;	area is task specific so if we task switch all is good
 ;
@@ -858,9 +874,7 @@ x11:
 ;	part of the page away)	
 ;
 
-; Needs to live with buffers
-
-	.overlay4
+	.common
 
 	.export _devide_read_data
 	.export _devide_write_data
@@ -1135,7 +1149,7 @@ _ctrl:
 	.byte	0
 
 	.code
-
+#if 0
 	.export	_keyscan
 
 ;
@@ -1221,7 +1235,7 @@ key_down:
 keydone:
 	lda	_keydown
 	rts
-
+#endif
 	.export	_keyread
 
 keyd	.equ	0x0277

@@ -20,7 +20,7 @@ CROSS_CCOPTS += -I../../dev/
 all:	$(OBJS)
 
 $(COBJS): %$(BINEXT): %.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $< -Toverlay3
+	$(CROSS_CC) $(CROSS_CCOPTS) $< -Toverlay4
 
 $(AOBJS): %$(BINEXT): %.S
 	$(CROSS_AS) $(ASOPTS) $< -o $*$(BINEXT)

@@ -34,6 +34,11 @@ FF00-FFFF	REU trigger, vectors (maybe put istack here)
 Pretty much as Atari 8bit. In fact very similar ports except for a few
 drivers. See notes on WIP atari 8bit.
 
+Disk I/O requires accessing Dxxx. We have user memory at Dxxx and it's not
+possible to have both mapped at once. Therefore like MSX1 we will need to
+bounce stuff in that range or keep flipping back and forth for that case
+which *might* be better.
+
 ### Kernal
 
 We get the system ROM shoved in our face whether we like it or not. It's

@@ -11,7 +11,8 @@
 /* Use fixed banks for now. It's simplest and we've got so much memory ! */
 #define CONFIG_BANKS	1
 /* Permit large I/O requests to bypass cache and go direct to userspace */
-#define CONFIG_LARGE_IO_DIRECT(x)	1
+/* Needs work to do this alas */
+#define CONFIG_LARGE_IO_DIRECT(x)	0
 
 /*
  *	One process in memory only
