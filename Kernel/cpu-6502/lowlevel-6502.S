@@ -100,13 +100,30 @@ interrupt_k:
 ;
 ; Swap the C temporaries  (TODO we copy sp and also stack it)
 ;
+;	We save
+;	@sp
+;	@hireg
+;	@tmp
+;	@tmp1
+;	@tmp2
+;	@tmp3
+;	@tmp4
+;	@tmp5
+;	@reg1
+;	@reg2
+;	@reg3
+;	@reg4
+;
+;	So 24 bytes are required. The user ZP values follow but are
+;	not something we need to worry about.
+;
 stash_zp:
-        ldy     #20
+        ldy     #23
 swap1:  ldx     CTemp,y
-        lda     sp,y
+        lda     @sp,y
         sta     CTemp,y
         txa
-        sta     sp,y
+        sta     @sp,y
         dey
         bpl     swap1
         rts
