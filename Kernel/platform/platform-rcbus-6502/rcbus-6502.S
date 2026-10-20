@@ -85,12 +85,14 @@ ___hard_ei:
 	rts
 
 ___hard_irqrestore:
+	ldy	#0
+	lda	(@sp),y
 	and	#4		; IRQ flag
-	bne	irq_on
+	bne	irq_off
 	cli
 	jmp	__add1sp
 
-irq_on:
+irq_off:
 	sei
 	jmp	__add1sp
 
