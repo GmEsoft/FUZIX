@@ -57,9 +57,41 @@ void tty_data_consumed(uint8_t minor)
 {
 }
 
+#define POKEY	((volatile uint8_t *)0xD200)
+
+static uint8_t kdown;
+
+static void kbd_poll(void)
+{
+	extern uint8_t keydecode[];
+	uint8_t r;
+	/* Key still down: TODO autorepeat etc */
+	if (POKEY[0x0F] & 4)
+		return;
+	r = POKEY[0x09];
+	if (kdown)
+		return;
+	if (r & 0x80)
+		r = keydecode[r & 0x7F] & 0x1F;
+	else
+		r = keydecode[r];
+	if (r)
+		vt_inproc(1, r);
+}
+
 void tty_poll(void)
 {
-// TODO - keyboard scan and translate
-//	vt_inproc(1, x);
+	uint8_t r = POKEY[0x0E];
+	if (r & 0x80)
+		vt_inproc(1, 3);	/* Map break to ^C */
+	if (r & 0x40)
+		kbd_poll();
+	else
+		kdown = 0;
+	/* TODO: 0x20 is serial ready, low bits are timers etc */
+	/* Reset error flags */
+	r = POKEY[0x0F];
+	if (r & 0xE0)
+		POKEY[0x0A] = 1;
 }
 

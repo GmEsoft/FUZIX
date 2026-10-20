@@ -133,3 +133,61 @@ disc2	lda	diskdata
 With a big RAM card we can use the extra pages of extra RAM as swap as we've
 got only the 16K window but it would be more optimal to copy 32K and treat
 is as banked as that cuts our copy down by 16K.
+
+
+
+
+D20F (W)
+bit 7: brk (output)
+bit 6/5/4: serial mode
+bit 3: serial two tone (FSK - used for cassette)
+bit 2: fast pot scan
+bit 1: enable kbd scanning
+bit 0: enable kbd debounce
+
+D20F(R)
+bit 7: serial frame
+bit 6: serial overrun
+bit 5: KB overrun
+bit 4: data ready serial
+bit 3: shift key
+bit 2: last key still pressed
+bit 1: serial input busy
+
+
+Write D20A to reset error bits 5-7 in SKSTAT
+
+Serial D20D data out (8N1), D20D read data in ditto
+
+D209 (R): keyboard code
+	00-3F code
+	upper 2 bits special key decode
+	unshifted
+	shifted
+	control
+	shift-ctrl (not all keys)
+
+Codes:
+
+https://www.atariarchives.org/c3ba/page004.php
+
+Lock key processing is software
+
+D20E IRQ status
+
+7: break pressed
+6: key pressed
+5: serial input ready
+4: serial output needed
+3: serial output done
+2: timer4
+1; timer2
+0: timer1
+
+D01F: bit 0: start 1: select 2 : option (console buttons)
+
+D20E (W) IRQen
+
+Set bit to enable (as IRQ status)
+
+

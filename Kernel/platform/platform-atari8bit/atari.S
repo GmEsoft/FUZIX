@@ -82,12 +82,14 @@ ___hard_ei:
 	rts
 
 ___hard_irqrestore:
+	ldy	#0
+	lda	(@sp),y
 	and	#4		; IRQ flag
-	bne	irq_on
+	bne	irq_off
 	cli
 	jmp	__add1sp
 
-irq_on:
+irq_off:
 	sei
 	jmp	__add1sp
 
@@ -913,6 +915,7 @@ noover:
 	adc	@tmp3		; low add
 	bcc	nobump
 	inc	@tmp3+1		; carry into uppet for add
+	clc
 nobump:	adc	@tmp		; add X
 	sta	@tmp		; low set
 	lda	@tmp2		; high
@@ -969,6 +972,7 @@ clac:
 _clear_lines:
 	jsr	gaddr
 	stx	@tmp2+1		; not touched by set_addr
+	cpx	#0
 	beq	nowork
 	ldx	#0
 	jsr	set_addr	; start of line
@@ -1001,3 +1005,37 @@ cursorl:
 	.byte	0
 cursorh:
 	.byte	0
+
+	; Keyboard table
+
+#define KEY_F1	0x80 + '1'
+#define KEY_F2	0x80 + '2'
+#define KEY_F3	0x80 + '3'
+#define KEY_F4	0x80 + '4'
+#define KEY_F5	0x80 + '5'
+#define KEY_F6	0x80 + '6'
+#define KEY_F7	0x80 + '7'
+#define KEY_F8	0x80 + '8'
+#define KEY_HOME 0x80 + 'H'
+#define KEY_HELP 0x80 + 'h'
+
+	.literal
+	.export _keydecode
+_keydecode:
+	.byte 'l', 'j', ';', KEY_F1, KEY_F2, 'k', '+', '*'
+	.byte 'o', 0, 'p', 'u', 13, 'i', '-', '='
+	.byte 'v', KEY_HELP, 'c', KEY_F3, KEY_F4, 'b', 'x', 'z'
+	.byte '4', '0', '3', '6', 27, '5', '2', '1'
+	.byte ',', ' ', ',' ,'n' , 0, 'm', '/', KEY_HOME
+	.byte 'r', 0, 'e', 'y', 8, 't', 'w', 'q'
+	.byte '9', 0, '0', '7', 127, '8', '<', '>'
+	.byte 'f', 'h', 'd', 0, 0 /* CAPS */, 'g', 's', 'a'
+
+	.byte 'L', 'J', ':', KEY_F5, KEY_F6, 'K', '\', '^'
+	.byte 'O', 0, 'P', 'U', 13, 'I', '_', '|'
+	.byte 'V', KEY_HELP, 'C', KEY_F7, KEY_F8, 'B', 'X', 'Z'
+	.byte '$', ')', '#', '&', 27, '%', '"', '!'
+	.byte '[', ' ', ']', 'N', 0, 'M', '?', KEY_HOME
+	.byte 'R', 0, 'E', 'Y', 8, 'T', 'W', 'Q'
+	.byte '(', 0, ')', 39, 127, '8', '{', '}'
+	.byte 'F', 'H', 'D', 0, 0 /* CAPS */, 'G', 'S', 'A'

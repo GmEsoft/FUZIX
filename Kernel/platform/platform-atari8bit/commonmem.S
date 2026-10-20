@@ -10,6 +10,9 @@
         .export istack_switched_sp
 	.export CTemp
 
+#include "kernel.def"
+#include "../../cpu-6502/kernel02.def"
+
 	.commondata
 ;
 ;	In 6502 land these are the C stacks, we will need to handle the
@@ -31,14 +34,7 @@ kstack_top:
 ; Swap space for the the C temporaries
 ;
 CTemp:
-	.word	0               ; working value for save (SP is kept elsewhere)
-	.word   0               ; hireg
-	.word	0		; tmp
-	.word	0		; tmp1
-	.word	0		; tmp2
-	.word	0		; tmp3
-	.word	0		; tmp4
-	.word	0		; tmp5
+	.ds	STASHSIZE
 
         ; next 256 bytes: 254 byte interrupt stack, then 2 byte saved stack pointer
 istack_base:
