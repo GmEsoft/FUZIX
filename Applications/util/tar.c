@@ -307,10 +307,11 @@ static void storedir(char *name)
 	int ret;
 	DIR *dirstream;
 	struct dirent *dir;
-	char cname[100];
+	char cname[sizeof(h.name)];
 	uint32_t count = 0;
 	uint16_t rem;
 	char *aname;
+	size_t nlen;
 
 	/* stat file */
 	ret = stat(name, &s);
@@ -343,6 +344,14 @@ static void storedir(char *name)
 		aname++;
 	if (*aname == 0)
 		aname = ".";
+	nlen = strlen(aname);
+	/* The ustar name field is 100 bytes; leave room for the trailing
+	 * slash directory members carry. */
+	if (nlen + (S_ISDIR(s.st_mode) ? 1 : 0) >= sizeof(h.name)) {
+		fprintf(stderr, "%s: name too long for a tar archive\n",
+			name);
+		exit(1);
+	}
 	strcpy(h.name, aname);
 	b8put(s.st_mode & 07777, h.mode + 8);
 	b8put(s.st_uid, h.uid + 8);
@@ -355,8 +364,7 @@ static void storedir(char *name)
 		break;
 	case S_IFDIR:
 		h.type = '5';
-		if (S_ISDIR(s.st_mode))
-			h.name[strlen(aname)] = '/';
+		h.name[nlen] = '/';
 		break;
 	case S_IFCHR:
 		h.type = '3';
@@ -423,9 +431,18 @@ static void storedir(char *name)
 			if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, "..")
 			    )
 				continue;
-			strncpy(cname, name, 100);
-			strncat(cname, "/", 100);
-			strncat(cname, dir->d_name, 100);
+			/* name + '/' + entry must fit in the archive
+			 * name field, which is the only place the result
+			 * can be stored. */
+			if (strlen(name) + strlen(dir->d_name) + 2 >
+			    sizeof(cname)) {
+				fprintf(stderr,
+					"%s/%s: name too long for a tar archive\n",
+					name, dir->d_name);
+				exit(1);
+			}
+			snprintf(cname, sizeof(cname), "%s/%s", name,
+				 dir->d_name);
 			{
 				/* save state of files */
 				uint32_t tell = telldir(dirstream);
