@@ -73,9 +73,7 @@ main(int argc, char **argv)
 	FILE *fp;
 	int ch, tflag, xflag;
 	char *p;
-	const char *src;
 	char *newsep;
-	size_t seplen;
 
 	if (ioctl(1, TIOCGWINSZ, &win) == -1 || !win.ws_col) {
 		if ((p = getenv("COLUMNS")))
@@ -99,7 +97,7 @@ main(int argc, char **argv)
 				    optarg);
 			break;
 		case 's':
-		        newsep = strdup(src);
+		        newsep = strdup(optarg);
 			if (newsep == NULL)
 				err(1, NULL);
 			separator = newsep;
