@@ -52,7 +52,8 @@ int main(int argc, char* const* argv)
 
 	if (!force)
 	{
-		printf("This will destroy %dkB of data on %s. Proceed? ", size/2, filename);
+		printf("This will destroy %lukB of data on %s. Proceed? ",
+			(unsigned long)size / 2, filename);
 		fflush(stdout);
 		if (getchar() != 'y')
 		{
@@ -64,10 +65,23 @@ int main(int argc, char* const* argv)
 	printf("Erasing...\n");
 	fflush(stdout);
 	{
-		uint16_t blkno;
+		uint32_t blkno;
+		uint16_t lba;
+
+		/* HDIO_TRIM takes a 16-bit block number, so a bigger
+		 * device cannot be addressed by this interface. */
+		if (size > 65536UL)
+		{
+			fprintf(stderr,
+				"%s: device is too large to discard\n",
+				filename);
+			exit(1);
+		}
+
 		for (blkno=0; blkno<size; blkno++)
 		{
-			if (ioctl(fd, HDIO_TRIM, &blkno) == -1)
+			lba = blkno;
+			if (ioctl(fd, HDIO_TRIM, &lba) == -1)
 				perror_exit("erase failed");
 		}
 	}
