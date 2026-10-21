@@ -249,6 +249,7 @@ __uputc:
 uputcl:
 	call map_page_low
 	ld (hl),e
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel_low
 
 __uputw:
@@ -267,6 +268,7 @@ __uputw:
 	inc hl
 normal_pwl:
 	ld (hl),d
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel_low
 uputwl:
 	ld a,(_udata + U_DATA__U_PAGE)
@@ -279,4 +281,5 @@ uputwl:
 	call map_page_low
 	ld a,d
 	ld (0),a		; Split can only mean one address
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel_low

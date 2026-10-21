@@ -63,6 +63,7 @@ __uputc:
 	call map_proc_save
 	ld (hl), e
 uputc_out:
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel_restore			; map the kernel back below common
 
 __uputw:
@@ -78,6 +79,7 @@ __uputw:
 	ld (hl), e
 	inc hl
 	ld (hl), d
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel_restore
 
 __ugetc:
