@@ -10,9 +10,6 @@
 
 .export __uputc
 
-
-.export __uputc
-
 __uputc:
 	ldsi 2
 	ldax d
