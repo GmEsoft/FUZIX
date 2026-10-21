@@ -12,20 +12,24 @@
 #ifdef CONFIG_FONT8X8SMALL
 #define FONTDATAMAX 768
 #else
+#ifdef CONFIG_FONT8X8_7BIT
+#define FONTDATAMAX 1024
+#else
 #define FONTDATAMAX 2048
+#endif
 #endif
 
 const unsigned char fontdata_8x8[FONTDATAMAX] = {
 #ifndef CONFIG_FONT8X8SMALL
 	/* 0 0x00 '^@' */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
-	0x00, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
+	0xFF, /* 00000000 */
 
 	/* 1 0x01 '^A' */
 	0x7e, /* 01111110 */
