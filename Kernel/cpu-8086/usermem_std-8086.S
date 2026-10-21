@@ -31,6 +31,7 @@ _ugetc:
 	movw	U_DATA__U_PAGE+2(%bx),%ax
 	popw	%bx
 	movw	%ax,%es
+	xorw	%ax,%ax		/* return value is 8bit but AX is the return reg */
 	movb	%es:(%bx),%al
 	pushw	%bx
 	jmp	*%cx
@@ -42,8 +43,10 @@ _ugetw:
 	popw	%bx
 	movw	%ax,%es
 	movw	%es:(%bx),%ax
+	pushw	%ax		/* preserve the value while we restore ES */
 	movw	%ds,%ax
 	movw	%ax,%es
+	popw	%ax
 	pushw	%bx
 	jmp	*%cx
 
