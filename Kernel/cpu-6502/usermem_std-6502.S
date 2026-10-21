@@ -106,6 +106,7 @@ __ugetc:	jsr	__pop
 		jsr	map_proc_always
 		ldy	#0
 		lda	(@tmp3),y
+		ldx	#0		; return the byte zero extended
 		jmp	map_kernel
 
 __ugetw:	jsr	__pop
