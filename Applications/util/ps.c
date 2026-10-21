@@ -149,9 +149,11 @@ static int addmatch(struct matchtab *tab, uint16_t match)
 static uint16_t do_pidmatch(char *arg)
 {
 	unsigned long n;
+	char *end;
+
 	errno = 0;
-	n = strtoul(arg, NULL, 0);
-	if (errno || n == 0 || n > pid_max) {
+	n = strtoul(arg, &end, 0);
+	if (errno || *end || n == 0 || n > pid_max) {
 		fprintf(stderr, "ps: invalid process id.\n");
 		exit(1);
 	}
@@ -161,23 +163,24 @@ static uint16_t do_pidmatch(char *arg)
 static uint16_t do_uidmatch(char *arg)
 {
 	unsigned long n;
+	char *end;
 	struct passwd *pw;
 
 	errno = 0;
-	n = strtoul(arg, NULL, 0);
-	if (errno) {
-		pw = getpwnam(arg);
-		if (pw == NULL) {
-			fprintf(stderr, "ps: unknown user '%s'.\n", arg);
-			exit(1);
-		}
-		n = pw->pw_uid;
+	n = strtoul(arg, &end, 0);
+	if (errno == 0 && *end == '\0') {
 		if (n > uid_max) {
-			fprintf(stderr, "ps: invalid process id.\n");
+			fprintf(stderr, "ps: invalid user id.\n");
 			exit(1);
 		}
+		return n;
 	}
-	return n;
+	pw = getpwnam(arg);
+	if (pw == NULL) {
+		fprintf(stderr, "ps: unknown user '%s'.\n", arg);
+		exit(1);
+	}
+	return pw->pw_uid;
 }
 
 static char tbuf[] = "/dev/ttyXXX";
@@ -199,7 +202,7 @@ static uint16_t do_ttymatch(char *arg)
 		exit(1);
 	}
 	if (major(st.st_rdev) != TTY_MAJOR) {
-		fprintf(stderr, "%s: not a tty.\n");
+		fprintf(stderr, "%s: not a tty.\n", t);
 		exit(1);
 	}
 	return minor(st.st_rdev);
@@ -408,8 +411,9 @@ void display_process(struct p_tab *pp, int i)
 		c -= mins;
 		c /= 60;
 		/* What to do if we exceed 99 hours ? */
-		printf("%02d:%02d:%02d ",
-			c, mins, secs);
+		printf("%02lu:%02lu:%02lu ",
+			(unsigned long)c, (unsigned long)mins,
+			(unsigned long)secs);
 	}
 	if (outflags & OF_CMD) {
 		char name[9];
