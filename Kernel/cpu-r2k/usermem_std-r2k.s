@@ -62,6 +62,7 @@ __uputc:
 	call map_proc_always
 	ld (hl), e
 uputc_out:
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel			; map the kernel back below common
 
 __uputw:
@@ -75,6 +76,7 @@ __uputw:
 	ld (hl), e
 	inc hl
 	ld (hl), d
+	ld hl,#0	; we return 0 from the uput calls
 	jp map_kernel
 
 __ugetc:
