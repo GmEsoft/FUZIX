@@ -17,7 +17,7 @@ static unsigned has_overlay;
 static struct section *sections;
 
 /* The sections from the map we pre allocate */
-static struct section sect[10];
+static struct section sect[16];
 
 static struct section *new_section(const char c, uint16_t base, uint16_t size)
 {
@@ -151,8 +151,8 @@ int main(int argc, char *argv[])
 		fclose(fp);
 	}
 
-	for (i = 0; i < 14; i++)
-		sect[i].name = "ACDBZXSLsb1234PU"[i];
+	for (i = 0; i < 16; i++)
+		sect[i].name = "ACDBZXSLsb12345U"[i];
 
 
 	while (fgets(buf, 511, stdin)) {
@@ -203,6 +203,9 @@ int main(int argc, char *argv[])
 		if (strcmp(name, "__overlay4_size") == 0)
 			sect[13].size = addr;
 
+		if (strcmp(name, "__overlay5_size") == 0)
+			sect[14].size = addr;
+
 		if (strcmp(name, "__code") == 0)
 			sect[1].base = addr;
 
@@ -235,6 +238,7 @@ int main(int argc, char *argv[])
 			sect[11].base = addr;
 			sect[12].base = addr;
 			sect[13].base = addr;
+			sect[14].base = addr;
 			has_overlay = 1;
 		}
 	}
@@ -248,7 +252,7 @@ int main(int argc, char *argv[])
 	show_map();
 
 	if (has_overlay) {
-		for (i = 10; i < 14; i++) {
+		for (i = 10; i < 15; i++) {
 			if (sect[i].size) {
 				sections = NULL;
 				insert_section(sect + i);
