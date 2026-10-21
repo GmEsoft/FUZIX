@@ -174,8 +174,8 @@ extern int __signbit(double x);
 #define remquo(a,b,c)	remquof(a,b,c)
 #define rint(a)		rintf(a)
 #define round(a)	roundf(a)
-#define scalbln(a,b)	scalblnf(a,b)
-#define scalbn(a,b)	scalbf(a,b)
+#define scalbln(a,b)	scalbf(a,(float)(b))
+#define scalbn(a,b)	scalbnf(a,b)
 #define sin(a)		sinf(a)
 #define sinh(a)		sinhf(a)
 #define sqrt(a)		sqrtf(a)
@@ -187,7 +187,7 @@ extern int __signbit(double x);
 #define y1(a)		y1f(a)
 #define yn(a,b)		ynf(a,b)
 
-#define fpclassify(x) __fpclassify(x))
+#define fpclassify(x) __fpclassifyf(x)
 
 #define isinf(x) ( \
   (__float_bits(x) & 0x7fffffff) == 0x7f800000)
@@ -196,7 +196,7 @@ extern int __signbit(double x);
    (__float_bits(x) & 0x7fffffff) > 0x7f800000)
 
 #define isnormal(x) ( \
-   ((__float_bits(x)+0x00800000) & 0x7fffffff) >= 0x0100000)
+   ((__float_bits(x)+0x00800000) & 0x7fffffff) >= 0x01000000)
 
 #define isfinite(x) ( \
    (__float_bits(x) & 0x7fffffff) < 0x7f800000)
