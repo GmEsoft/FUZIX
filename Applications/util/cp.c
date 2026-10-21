@@ -365,6 +365,7 @@ fdcopy(const char *src, const int sfd, const char *tgt, const int dfd)
 			free(buf);
 		if ((buf = malloc(blksize)) == NULL)
 			nomem();
+		bufsize = blksize;
 	}
 	while ((rsz = read(sfd, buf, blksize)) > 0) {
 		wt = 0;
