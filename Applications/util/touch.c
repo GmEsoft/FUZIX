@@ -13,7 +13,7 @@ int main(int argc, const char *argv[])
     struct stat sbuf;
     struct utimbuf tbuf;
 
-    if ((argv[1][0] == '-') && (argv[1][1] == 'c')) {
+    if (argc > 1 && (argv[1][0] == '-') && (argv[1][1] == 'c')) {
 	ncreate = 1;
     }
 
