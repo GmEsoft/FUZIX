@@ -76,6 +76,10 @@ void pagemap_init(void)
 {
 }
 
+/* Some simple type targets have very strange swap requirements so let them
+   provide their own logic */
+#ifndef CONFIG_SIMPLE_CUSTOMSWAP
+
 /*
  *	Swap out the memory of a process to make room
  *	for something else
@@ -162,4 +166,4 @@ void swapinout(ptptr p)
 }
 
 #endif
-
+#endif
