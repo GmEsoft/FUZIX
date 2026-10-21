@@ -15,14 +15,15 @@ int remove_dir(char *ni, int f)
     int er, era = 2;
     char *line;
     char *name = strdup(ni);
-    char *p = name + strlen(name) - 1;
+    char *p;
 
     if (name == NULL) {
         writes("rmdir: out of memory\n");
 	exit(255);
     }
-    while(p >= name && *p == '/')
-        *p-- = '\0';
+    p = name + strlen(name);
+    while(p > name && p[-1] == '/')
+        *--p = '\0';
 
     while (((er = rmdir(name)) == 0)
 	   && ((line = rindex(name, '/')) != NULL) && f) {
@@ -39,7 +40,7 @@ int main(int argc, char **argv)
 {
     int i, parent = 0, er = 0;
 
-    if ((argv[1][0] == '-') && (argv[1][1] == 'p'))
+    if (argc > 1 && (argv[1][0] == '-') && (argv[1][1] == 'p'))
 	parent = 1;
 
     newmode = 0666 & ~umask(0);
