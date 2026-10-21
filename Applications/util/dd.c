@@ -251,10 +251,10 @@ int main(int argc, char *argv[])
     if (buf != localbuf)
 	free(buf);
 
-    printf("%d+%d records in\n", intotal / blocksize,
+    printf("%ld+%d records in\n", intotal / blocksize,
 	   (intotal % blocksize) != 0);
 
-    printf("%d+%d records out\n", outtotal / blocksize,
+    printf("%ld+%d records out\n", outtotal / blocksize,
 	   (outtotal % blocksize) != 0);
 
     return ret;
