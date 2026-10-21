@@ -53,7 +53,7 @@ void fail(const char *p) {
   const char *e = strerror(errno);
   write(2, n, strlen(n));
   write(2, " cannot open '", 14);
-  write(2, p, strlen(n));
+  write(2, p, strlen(p));
   write(2, "' for reading: ", 15);
   write(2, e, strlen(e));
   write(2, "\n", 1);
