@@ -77,6 +77,7 @@ __ugetc:
 	lda	0,x
 	rep	#0x20
 	.a16
+	and	#0x00FF		; return the byte zero extended
 	jsr	map_kernel
 	rts
 
