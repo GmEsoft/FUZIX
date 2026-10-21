@@ -13,20 +13,23 @@ AOBJS = $(ASRCS:.S=$(BINEXT))
 DOBJS = $(patsubst ../../dev/%.c,%.o, $(DSRCS))
 DISCARD_DOBJS = $(patsubst ../../dev/%.c,%.o, $(DISCARD_DSRCS))
 
-OBJS  = $(COBJS) $(AOBJS) $(DOBJS) $(DISCARD_DOBJS)
+OBJS  = font8x8.o $(COBJS) $(AOBJS) $(DOBJS) $(DISCARD_DOBJS)
 
 CROSS_CCOPTS += -I../../dev/
 
 all:	$(OBJS)
 
+font8x8.o: ../../font/font8x8.c
+	$(CROSS_CC) $(CROSS_CCOPTS) -c ../../font/font8x8.c -o $@ -p force_common.peep
+
 $(COBJS): %$(BINEXT): %.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $< -Toverlay4
+	$(CROSS_CC) $(CROSS_CCOPTS) $< -Toverlay5
 
 $(AOBJS): %$(BINEXT): %.S
 	$(CROSS_AS) $(ASOPTS) $< -o $*$(BINEXT)
 
 $(DOBJS): %$(BINEXT): ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) -c -Toverlay1 $<
+	$(CROSS_CC) $(CROSS_CCOPTS) -c -Toverlay5 $<
 	mv ../../dev/$*.o .
 
 $(DISCARD_DOBJS): %$(BINEXT): ../../dev/%.c
@@ -36,15 +39,10 @@ $(DISCARD_DOBJS): %$(BINEXT): ../../dev/%.c
 clean:
 	rm -f $(OBJS) *.o core *~ fuzix.img fuzix.bin
 
-romload: romload.S
-	fcc -c -m6502 romload.S
-	ld6502 -b romload.o -o romload.tmp
-	dd if=romload.tmp bs=1024 skip=40 of=romload
-	
-image:	romload
-	$(CROSS_LD) -b -f CSsLDBbX -S 0x0800 -Z 0x00 -O 0x8000 -C 0xB000 -X 0x4000 \
+image:
+	$(CROSS_LD) -b -f CLSsDBbX -S 0x0800 -Z 0x00 -O 0x8000 -C 0xAC00 -X 0x4000 \
 	-o ../../fuzix.bin -m fuzix.tmpmap -R fuzix.relocs \
-	crt0.o commonmem.o c64.o ../../start.o ../../version.o ../../cpu-6502/lowlevel-6502.o \
+	font8x8.o crt0.o commonmem.o c64.o ../../start.o ../../version.o ../../cpu-6502/lowlevel-6502.o \
 	tricks.o main.o ../../timer.o ../../kdata.o devices.o \
 	tinydisk.o tinydisk_discard.o tinyide.o tinyide_discard.o ../../mm/memalloc_none.o \
 	../../devio.o ../../filesys.o ../../process.o ../../inode.o ../../syscall_fs.o \
@@ -55,8 +53,8 @@ image:	romload
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
 	bankman ../../fuzix.bin fuzix.tmpmap fuzix.relocs 6502
 	# Now assemble an image in cartridge layout
-	# Copy common from B000 into a temporary
-	dd if=../../fuzix.bin of=fuzix.shared bs=4096 skip=11 count=1
+	# Copy common from AC00 into a temporary
+	dd if=../../fuzix.bin of=fuzix.shared bs=1024 skip=43 count=5
 	# Pack ROM bank 1
 	# Insert first 8K block (0000-1FFF)
 	dd if=../../fuzix.bin bs=8192 seek=0 skip=0 count=1 of=fuzix.rom
@@ -72,13 +70,16 @@ image:	romload
 	dd if=../../fuzix.bin bs=8192 skip=28 seek=6 count=2 of=fuzix.rom
 	# 8000-BFFF from overlay3 into cartridge bank 4
 	dd if=../../fuzix.bin bs=8192 skip=36 seek=8 count=2 of=fuzix.rom
+	# 8000-BFFF from overlay3 into cartridge bank 5
+	dd if=../../fuzix.bin bs=8192 skip=44 seek=10 count=2 of=fuzix.rom
 	# Insert the shared code into each bank
-	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=28 conv=notrunc
-	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=44 conv=notrunc
-	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=60 conv=notrunc
-	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=76 conv=notrunc
-	# And size out. We've filled 5 banks of 8
-	dd if=/dev/zero of=fuzix.rom bs=16384 seek=5 count=3
+	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=27 conv=notrunc
+	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=43 conv=notrunc
+	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=59 conv=notrunc
+	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=75 conv=notrunc
+	dd if=fuzix.shared of=fuzix.rom bs=1024 seek=91 conv=notrunc
+	# And size out. We've filled 6 banks of 8
+	dd if=/dev/zero of=fuzix.rom bs=16384 seek=6 count=2
 	
 IMAGES = $(FUZIX_ROOT)/Images/$(TARGET)
 

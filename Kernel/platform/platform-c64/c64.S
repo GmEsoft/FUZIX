@@ -281,22 +281,32 @@ map_save_kernel:
 	.export	__bank_0_2
 	.export	__bank_0_3
 	.export	__bank_0_4
+	.export	__bank_0_5
 	.export	__bank_1_2
 	.export	__bank_1_3
 	.export	__bank_1_4
+	.export	__bank_1_5
 	.export	__bank_2_1
 	.export	__bank_2_3
 	.export	__bank_2_4
+	.export	__bank_2_5
 	.export	__bank_3_1
 	.export	__bank_3_2
 	.export	__bank_3_4
+	.export	__bank_3_5
 	.export	__bank_4_1
 	.export	__bank_4_2
 	.export	__bank_4_3
+	.export	__bank_4_5
+	.export	__bank_5_1
+	.export	__bank_5_2
+	.export	__bank_5_3
+	.export	__bank_5_4
 	.export __stub_1
 	.export __stub_2
 	.export __stub_3
 	.export __stub_4
+	.export __stub_5
 
 
 jsrtmpy:
@@ -307,7 +317,7 @@ jsrtmpy:
 	rts
 
 __bank_1_2:
-	lda	#ROM1	; RAM select, antic on main, cpu on ext page 1
+	lda	#ROM1
 b1call:
 	stx	@tmp
 	tax
@@ -321,14 +331,17 @@ b1call:
 	pla
 	rts
 __bank_1_3:
-	lda	#ROM2	; cpu on ext page 2
+	lda	#ROM2
 	bne	b1call
 __bank_1_4:
-	lda	#ROM3	; cpu on main page (overlay 4)
+	lda	#ROM3
+	bne	b1call
+__bank_1_5:
+	lda	#ROM4
 	bne	b1call
 
 __bank_2_1:
-	lda	#ROM0	; RAM select, antic on main, cpu on ext page 0
+	lda	#ROM0
 b2call:
 	stx	@tmp
 	tax
@@ -342,14 +355,17 @@ b2call:
 	pla
 	rts
 __bank_2_3:
-	lda	#ROM2	; cpu on ext page 2
+	lda	#ROM2
 	bne	b2call
 __bank_2_4:
-	lda	#ROM3	; cpu on main page (overlay 4)
+	lda	#ROM3
+	bne	b2call
+__bank_2_5:
+	lda	#ROM4
 	bne	b2call
 
 __bank_3_1:
-	lda	#ROM0	; RAM select, antic on main, cpu on ext page 0
+	lda	#ROM0
 b3call:
 	stx	@tmp
 	tax
@@ -363,14 +379,17 @@ b3call:
 	pla
 	rts
 __bank_3_2:
-	lda	#ROM1	; cpu on ext page 1
+	lda	#ROM1
 	bne	b3call
 __bank_3_4:
-	lda	#ROM3	; cpu on main page (overlay 4)
+	lda	#ROM3
+	bne	b3call
+__bank_3_5:
+	lda	#ROM4	; cpu on main page (overlay 4)
 	bne	b3call
 
 __bank_4_1:
-	lda	#ROM0	; RAM select, antic on main, cpu on ext page 0
+	lda	#ROM0
 b4call:
 	stx	@tmp
 	tax
@@ -378,17 +397,44 @@ b4call:
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	pha
-	lda	#ROM3	; cpu on main page
+	lda	#ROM3
 	sta	@old_kmap
 	sta	CARTPORT+ROM3
 	pla
 	rts
 __bank_4_2:
-	lda	#ROM1	; cpu on ext page 1
+	lda	#ROM1
 	bne	b4call
 __bank_4_3:
-	lda	#ROM2	; cpu on ext page 3
+	lda	#ROM2
 	bne	b4call
+__bank_4_5:
+	lda	#ROM4
+	bne	b4call
+
+__bank_5_1:
+	lda	#ROM0
+b5call:
+	stx	@tmp
+	tax
+	sta	@old_kmap
+	sta	CARTPORT,x
+	jsr	jsrtmpy
+	pha
+	lda	#ROM4
+	sta	@old_kmap
+	sta	CARTPORT+ROM4
+	pla
+	rts
+__bank_5_2:
+	lda	#ROM1
+	bne	b5call
+__bank_5_3:
+	lda	#ROM2
+	bne	b5call
+__bank_5_4:
+	lda	#ROM3
+	bne	b5call
 
 __stub_1:
 __bank_0_1:
@@ -427,6 +473,12 @@ __bank_0_4:
 	lda	@old_kmap
 	pha		; not ideal we need to see if this is too much stack
 	lda	#ROM3
+	bne	bnk0h
+__stub_5:
+__bank_0_5:
+	lda	@old_kmap
+	pha		; not ideal we need to see if this is too much stack
+	lda	#ROM4
 	bne	bnk0h
 
 
@@ -1152,12 +1204,8 @@ _plot_char:
 	jsr	addr
 	; @tmp is now address
 	lda	(@sp),y
-	; ROM font is a weird layout anbd not quite ASCII either
-	cmp	#0x60
-	bcc	plotit
-	and	#0x1F
-plotit:
 	ldy	#0
+	and	#0x7F
 	sta	(@tmp),y
 	lda	#14
 	sta	(@tmp3),y
@@ -1167,7 +1215,8 @@ _cursor_on:
 	jsr	addr
 	ldy	#0
 	lda	(@tmp),y
-	eor	#0x80
+	sta	cursorc
+	lda	#0x00
 	sta	(@tmp),y
 	lda	@tmp
 	sta	cursorl
@@ -1181,8 +1230,7 @@ _cursor_off:
 	lda	cursorh
 	sta	@tmp+1
 	ldy	#0
-	lda	(@tmp),y
-	eor	#0x80
+	lda	cursorc
 	sta	(@tmp),y
 	rts
 
@@ -1266,6 +1314,8 @@ _scroll_down:
 cursorl:
 	.byte	0
 cursorh:
+	.byte	0
+cursorc:
 	.byte	0
 
 	.export _keydown

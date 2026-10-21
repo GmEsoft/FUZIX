@@ -19,3 +19,4 @@ NBUFS			.equ	5
 #define ROM1		0x02
 #define ROM2		0x03
 #define ROM3		0x04
+#define ROM4		0x05

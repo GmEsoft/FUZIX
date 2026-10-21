@@ -1,0 +1,4 @@
+#	Force the font into common
+	.data
+=
+	.common

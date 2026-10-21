@@ -76,7 +76,7 @@ bootstrap:
 	lda	0xDD00
 	ora	#0x03		; low 16K for VIC
 	sta	0xDD00
-	lda	#0x16		; ROM charset 2 video at 0x0400
+	lda	#0x13		; Chars 0x0800 video at 0x0400
 	sta	0xD018
 	lda	#0x1B
 	sta	0xD011		; standard character mode
@@ -126,6 +126,8 @@ x1:	; Shouldn't get here
 	.byte	0x03
 	.overlay4
 	.byte	0x04
+	.overlay5
+	.byte	0x05
 
 	.overlay1
 
@@ -186,7 +188,7 @@ gogogo:
 	sei			; Spin
 stop:	jmp	stop
 
-	.literal
+	.common
 
 ;
 ;	Stubs can be shoved anywhere that stays mapped when the
