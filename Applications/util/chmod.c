@@ -33,7 +33,7 @@
 /* Common variables */
 char *symbolic;
 mode_t new_mode, u_mask;
-int  rflag, errors;
+int  rflag;
 struct stat st;
 char path[PATH_MAX + 1];
 
@@ -211,6 +211,7 @@ int main(int argc, char *argv[])
 int do_change(char *name)
 {
     mode_t m;
+    int errs = 0;
     DIR *dir;
     register struct dirent *entp;
     register char *namp;
@@ -230,9 +231,7 @@ int do_change(char *name)
 
     if (chmod(name, m)) {
 	perror(name);
-	errors = 1;
-    } else {
-	errors = 0;
+	errs = 1;
     }
 
     if (S_ISDIR(st.st_mode) && rflag) {
@@ -249,13 +248,13 @@ int do_change(char *name)
 		(entp->d_name[1] &&
 		 (entp->d_name[1] != '.' || entp->d_name[2]))) {
 		strcpy(namp, entp->d_name);
-		errors |= do_change(path);
+		errs |= do_change(path);
 	    }
 	}
 	closedir(dir);
 	*--namp = '\0';
     }
-    return (errors);
+    return (errs);
 }
 
 
