@@ -16,7 +16,8 @@ static void chmem_flat(FILE * fp, unsigned char *buf, int argc, char *argv[])
 	unsigned int v;
 
 	if (ntohl(hdr[1]) != 4) {
-		fprintf(stderr, "%s: unsupported revision %d.\n", ntohl(hdr[1]));
+		fprintf(stderr, "%s: unsupported revision %d.\n",
+			argv[0], (int)ntohl(hdr[1]));
 		exit(1);
 	}
 	if (argc == 2) {
