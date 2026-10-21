@@ -71,7 +71,9 @@ static int is_mounted(const char *path)
     FILE *f = setmntent("/etc/mtab", "r");
     struct mntent mnt;
     static char buf[_MAX_MNTLEN];
-    
+
+    if (f == NULL)
+        return 0;
     while(getmntent_r(f, &mnt, buf, _MAX_MNTLEN)) {
         if (strcmp(mnt.mnt_fsname, path) == 0) {
             endmntent(f);
@@ -102,6 +104,11 @@ static void automount(char *match)
     const char *p;
     struct mntent *mnt;
 
+    if (f == NULL) {
+        perror("/etc/fstab");
+        err = 1;
+        return;
+    }
     while ((mnt = getmntent(f)) != NULL) {
         p = mnt_device_path(mnt);
         /* Warning - mnt contents go invalid if we do work on mtab so
