@@ -39,8 +39,8 @@ head:
 ;
 __sighandler:
 	dec	@sp+1		; ensure we are safe C stack wise
-	; Now make a 14 byte save area
-	ldy	#14
+	; Now make a 24 byte save area
+	ldy	#24
 	jsr	__subysp
 	jsr	stash_zp	; saves sp etc
 	lda	#0x4C		; jmp xxxx
@@ -49,11 +49,12 @@ __sighandler:
 	sta	@tmp+1		; ZP was swapped
 	pla
 	sta	@tmp+2		; Patch jmpvec
-	pla			; Signa number
+	pla			; Signal number
 	ldx	#0		; signal(sig)
+	jsr	__push		; stack word
 	jsr	@tmp		; no jsr (x) so fake it
 	jsr	stash_zp	; recovers everything
-	ldy	#14		; 14 bytes to recover
+	ldy	#22		; 22 bytes to recover
 	jsr	__addysp	; Stack back as it was
 	inc	@sp+1		; back to old stack
 initmainargs:			; Hardcoded compiler dumbness
@@ -121,7 +122,7 @@ stash_loop:
 	tax
 	stx	@sp+2,y
 	iny
-	cpy	#20		; 20 bytes of save area
+	cpy	#22		; 22 bytes of save area
 	bne	stash_loop
 	rts
 
