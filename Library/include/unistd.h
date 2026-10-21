@@ -102,7 +102,7 @@ extern long _pathconf(int __name);
 
 /* POSIX: show that the clock_ API is present */
 #define _POSIX_TIMERS
-#define _POSIX_MONTONIC_CLOCK
+#define _POSIX_MONOTONIC_CLOCK	200809L
 
 extern int gethostname(char *__name, size_t __len);
 extern int sethostname(const char *__name, size_t __len);
