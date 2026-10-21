@@ -1,6 +1,8 @@
 #ifndef _LOCALE_H
 #define _LOCALE_H
 
+#include <ctype.h>
+
 typedef void * locale_t;
 
 struct lconv {
@@ -9,7 +11,7 @@ struct lconv {
 	char *grouping;
 	char *int_curr_symbol;
 	char *currency_symbol;
-	char *mon_decimal_pont;
+	char *mon_decimal_point;
 	char *mon_thousands_sep;
 	char *positive_sign;
 	char *negative_sign;
@@ -29,6 +31,11 @@ struct lconv {
 
 extern char *setlocale(int, const char *);
 extern struct lconv *localeconv(void);
+extern locale_t newlocale(int __category_mask, const char *__locale,
+    locale_t __base);
+extern locale_t duplocale(locale_t __locobj);
+extern void freelocale(locale_t __locobj);
+extern locale_t uselocale(locale_t __newloc);
 
 #define LC_ALL			0
 #define LC_ADDRESS		1
