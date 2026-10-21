@@ -17,6 +17,7 @@ __uputc:
 	swpb	r4		; it's word argument byte write
 	movb	r4,*r5
 	bl	@map_kernel
+	clr	r1		; we return 0 from the uput calls
 	b	*r2
 
 __uputw:
@@ -24,6 +25,7 @@ __uputw:
 	bl	@map_proc_always
 	mov	r4,*r5
 	bl	@map_kernel
+	clr	r1		; we return 0 from the uput calls
 	b	*r2
 
 ; Address in r4
