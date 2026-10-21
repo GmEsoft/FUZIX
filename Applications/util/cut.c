@@ -79,6 +79,7 @@ void warn(int warn_number, char *option)
 	"%s: Option -d allowed only with -f\n",
 	"%s: -%s overrides earlier option\n",
 	"%s: -%s not allowed in current mode\n",
+	"%s: unknown option -%s\n",
 	"%s: Cannot open %s\n"
     };
 
@@ -130,12 +131,12 @@ void get_args(void)
 		if (!args[arg_ptr])
 		    cuterror(POSITION_ERROR);
 		arg_ptr++;
-	    }
-	    if (line[i] == '-') {
+	    } else if (line[i] == '-') {
 		arg_ptr |= 1;
 		i++;
 		flag = 0;
-	    }
+	    } else
+		cuterror(SYNTAX_ERROR);
 	}
 	if (flag && arg_ptr & 1)
 	    args[arg_ptr] = args[arg_ptr - 1];
@@ -155,8 +156,13 @@ void cut(void)
 
     while (fgets(line, BUFSIZ, fd)) {
 
-	length = strlen(line) - 1;
-	*(line + length) = 0;
+	/* Strip the newline if there is one; the last line of a file
+	   need not be newline terminated. */
+	length = strlen(line);
+	if (length && line[length - 1] == '\n')
+	    line[--length] = 0;
+
+	maxcol = 0;
 
 	switch (mode) {
 	case DUMP_STDIN:
@@ -226,10 +232,14 @@ int main(int argc, char *argv[])
 	    case 'd':
 		if (mode == OPTIONC || mode == OPTIONB)
 		    warn(DELIMITER_NOT_APPLICABLE, "d");
+		if (i == argc)
+		    cuterror(USAGE);
 		delim = argv[i++][0];
 		break;
 
 	    case 'f':
+		if (i == argc)
+		    cuterror(USAGE);
 	        strlcpy(line, argv[i++], BUFSIZ);
 		if (mode == OPTIONC || mode == OPTIONB)
 		    warn(OVERRIDING_PREVIOUS_MODE, "f");
@@ -237,6 +247,8 @@ int main(int argc, char *argv[])
 		break;
 
 	    case 'b':
+		if (i == argc)
+		    cuterror(USAGE);
 	        strlcpy(line, argv[i++], BUFSIZ);
 		if (mode == OPTIONF || mode == OPTIONC)
 		    warn(OVERRIDING_PREVIOUS_MODE, "b");
@@ -244,6 +256,8 @@ int main(int argc, char *argv[])
 		break;
 
 	    case 'c':
+		if (i == argc)
+		    cuterror(USAGE);
 	        strlcpy(line, argv[i++], BUFSIZ);
 		if (mode == OPTIONF || mode == OPTIONB)
 		    warn(OVERRIDING_PREVIOUS_MODE, "c");
@@ -288,8 +302,8 @@ int main(int argc, char *argv[])
     }
 
     /* Flag -i is only allowed with -f, otherwise warn and reset flag_i */
-    if (flag_i == SET && mode == OPTIONF) {
-	warn(OPTION_NOT_APPLICABLE, "s");
+    if (flag_i == SET && mode != OPTIONF) {
+	warn(OPTION_NOT_APPLICABLE, "i");
 	flag_i = NOTSET;
     }
 
