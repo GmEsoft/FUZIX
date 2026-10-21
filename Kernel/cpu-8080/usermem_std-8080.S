@@ -189,5 +189,6 @@ zeroloop:
 	ora c
 	jnz zeroloop
 	pop b
+	lxi h,0		; we return 0 from the uput calls
 	jmp map_kernel
 
