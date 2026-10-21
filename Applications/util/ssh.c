@@ -243,12 +243,13 @@ int main(int argc, char *argval[])
             if ((i = read(infd, buf, 127)) <= 0) {
                 if (infd == 0)
                     return 0;
-                else {
-                    close(infd);
-                    infd = 0;
-                }
+                close(infd);
+                infd = 0;
+                /* EOF on the startup file: fall through to the
+                 * terminal without re-running the last command. */
+                buf[0] = '\0';
             }
-            if (buf[i - 1] == '\n')
+            if (i > 0 && buf[i - 1] == '\n')
                 buf[i - 1] = '\0';   /* Strip newline from read() */
 	    cmd = getarg(buf);
 	} while (cmd == NULL);
