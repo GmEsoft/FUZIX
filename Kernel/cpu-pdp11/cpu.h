@@ -10,8 +10,8 @@ extern void *memcpy(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
 extern size_t strlen(const char *);
 extern uint16_t swab(uint16_t);
-extern uint32_t swab32(uint16_t);
-extern uint32_t shuffle32(uint16_t);
+extern uint32_t swab32(uint32_t);
+extern uint32_t shuffle32(uint32_t);
 
 /* PDP 11 32bit values are an odd order indeed hence the shuffle32 helper
    we also need below */
