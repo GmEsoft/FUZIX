@@ -45,7 +45,7 @@
 #define ERANGE          34              /* Result too large */
 
 #define EWOULDBLOCK	EAGAIN		/* Operation would block */
-#define ENOLOCK		35		/* Lock table full */
+#define ENOLCK		35		/* Lock table full */
 #define ENOTEMPTY	36		/* Directory is not empty */
 #define ENAMETOOLONG    37              /* File name too long */
 #define EAFNOSUPPORT	38		/* Address family not supported */
