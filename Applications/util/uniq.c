@@ -31,18 +31,6 @@ int  uniq(void);
 void usage(void);
 int  getline(char *, int);
 
-FILE *xfopen(char *fn, char *mode)
-{
-    FILE *p;
-
-    if ((p = fopen(fn, mode)) == NULL) {
-	perror("uniq");
-	fflush(stdout);
-	exit(1);
-    }
-    return (p);
-}
-
 int main(int argc, char *argv[])
 {
     char *p;
@@ -81,14 +69,18 @@ int main(int argc, char *argv[])
     if (argc == 0) {
 	inf = 0;
     } else if (inf == -1) {	/* if - was not given */
-	fclose(stdin);
-	xfopen(*argv++, "r");
+	if (freopen(*argv++, "r", stdin) != stdin) {
+	    perror("uniq");
+	    exit(1);
+	}
 	argc--;
     }
 
     if (argc) {
-	fclose(stdout);
-	xfopen(*argv++, "w");
+	if (freopen(*argv++, "w", stdout) != stdout) {
+	    perror("uniq");
+	    exit(1);
+	}
 	argc--;
     }
 
