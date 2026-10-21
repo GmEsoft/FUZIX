@@ -47,6 +47,9 @@
 	.export reg3
 	.export reg4
 
+	.zp
+
+
 	.export usp
 
 sp:	.word	0
@@ -61,6 +64,14 @@ reg1:	.word	0
 reg2:	.word	0
 reg3:	.word	0
 reg4:	.word	0
+old_kbank:
+	.byte	0
+old_kmap:
+	.byte	0
+old_mmu:
+	.byte	0
+sparezp:			; Keeps the usp even for the disk load
+	.byte	0
 
 usp:	.word	0
 
@@ -260,14 +271,6 @@ map_save_kernel:
 	pla
 	rts
 
-	.zp
-
-old_kbank:
-	.byte	0
-old_kmap:
-	.byte	0
-old_mmu:
-	.byte	0
 
 	.common
 ;
@@ -426,8 +429,8 @@ __bank_0_4:
 	lda	#ROM3
 	bne	bnk0h
 
-	
-	
+
+
 
 ; outchar: Wait for UART TX idle, then print the char in a without
 ; corrupting other registers
@@ -484,7 +487,7 @@ vector_do:
 	php	; fake stack for the ROM routine RTI
 	pha
 	pha
-	pha	
+	pha
 	;	can't JSR this as RTI and RTS work differently (sigh)
 	jmp	(oldvec)
 #endif
@@ -499,7 +502,7 @@ vector3:
 ;	Save our zero page bits (and thus the C stack etc). The save
 ;	area is task specific so if we task switch all is good
 ;
-	jsr 	stash_zp
+	jsr	stash_zp
 ;
 ;	Q: do we want to spot BRK instructions and signal them ?
 ;
@@ -608,7 +611,7 @@ no_preempt:
 	; Right now the stack holds Y X A P rti addr
 	; Push a helper to clean up and restore the register state
 	lda	#>irqout-1
-	pha	
+	pha
 	lda	#<irqout-1
 	pha					; stack a return vector
 	tya
@@ -663,7 +666,7 @@ syscall_entry:
 
 	stx	_udata+U_DATA__U_CALLNO
 
-	; 	@sp points to the user argments
+	;	@sp points to the user argments
 
 	;
 	;	We copy the arguments but need to deal with the compiler
@@ -870,27 +873,121 @@ x11:
 ;	live CPU stack and this may make it very tricky if at all possible
 ;	to do 6502 swap and make the atari8bit work. Research needed
 ;
-;	TODO; special handler for read into pages 0 and 1 (has to throw
-;	part of the page away)	
+;	part of the page away)
 ;
-
+;	Some mapping tricks are needed unfortunately
+;
+;	If the address is outside of the range D000-DFFF then we can
+;	map HIRAM/LORAM as 01 and directly copy. If the Address is
+;	between D000-DFFF then we just have to deal with it. A read
+;	can also cross the boundary so we really care about CE01-DFFF
+;
 	.common
 
 	.export _devide_read_data
 	.export _devide_write_data
 
+	; asm entry points using XA
+	.export devide_read_data
+	.export devide_write_data
+
+;
+;	Disk I/O into S and Z. Much fun and games as we need to avoid
+;	bits of them used as our tiny swap stack
+;
+;	TODO: optimize
+;
+read_zp:
+	ldy	#0
+skip_kz:
+	lda	0xDE20
+	iny
+	lda	0xDE31	; Can we skip these ?
+	iny
+	cpy	#@usp
+	bne	skip_kz
+	; Threw away the MMU and low ZP save
+user_z:	lda	0xDE20
+	sta	0,y
+	iny
+	lda	0xDE31
+	sta	0,y
+	iny
+	bne	user_z
+	; Ok we now have the stack. We are squatting on 100-110 for our tiny
+	; swap stack
+skip_s:	lda	0xDE20
+	iny
+	lda	0xDE32
+	iny
+	cpy	#0x10
+	bne	skip_s
+kern_s:	lda	0xDE20
+	sta	0x100,y
+	iny
+	lda	0xDE31
+	sta	0x100,y
+	iny
+	bne	kern_s
+	rts
+
 _devide_read_data:
 	jsr	__pop
+devide_read_data:
 	sta	@tmp3
 	stx	@tmp3+1		; Save the target
+	cpx	#0
+	beq	read_zp		; Very special, 6502 joy
+	cpx	#0xE0
+	bcs	read_fast
+	cpx	#0xCE
+	bcc	read_fast
+	tax			; CE00-CFFF will come up in exec so check
+	beq	read_fast	; to the byte!
 
+	;	Slow path
+	;	CE01-DFFF are never kernel reads
+	;	REU would avoid so much pain!
+read_slow:
+	ldy	#0
+	lda	@mmu
+	and	#0xFC
+	tax
+	inx
+	jsr	hd_rslow256
+	inc	@tmp3+1
+	jsr	hd_rslow256
+	jmp	map_kernel
+
+hd_rslow256:
+	stx	@mmu		; I/O in but user
+	lda	0xDE20
+	dex
+	stx	@mmu		; I/O out but user
+	sta	(@tmp3),y	; Save behind I/O window
+	iny
+	inx
+	stx	@mmu
+	lda	0xDE31
+	dex
+	stx	@mmu
+	sta	(@tmp3),y
+	iny
+	bne	hd_rslow256
+	rts
+
+read_fast:
 	;
 	;	We must flip banks before we play mmu pokery, or it will
 	; undo all our work. This means our variables must be commondata
 	;
 	lda	_td_raw
 	beq	hd_kmap
-	jsr	map_proc_always
+	; Map user except for the I/O window
+	lda	@mmu
+	and	#0xFC
+	ora	#1
+	sta	@mmu
 hd_kmap:
 	ldy	#0
 	jsr	hd_read256
@@ -914,8 +1011,48 @@ no_remap:
 
 _devide_write_data:
 	jsr	__pop
+devide_write_data:
 	sta	@tmp3
 	stx	@tmp3+1		; Save the target
+	cpx	#0xE0
+	bcs	write_fast
+	cpx	#0xCE
+	bcc	write_fast
+	tax			; CE00-CFFF will come up in exec so check
+	beq	write_fast	; to the byte!
+
+	;	Slow path
+	;	CE01-DFFF are never kernel reads
+	;	REU would avoid so much pain!
+write_slow:
+	ldy	#0
+	lda	@mmu
+	and	#0xFC
+	tax
+	jsr	hd_wslow256
+	inc	@tmp3+1
+	jsr	hd_wslow256
+	jmp	map_kernel
+
+hd_wslow256:
+	stx	@mmu
+	lda	(@tmp3),y	; Load behind I/O window
+	inx
+	stx	@mmu		; I/O in but user
+	sta	0xDE20
+	iny
+	dex
+	stx	@mmu
+	lda	(@tmp3),y	; Load behind I/O window
+	inx
+	stx	@mmu		; I/O in but user
+	sta	0xDE32
+	iny
+	dex
+	bne	hd_wslow256
+	rts
+
+write_fast:
 	;
 	; We must flip banks before we play mmu pokery, or it will
 	; undo all our work. This means our variables must be commondata
@@ -936,7 +1073,10 @@ hd_kmapw:
 
 hd_write256:
 	lda	(@tmp3),y
-	sta	0xDE30
+	sta	0xDE20
+	iny
+	lda	(@tmp3),y
+	sta	0xDE31
 	iny
 	bne	hd_write256
 	rts
@@ -1115,7 +1255,7 @@ cpup2:	lda	(@tmp2),y
 	iny
 	cpy	#0xC0
 	bne	cpup2
-	rts	
+	rts
 
 _scroll_down:
 	; TODO
