@@ -435,6 +435,9 @@ even:
 
 	.commondata
 
+	.export _swapdevh
+	.export _swaplba
+
 switch_proc_ptr:
 	.word	0
 fork_proc_ptr:

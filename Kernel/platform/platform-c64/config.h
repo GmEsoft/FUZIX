@@ -18,6 +18,7 @@
  *	One process in memory only
  */
 #define CONFIG_SWAP_ONLY
+#define CONFIG_DYNAMIC_SWAP
 #define SWAPBASE 0x4000		/* Special handling needed on the in part ! */
 #define SWAPTOP  0xFE00
 #define SWAP_SIZE 0x60		/* including the udata */
@@ -25,7 +26,7 @@
 #define swap_map(x)	((uint8_t *)(x))
 
 #define MAX_SWAPS	14
-#define SWAPDEV (swap_dev)
+#define SWAPDEV		(swap_dev)
 /* We have one mapping from our working of memory */
 #define MAX_MAPS	1
 #define MAP_SIZE	0xBE00U
@@ -47,8 +48,6 @@
 #define CONFIG_TD_IDE
 #define CONFIG_TINYIDE_8BIT
 #define IDE_IS_8BIT(x)	1
-
-/* FIXME: swap */
 
 #define BOOT_TTY 513        /* Set this to default device for stdio, stderr */
 

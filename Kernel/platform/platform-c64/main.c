@@ -2,6 +2,8 @@
 #include <timer.h>
 #include <kdata.h>
 #include <printf.h>
+#define _TINYDISK_PRIVATE
+/* Our swap hack has to stick its nose in places it shouldn't */
 #include <tinydisk.h>
 #include <tinyide.h>
 #include <devtty.h>
@@ -31,9 +33,23 @@ uint_fast8_t plt_param(char *p)
 
 void device_init(void)
 {
+	extern uint8_t swapdevh, swaplba[3];
+	uint8_t minor;
 #ifdef CONFIG_TD_IDE
 	ide_probe();
 #endif
+	minor = swap_dev & 0x0F;
+	/* Our custom swap logic is a bit restrictive */
+	if ((swap_dev & 0xFF00) != 0 || minor > CONFIG_TD_MAX_PART)
+		panic("swap required on primary device");
+	/* Configure the swap helper values */
+	swapdevh = 0xE0;	/* primary only for now */
+	if (minor) {
+		/* LBA offset of partition for 24bits */
+		swaplba[0] = td_lba[0][minor];
+		swaplba[1] = td_lba[0][minor] >> 8;
+		swaplba[2] = td_lba[0][minor] >> 16;
+	}
 }
 
 void plt_interrupt(void)
