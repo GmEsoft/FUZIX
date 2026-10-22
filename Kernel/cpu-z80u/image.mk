@@ -18,10 +18,12 @@ tools/plus3boot: tools/plus3boot.c
 
 tools/raw2dsk: tools/raw2dsk.c
 
+tools/trdify: tools/trdify.c
+
 cpm-loader-fcc/cpmload.bin: cpm-loader-fcc/cpmload.S cpm-loader-fcc/fuzixload.S cpm-loader-fcc/makecpmloader.c
 	+$(MAKE) -C cpm-loader-fcc
 
-fuzix.bin: target $(OBJS) tools/pack85 tools/packdiscard tools/visualizefcc tools/doubleup cpm-loader-fcc/cpmload.bin tools/makejv3 tools/trslabel tools/hogfather tools/makedck tools/plus3boot tools/raw2dsk
+fuzix.bin: target $(OBJS) tools/pack85 tools/packdiscard tools/visualizefcc tools/doubleup cpm-loader-fcc/cpmload.bin tools/makejv3 tools/trslabel tools/hogfather tools/makedck tools/plus3boot tools/raw2dsk tools/trdify
 	+$(MAKE) -C platform/platform-$(TARGET) image
 	(cd platform/platform-$(TARGET); ../../tools/visualizefcc <../../fuzix.map)
 	tools/hogfather fuzix.map | sort -nr >fuzix.hogs

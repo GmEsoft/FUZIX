@@ -13,13 +13,13 @@ idesetup:
 	ld	d,(hl)
 	ex	de,hl
 	ld	a, (_td_raw)
-	ld	bc, IDE_REG_DATA_LATCH	; setup port number
+	ld	bc, 0x11		; setup port number
 					; and count
 	or	a
 	ret	z
 	cp	2
 	jp	nz, map_proc_always	; User
-	ld	a, *_td_page)		; Will never be zero
+	ld	a, (_td_page)		; Will never be zero
 	jp	map_for_swap
 
 _devide_read_data:
