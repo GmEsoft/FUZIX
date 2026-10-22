@@ -3,8 +3,8 @@
 #include <kdata.h>
 #include <devlpr.h>
 
-__sfr __at 0x00 status;
-__sfr __at 0x0E data;
+#define	STATUS	0x00
+#define DATA	0x0E
 
 int lpr_open(uint_fast8_t minor, uint16_t flag)
 {
@@ -42,11 +42,11 @@ int lpr_write(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 
 	while (p < pe) {
 		/* Printer busy ? */
-		while (status & 1) {
+		while (in(STATUS) & 1) {
 			if ((n = iopoll(pe - p)) != 0)
 				return n;
 		}
-		data = ugetc(p++);
+		out(DATA, ugetc(p++));
 	}
 	return pe - p;
 }

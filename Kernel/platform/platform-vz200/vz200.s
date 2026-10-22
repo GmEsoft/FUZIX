@@ -1,61 +1,66 @@
+# 1 "vz200.S"
 ;
 ;	Basic VZ200 setup
 ;
-        .module vz200
 
         ; exported symbols
-        .globl init_hardware
-	.globl _program_vectors
-	.globl map_kernel
-	.globl map_proc
-	.globl map_proc_always
-	.globl map_kernel_di
-	.globl map_kernel_restore
-	.globl map_proc_di
-	.globl map_proc_save
-	.globl map_proc_always_di
-	.globl map_save_kernel
-	.globl map_restore
-	.globl map_for_swap
-	.globl map_buffers
-	.globl plt_interrupt_all
-	.globl _plt_reboot
-	.globl _plt_monitor
-	.globl _bufpool
-	.globl _int_disabled
-	.globl _interrupt_setup
-
-        ; imported symbols
-	.globl init
-        .globl _ramsize
-        .globl _procmem
-        .globl outhl
-        .globl outnewline
-	.globl interrupt_handler
-	.globl nmi_handler
-	.globl null_handler
+        .export init_hardware
+	.export _program_vectors
+	.export map_kernel
+	.export map_proc
+	.export map_proc_always
+	.export map_kernel_di
+	.export map_kernel_restore
+	.export map_proc_di
+	.export map_proc_save
+	.export map_proc_always_di
+	.export map_save_kernel
+	.export map_restore
+	.export map_for_swap
+	.export map_buffers
+	.export plt_interrupt_all
+	.export _plt_reboot
+	.export _plt_monitor
+	.export _int_disabled
+	.export _interrupt_setup
+	.export _update_keyboard
+	.export _sd_spi_rx_sector
+	.export _sd_spi_tx_sector
 
 	; exported debugging tools
-	.globl outchar
+	.export outchar
+# 1 "kernelu.def"
+; FUZIX mnemonics for memory addresses etc
 
-        .include "kernel.def"
-        .include "../../cpu-z80/kernel-z80.def"
+U_DATA__TOTALSIZE	.equ	0x200	; 256+256 bytes @ 0x0100
 
+
+
+PROGBASE		.equ	0x8800
+PROGLOAD		.equ	0x8800
+# 1 "../../cpu-z80u/kernel-z80.def"
+ 
+# 26
+ 
+# 44
+ 
+# 35 "vz200.S"
 ;=========================================================================
 ; Initialization code
 ;=========================================================================
-        .area _DISCARD
+
+	.discard
 init_hardware:
-	ld	hl,#90
+	ld	hl, 90
 	ld	(_ramsize), hl
-	ld	hl,#30
+	ld	hl, 30
 	ld	(_procmem), hl
 	ret
 
 ;=========================================================================
 ; Common Memory between 7800-87FF
 ;=========================================================================
-        .area _COMMONMEM
+	.common
 
 _plt_monitor:
 _plt_reboot:
@@ -64,18 +69,18 @@ _plt_reboot:
 
 ; Install the interrupt vector now the discard can be trashed
 _interrupt_setup:
-	ld	hl,#0x787D
-	ld	(hl),#0xC3
-	ld	de,#interrupt_stub
+	ld	hl, 0x787D
+	ld	(hl), 0xC3
+	ld	de, interrupt_stub
 	inc	 hl
-	ld	(hl),e
+	ld	(hl), e
 	inc	hl
-	ld	(hl),d
+	ld	(hl), d
 	ei
 	xor	a
-	ld	(_int_disabled),a
+	ld	(_int_disabled), a
 	inc	a
-	ld	(_postinit),a
+	ld	(_postinit), a
 	ret
 
 interrupt_stub:
@@ -86,33 +91,93 @@ interrupt_stub:
 	pop	af		; unwind rom
 	jp	interrupt_handler	; and do our thing
 
+	.code
+
+; TODO: can we check the whole keyboard with a single (6800) !+ 0xFF if
+; we know it was all up before ?
+
+_update_keyboard:
+	push	bc
+	ld	hl, _keybuf
+	ld	de, 0x68FE
+	ld	b, 8	; 8 keyboard ports, 7FFE, BFFE, DFFE and so on
+read_halfrow:
+	ld	a, (de)
+	cpl
+	ld	(hl), a
+	rlc	e
+	inc	hl
+	djnz	read_halfrow
+	pop	bc
+	ret
+
 ;=========================================================================
 
-		.globl _postinit
+	.commondata
+	.export _postinit
 
 _int_disabled:
-	.db 1
+	.byte	1
 _postinit:
-	.db 0
+	.byte	0
 
+	.common
 ; install interrupt vectors
 _program_vectors:
 ; platform fast interrupt hook
 plt_interrupt_all:
 	ret
 
+spisetup:
+	ld	hl, 8
+	add	hl, sp
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ex	de,hl
+	ld	bc, 57
+	ld	d, 0xFF
+	ld	a,(_td_raw)
+	or	a
+	jp	z, map_buffers
+	jp	map_proc_always
+
+_sd_spi_rx_sector:
+	push	bc
+	call	spisetup
+readl:
+	out	(c),d
+	nop	; Check delay needed
+	ini
+	inc	b
+	out	(c),d
+	nop
+	ini
+	jr	nz, readl
+	jp	map_kernel_restore
+
+_sd_spi_tx_sector:
+	push	bc
+	call	spisetup
+writel:
+	outi
+	nop				; Check delay needed
+	inc	b
+	outi
+	nop
+	jr	nz, writel
+	jp	map_kernel_restore	
+
 ;
 ;	Custom interrupt handling. We have to keep interrupts off until
 ;	after early boot.
 ;
-		.globl _di
-		.globl ___hard_di
+	.export _di
 
 _di:
 	jp	___hard_di
 
-		.globl _ei
-		.globl ___hard_ei
+	.export _ei
 
 _ei:
 	ld	a,(_postinit)
@@ -120,15 +185,12 @@ _ei:
 	ret	z
 	jp	___hard_ei
 
-		.globl _irqrestore
+	.export _irqrestore
 
 _irqrestore:
-	pop	bc
-	pop	de
-	pop	hl
-	push	hl
-	push	de
-	push	bc
+	ld	hl, 4
+	add	hl, sp
+	ld	l, (hl)
 	di
 	ld	a,l
 	ld	(_int_disabled),a
@@ -150,6 +212,9 @@ _irqrestore:
 ; Inputs: page table address in HL, map kernel if HL == 0
 ; Outputs: none; A and HL destroyed
 ;=========================================================================
+
+	.common
+
 map_proc:
 map_proc_di:
 	ld	a,h
@@ -172,18 +237,18 @@ map_for_swap:
 
 ;=========================================================================
 ; map_proc_always - map process pages
-; Inputs: page table address in #U_DATA__U_PAGE
+; Inputs: page table address in 2     
 ; Outputs: none; all registers preserved
 ;=========================================================================
 map_proc_save:		; FIXME: fix banked 
 map_proc_always:
 map_proc_always_di:
-	push af
-	ld	a,(mapreg)
-	ld	(oldmap),a	; remember our bank
-	ld	a,#0x7		; RAM low, bank 1
-	ld	(mapreg),a
-	out	(55),a
+	push	af
+	ld	a, (mapreg)
+	ld	(oldmap), a	; remember our bank
+	ld	a, 0x7		; RAM low, bank 1
+	ld	(mapreg), a
+	out	(55), a
 	pop	af
 	ret
 
@@ -193,8 +258,8 @@ map_proc_always_di:
 ;	we do need to make the map_kernel_restore behave properly.
 ;
 map_buffers:
-	ld	a,(mapreg)
-	ld	(oldmap),a
+	ld	a, (mapreg)
+	ld	(oldmap), a
 	ret
 
 ;=========================================================================
@@ -207,9 +272,9 @@ map_kernel:
 map_kernel_di:
 map_kernel_restore:
 	push	af
-	ld	a,(oldmap)
-	ld	(mapreg),a
-	out	(55),a
+	ld	a, (oldmap)
+	ld	(mapreg), a
+	out	(55), a
 	pop	af
 	ret
 
@@ -220,9 +285,9 @@ map_kernel_restore:
 ;=========================================================================
 map_restore:
 	push	af
-	ld	a,(save_map)
-	ld	(mapreg),a
-	out	(55),a
+	ld	a, (save_map)
+	ld	(mapreg), a
+	out	(55), a
 	pop	af
 	ret
 
@@ -233,11 +298,11 @@ map_restore:
 ;=========================================================================
 map_save_kernel:
 	push	af
-	ld	a,(mapreg)
-	ld	(save_map),a
-	ld	a,#3
-	ld	(mapreg),a
-	out	(55),a
+	ld	a, (mapreg)
+	ld	(save_map), a
+	ld	a, 3
+	ld	(mapreg), a
+	out	(55), a
 	pop	af
 	ret
 
@@ -251,15 +316,15 @@ mapreg:
 ;
 ;	Helpers specific to the banked singe task support
 ;
-	.globl map_save_kmap
-	.globl map_restore_kmap
+	.export map_save_kmap
+	.export map_restore_kmap
 
 map_save_kmap:
-	ld	a,(mapreg)
+	ld	a, (mapreg)
 	ret
 map_restore_kmap:
-	ld	(mapreg),a
-	out	(55),a
+	ld	(mapreg), a
+	out	(55), a
 	ret
 
 
@@ -276,24 +341,24 @@ outchar:
 	ret
 
 ;
-	.area _COMMONMEM
+	.common
 
 ;	Banking support
 ;
-	.globl __bank_0_1
-	.globl __bank_0_2
-	.globl __bank_1_2
-	.globl __bank_2_1
-	.globl __stub_0_1
-	.globl __stub_0_2
+	.export __bank_0_1
+	.export __bank_0_2
+	.export __bank_1_2
+	.export __bank_2_1
+	.export __stub_1
+	.export __stub_2
 
 callhl:
 	jp	(hl)
 __bank_0_1:
-	ld	a,#1
+	ld	a, 1
 	jr	bank0
 __bank_0_2:
-	ld	a,#3
+	ld	a, 3
 bank0:
 	pop	hl
 	ld	e,(hl)
@@ -302,79 +367,84 @@ bank0:
 	inc	hl
 	push	hl
 	ex	de,hl
-	ld	bc,(mapreg)	; old bank into C
-	ld	(mapreg),a
-	out	(55),a		; Switch bank
-	bit	1,c		; Which bank ?
+	push	bc
+	ld	bc, (mapreg)	; old bank into C
+	ld	(mapreg), a
+	out	(55), a		; Switch bank
+	bit	1, c		; Which bank ?
+	pop	bc
 	jr	z, retbank1
 retbank2:
 	call	callhl
-	ld	a,#3
-	ld	(mapreg),a
-	out	(55),a		; and back
+	ld	a, 3
+	ld	(mapreg), a
+	out	(55), a		; and back
 	ret
 retbank1:
 	call	callhl
-	ld	a,#1
-	ld	(mapreg),a
-	out	(55),a
+	ld	a, 1
+	ld	(mapreg), a
+	out	(55), a
 	ret
 __bank_1_2:
-	ld	a,#3
+	ld	a,3
 	pop	hl
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
 	inc	hl
 	push	hl
-	ld	(mapreg),a
-	out	(55),a
+	ld	(mapreg), a
+	out	(55), a
 	ex	de,hl
 	call	callhl
-	ld	a,#1
-	ld	(mapreg),a
-	out	(55),a
+	ld	a, 1
+	ld	(mapreg), a
+	out	(55), a
 	ret
 __bank_2_1:
-	ld	a,#1
+	ld	a, 1
 	pop	hl
-	ld	e,(hl)
+	ld	e, (hl)
 	inc	hl
-	ld	d,(hl)
+	ld	d, (hl)
 	inc	hl
 	push	hl
-	ld	(mapreg),a
-	out	(55),a
+	ld	(mapreg), a
+	out	(55), a
 	ex	de,hl
 	call	callhl
-	ld	a,#3
-	ld	(mapreg),a
-	out	(55),a
+	ld	a, 3
+	ld	(mapreg), a
+	out	(55), a
 	ret
-__stub_0_1:
-	ld	a,#1
+
+__stub_1:
+	ld	a, 1
 	jr	stubin
-__stub_0_2:
-	ld	a,#3
+__stub_2:
+	ld	a, 3
 stubin:
 	pop	hl
 	ex	(sp),hl
 	ex	de,hl
+	push	bc
 	ld	bc,(mapreg)
-	ld	(mapreg),a
-	out	(55),a
+	ld	(mapreg), a
+	out	(55), a
 	bit	1,c
+	pop	bc
 	jr	z, from_1
 	call	callhl
-	ld	a,#3
+	ld	a, 3
 stubout:
-	ld	(mapreg),a
-	out	(55),a
-	pop	bc
-	push	bc
-	push	bc
+	ld	(mapreg), a
+	out	(55), a
+	pop	af
+	push	af
+	push	af
 	ret
 from_1:
 	call	callhl
-	ld	a,#1
+	ld	a, 1
 	jr	stubout

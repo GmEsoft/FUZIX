@@ -102,11 +102,12 @@ void tty_data_consumed(uint_fast8_t minor)
 /* kernel writes to system console -- never sleep! */
 void kputchar(uint_fast8_t c)
 {
+	uint8_t ch = c;
 	vtflush();
 	if (c == '\n')
 		kputchar('\r');
 	if (vidmode == 0)
-		vtoutput(&c, 1);
+		vtoutput(&ch, 1);
 	vtflush();
 }
 
@@ -147,27 +148,10 @@ static uint8_t keybyte, keybit;
 static uint8_t newkey;
 static int keysdown = 0;
 
+extern void update_keyboard(void);
 
 /* Other problems: we have a control key, and a shift but shift is needed
    for the symbols, so we use ctrl as caps and ctrl-shift as ctrl */
-
-static void update_keyboard(void)
-{
-	/* TODO: can we check the whole keyboard with a single (6800) !+ 0xFF if
-	   we know it was all up before ? */
-	__asm
-		ld hl,#_keybuf
-		ld de, #0x68FE
-		ld b, #8        ; 8 keyboard ports, 7FFE, BFFE, DFFE and so on
-	read_halfrow:
-		ld a, (de)
-		cpl
-		ld (hl), a
-		rlc e
-		inc hl
-		djnz read_halfrow
-	__endasm;
-}
 
 static uint8_t cursor[4] = { KEY_LEFT, KEY_DOWN, KEY_UP, KEY_RIGHT };
 
@@ -249,7 +233,7 @@ void tty_pollirq(unsigned irq)
 	}
 }
 
-int gfx_ioctl(uint8_t minor, uarg_t arg, char *ptr)
+int gfx_ioctl(uint_fast8_t minor, uarg_t arg, char *ptr)
 {
 	uint8_t m;
 	switch(arg) {

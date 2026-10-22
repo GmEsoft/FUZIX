@@ -1,4 +1,4 @@
-ASRCS = crt0.s tricks.s commonmem.s vz200.s video.s
+ASRCS = crt0.S tricks.S commonmem.S vz200.S video.S
 CSRCS = devices.c main.c devtty.c sd.c devlpr.c
 DISCARD_CSRCS = discard.c
 DISCARD_DSRCS = ../../dev/tinydisk_discard.c
@@ -6,80 +6,97 @@ DSRCS = ../../dev/tinydisk.c ../../dev/tinysd.c
 DASRCS =
 NSRCS = 
 
-AOBJS = $(ASRCS:.s=.rel)
-COBJS = $(CSRCS:.c=.rel)
-DISCARD_COBJS = $(DISCARD_CSRCS:.c=.rel)
-DISCARD_DOBJS = $(patsubst ../../dev/%.c,%.rel, $(DISCARD_DSRCS))
-DOBJS = $(patsubst ../../dev/%.c,%.rel, $(DSRCS))
-DHOBJS = $(patsubst ../../dev/%.c,%.rel, $(DHSRCS))
-DAOBJS = $(patsubst ../../dev/%.s,%.rel, $(DASRCS))
-NOBJS = $(patsubst ../../dev/net/%.c,%.rel, $(NSRCS))
+AOBJS = $(ASRCS:.S=.o)
+COBJS = $(CSRCS:.c=.o)
+DISCARD_COBJS = $(DISCARD_CSRCS:.c=.o)
+DISCARD_DOBJS = $(patsubst ../../dev/%.c,%.o, $(DISCARD_DSRCS))
+DOBJS = $(patsubst ../../dev/%.c,%.o, $(DSRCS))
+DHOBJS = $(patsubst ../../dev/%.c,%.o, $(DHSRCS))
+DAOBJS = $(patsubst ../../dev/%.S,%.o, $(DASRCS))
+NOBJS = $(patsubst ../../dev/net/%.c,%.o, $(NSRCS))
 
 OBJS  = $(AOBJS) $(COBJS) $(DOBJS) $(DHOBJS) $(DAOBJS) $(DISCARD_DOBJS) $(DISCARD_COBJS) $(NOBJS)
 
 CROSS_CCOPTS += -I../../dev/ -I../../dev/net/
 
-JUNK = *.rel *.lst *.asm *.sym *.rst *.map *.ihx *.bin
+JUNK = *.o *.bin *.tmp
 
 all:	$(OBJS)
 
-$(AOBJS): %.rel: %.s
-	$(CROSS_AS) $(ASOPTS) $<
+$(AOBJS): %.o: %.S
+	$(CROSS_AS) $(ASOPTS) $< -o $@
 
-$(COBJS): %.rel: %.c
+$(COBJS): %.o: %.c
 	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG1) -c $<
 
-$(DOBJS): %.rel: ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG1) -c $<
+$(DOBJS): %.o: ../../dev/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG4) -c $< -o $@
 
-$(DAOBJS): %.rel: ../../dev/%.s
-	$(CROSS_AS) $(ASOPTS) $@ $<
+$(DAOBJS): %.o: ../../dev/%.S
+	$(CROSS_AS) $(ASOPTS) $<  -o $@
 
-$(DISCARD_COBJS): %.rel: %.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $<
-
-$(DISCARD_DOBJS): %.rel: ../../dev/%.c
+$(DISCARD_COBJS): %.o: %.c
 	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
 
-$(NOBJS): %.rel: ../../dev/net/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) -c $<
+$(DISCARD_DOBJS): %.o: ../../dev/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $< -o $@
+
+$(NOBJS): %.o: ../../dev/net/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(JUNK)  core *~ fuzix.boot booter.tmp
 
 image: booter boot bootblock
+	$(CROSS_LD) -b -C 0x9000 -O 0x4000 -X 0x7200 -f bXSsCLDB -o ../../fuzix.bin \
+	crt0.o commonmem.o vz200.o devlpr.o devtty.o video.o sd.o \
+	../../start.o ../../version.o ../../cpu-z80u/lowlevel-z80u-banked.o \
+	../../cpu-z80u/usermem_std-z80u-banked.o \
+	../../usermem.o tricks.o main.o discard.o \
+	../../timer.o ../../kdata.o devices.o ../../devio.o \
+	../../filesys.o ../../blk512.o ../../process.o \
+	../../inode.o ../../syscall_exec.o ../../syscall_exec16.o \
+	../../syscall_fs.o ../../syscall_fs2.o ../../syscall_fs3.o \
+	../../syscall_proc.o ../../syscall_other.o ../../syscall_net.o \
+	../../network.o ../../tty.o ../../mm.o ../../mm/memalloc_none.o \
+	../../swap.o ../../mm/simple.o ../../devsys.o ../../vt.o \
+	tinydisk.o tinydisk_discard.o tinysd.o \
+	/opt/fcc/lib/z80/libz80.a -m fuzix.tmpmap -R fuzix.relocs
+	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
+	# Perform the banking conversion
+	bankman ../../fuzix.bin fuzix.tmpmap fuzix.relocs z80
+	# TODO: font
+	# Assemble the ROM as a single image
 	# Our image consists of the following in order starting at LBA 1
 	# Bank 0 0x4000 for 10K
 	# Bank 1 0x4000 for 10K
 	# Bank 0 0x9000 for 28K
 	# Common 0x7200 for 5.5K
 	# Font packed on the end for machines with the high res mod
-	dd if=../../bank1.bin of=fuzix.boot bs=512 skip=32 count=20
-	dd if=../../bank2.bin of=fuzix.boot bs=512 skip=32 seek=20 count=20
-	dd if=../../common.bin of=fuzix.boot bs=512 skip=72 seek=40 count=56
-	dd if=../../common.bin of=fuzix.boot bs=512 skip=57 seek=96 count=11
-	dd if=../../bank3.bin of=fuzix.boot bs=512 skip=56 seek=107 count=4
+	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=160 count=20
+	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=288 seek=20 count=20
+	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=72 seek=40 count=56
+	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=57 seek=96 count=11
+	# TODO add FONT
+	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=56 seek=107 count=4
 
-booter: booter.s
-	sdasz80 -o booter.s
-	sdldz80 -i booter.rel
-	makebin -s 65535 booter.ihx booter.tmp
+booter: booter.S
+	fcc -mz80 -c booter.S
+	ldz80 -b booter.o -o booter.tmp
 	dd if=booter.tmp of=booter.vz bs=1 skip=32744 count=536
 #
 #	Alternate Boot ROM image.
 #	TODO: support bootstrapping sanely off the standard boot rom with a .VZ
 #
-boot: boot.s
-	sdasz80 -o boot.s
-	sdldz80 -i boot.rel
-	makebin -s 65535 boot.ihx boot.tmp
+boot: boot.S
+	fcc -mz80 -c boot.S
+	ldz80 -b boot.o -o boot.tmp
 	dd if=boot.tmp bs=1 skip=16384 >boot.tmp2
 	dd if=boot.tmp2 bs=6034 count=1 conv=sync >sdboot.rom
 
-bootblock: bootblock.s
-	sdasz80 -o bootblock.s
-	sdldz80 -i bootblock.rel
-	makebin -s 65535 bootblock.ihx bootblock.bin
+bootblock: bootblock.S
+	fcc -mz80 -c bootblock.S
+	ldz80 -b bootblock.o -o bootblock.bin
 
 IMAGES = $(FUZIX_ROOT)/Images/$(TARGET)
 
