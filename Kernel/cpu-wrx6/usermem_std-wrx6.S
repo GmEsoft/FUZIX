@@ -18,6 +18,7 @@ __uputc:
 	stbb	(x)
 	jsr	map_kernel
 	ldx	(s+)
+	clr	b
 	rsr
 
 __uputw:
@@ -28,6 +29,7 @@ __uputw:
 	stb	(x)
 	jsr	map_kernel
 	ldx	(s+)
+	clr	b
 	rsr
 
 __ugetc:
