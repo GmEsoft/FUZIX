@@ -828,7 +828,8 @@ int netproto_begin_connect(struct socket *s)
 		return 1;
 	} else {
 		/* UDP/RAW - note have to do our own filtering for 'connect' */
-		memcpy(&s->src_addr, &udata.u_net.addrbuf, sizeof(struct ksockaddr));
+		memcpy(&s->dst_addr, &udata.u_net.addrbuf, sizeof(struct ksockaddr));
+		s->dst_len = sizeof(struct sockaddr_in);
 		s->s_state = SS_CONNECTED;
 		/* Complete now, no event will wake the caller */
 		sock_wake[s->s_num] = 1;
@@ -921,8 +922,10 @@ int netproto_read(struct socket *s)
 			if (s->s_type == W5100_UDP) {
 				w5x00_read(i, off, 2, &udata.u_net.addrbuf.sa.sin.sin_port);
 				off +=2;
-				if (s->src_addr.sa.sin.sin_addr.s_addr && s->src_addr.sa.sin.sin_addr.s_addr !=
-					udata.u_net.addrbuf.sa.sin.sin_addr.s_addr)
+				if (s->s_state == SS_CONNECTED &&
+				    s->dst_addr.sa.sin.sin_addr.s_addr &&
+				    s->dst_addr.sa.sin.sin_addr.s_addr !=
+				    udata.u_net.addrbuf.sa.sin.sin_addr.s_addr)
 					filtered = 1;
 			}
 			w5x00_read(i, off, 2, (uint8_t *) &n);	/* Actual packet size */
