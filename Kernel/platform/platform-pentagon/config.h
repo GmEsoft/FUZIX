@@ -6,7 +6,7 @@
 /* Enable to make ^A drop back into the monitor */
 #undef CONFIG_MONITOR
 /* Profil syscall support (not yet complete) */
-#define CONFIG_PROFIL
+#undef CONFIG_PROFIL
 /* Multiple processes in memory at once */
 #define CONFIG_MULTI
 /* CP/M emulation */
