@@ -6,36 +6,21 @@
 ;
 ; This code handles the 'big' machines with 256K+ RAM
 ;
-        .module tricks
 
-        .globl _ptab_alloc
-        .globl _makeproc
-	.globl _udata
-        .globl _getproc
-        .globl _plt_monitor
-        .globl _plt_switchout
-        .globl _switchin
-        .globl _dofork
-        .globl _runticks
-        .globl unix_syscall_entry
-        .globl interrupt_handler
-	.globl current_map
-	.globl _ptab
-	.globl _swapper
-	.globl _int_disabled
-	.globl switch_bank
-	.globl _inswap
+;
+;	TODO: register saves
+;
+        .export _plt_switchout
+        .export _switchin
+        .export _dofork
 
-	.globl _switchedwb
-	.globl _switchedbank
+	.export _switchedwb
+	.export _switchedbank
 
-        ; imported debug symbols
-        .globl outstring, outde, outhl, outbc, outnewline, outchar, outcharhex
+#include "../../build/kernelu.def"
+#include "../../cpu-z80u/kernel-z80.def"
 
-        .include "kernel.def"
-        .include "../../cpu-z80/kernel-z80.def"
-
-        .area _COMMONMEM
+	.common
 
 ; Switchout switches out the current process, finds another that is READY,
 ; possibly the same process, and switches it in.  When a process is
@@ -45,7 +30,7 @@ _plt_switchout:
         di
         ; save machine state
 
-        ld hl, #0 ; return code set here is ignored, but _switchin can 
+        ld hl, 0 ; return code set here is ignored, but _switchin can 
         ; return from either _switchout OR _dofork, so they must both write 
         ; U_DATA__U_SP with the following on the stack:
         push hl ; return code
@@ -66,18 +51,30 @@ _plt_switchout:
 	; Stash the uarea back into process memory
 	ld a, (_udata + U_DATA__U_PAGE2)
 
-	; Macro as this depends on the clone
-	switch
+	; Scorpion need a little helper
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
 	; This includes the stacks, so be careful on restore
-	ld hl, #_udata
-	ld de, #U_DATA_STASH
-	ld bc, #U_DATA__TOTALSIZE
+	ld hl, _udata
+	ld de, U_DATA_STASH
+	ld bc, U_DATA__TOTALSIZE
 	ldir
 
 	ld a, (current_map)
 
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
         ; find another process to run (may select this one again)
 	push af
@@ -92,30 +89,33 @@ _plt_switchout:
         ; we should never get here
         call _plt_monitor
 
-badswitchmsg: .ascii "_switchin: FAIL"
-            .db 13, 10, 0
+badswitchmsg:
+	.ascii	"_switchin: FAIL"
+        .byte	13, 10, 0
 
 _switchin:
+
+	; FIXME: BC - reg saves etc
         di
-	pop hl	; far padding
-        pop bc  ; return address
-        pop de  ; new process pointer
+	pop	hl	; far padding
+        pop	bc	; return address
+        pop	de	; new process pointer
 ;
 ;	FIXME: do we actually *need* to restore the stack !
 ;
-        push de ; restore stack
-        push bc ; restore stack
-	push hl ; far padding
+        push	de ; restore stack
+        push	bc ; restore stack
+	push	hl ; far padding
 
 	push de
-        ld hl, #P_TAB__P_PAGE_OFFSET
+        ld hl, P_TAB__P_PAGE_OFFSET
 	add hl, de	; process ptr
 	pop de
 	;
 	;	Get ourselves a valid private stack ASAP. We are going to
 	;	copy udata around and our main stacks are in udata
 	;
-	ld sp, #_swapstack
+	ld sp, _swapstack
 
 	;
 	;	Do we need to swap in the new process ?
@@ -139,12 +139,19 @@ _switchin:
 	; from the swap path. Not in any normal situation I think.
 	;
 	ld a,(_switchedbank)
-	switch
+
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
 	exx
-	ld hl,#0x8000
-	ld de,#0xC000
-	ld bc,#0x4000
+	ld hl,0x8000
+	ld de,0xC000
+	ld bc,0x4000
 	ldir			; until we optimize
 	exx
 	xor a
@@ -173,7 +180,7 @@ nowback:
 	;
 	; We have been loaded into 8000-FFFF directly
 	;
-	ld a,#1
+	ld a,1
 	ld (_int_disabled),a
 	dec a
 	di
@@ -182,7 +189,7 @@ nowback:
 	; and it is not clean so must be written back in future
 	ld a,(hl)
 	ld (_switchedbank),a
-	ld a,#1
+	ld a,1
 	ld (_switchedwb),a
 	inc hl
 	inc hl			; point to PAGE_2
@@ -233,24 +240,36 @@ not_swapped:
 	;
 	; Ok we need to shuffle the banks
 	;
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
 	exx
-	ld hl,#0x8000
-	ld de,#0xC000
-	ld bc,#0x4000
+	ld hl,0x8000
+	ld de,0xC000
+	ld bc,0x4000
 	ldir			; until we optimize
 	exx
 no_copyback:
 	ld a,(hl)		; p->p_page
 	ld (_switchedbank),a
 
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
 	exx
-	ld hl,#0xC000
-	ld de,#0x8000
-	ld bc,#0x4000
+	ld hl,0xC000
+	ld de,0x8000
+	ld bc,0x4000
 	ldir
 	exx
 
@@ -260,7 +279,7 @@ no_copyback:
 	; Entered with HL = &page2
 	;
 no_relocate:
-	ld a,#1
+	ld a,1
 	ld (_switchedwb),a
 
 	ld a,(hl)	; p->p_page2
@@ -271,16 +290,22 @@ no_relocate:
 	jr z, skip_copyback
 
 	;	Pages please
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
 	;	Copy the stash from the user page back down into common
 	;	The alternate registers are free - we use them for the
 	;	block copies
 	;
 	exx
-	ld hl, #U_DATA_STASH
-	ld de, #_udata
-	ld bc, #U_DATA__TOTALSIZE
+	ld hl, U_DATA_STASH
+	ld de, _udata
+	ld bc, U_DATA__TOTALSIZE
 	ldir
 	exx
 
@@ -291,7 +316,13 @@ skip_copyback:
 	;
 
 	ld a, (current_map)
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
         ; check u_data->u_ptab matches what we wanted
         ld hl, (_udata + U_DATA__U_PTAB) ; u_data->u_ptab
@@ -302,16 +333,16 @@ skip_copyback:
 	; wants optimising up a bit
 	ld ix, (_udata + U_DATA__U_PTAB)
         ; next_process->p_status = P_RUNNING
-        ld P_TAB__P_STATUS_OFFSET(ix), #P_RUNNING
+        ld (ix + P_TAB__P_STATUS_OFFSET), P_RUNNING
 
 	; Fix any moved page pointers
 	; Just do one byte of each as that is all we use on this platform
-	ld a, P_TAB__P_PAGE_OFFSET(ix)
+	ld a, (ix + P_TAB__P_PAGE_OFFSET)
 	ld (_udata + U_DATA__U_PAGE), a
-	ld a, P_TAB__P_PAGE2_OFFSET(ix)
+	ld a, (ix + P_TAB__P_PAGE2_OFFSET)
 	ld (_udata + U_DATA__U_PAGE2), a
         ; runticks = 0
-        ld hl, #0
+        ld hl, 0
         ld (_runticks), hl
 
         ; restore machine state -- note we may be returning from either
@@ -340,7 +371,7 @@ skip_copyback:
 
 switchinfail:
 	call outhl
-        ld hl, #badswitchmsg
+        ld hl, badswitchmsg
         call outstring
 	; something went wrong and we didn't switch in what we asked for
         jp _plt_monitor
@@ -363,7 +394,7 @@ _dofork:
         ld (fork_proc_ptr), hl
 
         ; prepare return value in parent process -- HL = p->p_pid;
-        ld de, #P_TAB__P_PID_OFFSET
+        ld de, P_TAB__P_PID_OFFSET
         add hl, de
         ld a, (hl)
         inc hl
@@ -395,13 +426,13 @@ _dofork:
         ; --------- copy process ---------
 
         ld hl, (fork_proc_ptr)
-        ld de, #P_TAB__P_PAGE2_OFFSET	;	bank number for high page
+        ld de, P_TAB__P_PAGE2_OFFSET	;	bank number for high page
         add hl, de
         ; load p_page for the high page
         ld c, (hl)
 	push hl
 
-	ld hl, (_udata + U_DATA__U_PAGE + 2)
+	ld hl, (_udata+U_DATA__U_PAGE+2)
 	ld a, l
 
 	;
@@ -417,11 +448,17 @@ _dofork:
 
 	ld a,(_udata + U_DATA__U_PAGE)	;	low page of parent
 
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
-	ld hl, #0x8000			; 	Fixed
-	ld de, #0xC000			;	Page we just mapped in
-	ld bc, #16384
+	ld hl, 0x8000			; 	Fixed
+	ld de, 0xC000			;	Page we just mapped in
+	ld bc, 16384
 	ldir
 
 	; We have one weirdness left. When we copied these up to the parent
@@ -432,28 +469,41 @@ _dofork:
 	dec hl				;	Child low page pointer
 	ld a,(hl)
 	ld (_switchedbank),a		; child bank (p->p_page)
-	ld a,#1
+	ld a,1
 	ld (_switchedwb),a
 
 	; Copy done
 
 	ld a, (_udata + U_DATA__U_PAGE2)	; parent memory high
 
-	switch			; Switch context to parent in 0xC000+
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
 	; We are going to copy the uarea into the parents uarea stash
 	; we must not touch the parent uarea after this point, any
 	; changes only affect the child
-	ld hl, #_udata		; copy the udata from common into the
-	ld de, #U_DATA_STASH	; target process
-	ld bc, #U_DATA__TOTALSIZE
+	ld hl, _udata		; copy the udata from common into the
+	ld de, U_DATA_STASH	; target process
+	ld bc, U_DATA__TOTALSIZE
 	ldir
 
 	;
 	; And back into the kernel
 	;
 	ld a, (current_map)
-	switch
+
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
         ; now the copy operation is complete we can get rid of the stuff
         ; _switchin will be expecting from our copy of the stack.
 
@@ -463,7 +513,7 @@ _dofork:
 	pop bc
 
         ; Make a new process table entry, etc.
-	ld hl, #_udata
+	ld hl, _udata
 	push hl
         ld hl, (fork_proc_ptr)
         push hl
@@ -474,7 +524,7 @@ _dofork:
 	pop bc
 
         ; runticks = 0;
-        ld hl, #0
+        ld hl, 0
         ld (_runticks), hl
         ; in the child process, fork() returns zero.
 	;
@@ -496,16 +546,22 @@ _dofork:
 ;	we can use with a lazy copying model
 ;
 bankfork:
-	ld b, #0x3D		; 64 x 256 minus 3 sets for the uarea stash/irqs
-	ld hl, #0xC000		; base of memory to fork (vectors included)
+	ld b, 0x3D		; 64 x 256 minus 3 sets for the uarea stash/irqs
+	ld hl, 0xC000		; base of memory to fork (vectors included)
 bankfork_1:
 	push bc			; Save our counter and also child offset
 	push hl
 
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
-	ld de, #bouncebuffer
-	ld bc, #256
+	ld de, bouncebuffer
+	ld bc, 256
 	ldir			; copy into the bounce buffer
 	pop de			; recover source of copy to bounce
 				; as destination in new bank
@@ -515,10 +571,16 @@ bankfork_1:
 	ld a, c			; switch to the child
 	push bc			; save the bank pointers
 
-	switch
+#ifdef NONSTD_SWITCH
+	call	switch_bank_nosave
+#else
+	ld bc,0x7ffd
+	or BANK_BITS
+	out (c),a
+#endif
 
-	ld hl, #bouncebuffer
-	ld bc, #256
+	ld hl, bouncebuffer
+	ld bc, 256
 	ldir			; copy into the child
 	pop bc			; recover the bank pointers
 	ex de, hl		; destination is now source for next bank
@@ -529,7 +591,8 @@ bankfork_1:
 ;
 ;	For the moment
 ;
-	.area _COMMONDATA
+	.commondata
+
 bouncebuffer:
 	.ds 256
 ;	We can keep a stack in common because we will complete our
@@ -538,9 +601,9 @@ bouncebuffer:
 ;	so share with bouncebuffer
 _swapstack:
 _switchedbank:
-	.db 0
+	.byte 0
 _switchedwb:
-	.db 0
+	.byte 0
 
 fork_proc_ptr:
-	.dw 0 ; (C type is struct p_tab *) -- address of child process p_tab entry
+	.word 0 ; (C type is struct p_tab *) -- address of child process p_tab entry

@@ -3,56 +3,60 @@ CDSRCS = discard.c
 DSRCS = ../../dev/tinyide.c ../../dev/tinysd.c ../../dev/tinydisk.c
 DDSRCS = ../../dev/tinyide_discard.c ../../dev/tinysd_discard.c
 DDSRCS += ../../dev/tinydisk_discard.c
-DZSRCS = ../../dev/zx/nemoide.c ../../dev/zx/zxmmc.c ../../dev/zx/zxkeyboard.c
+DZSRCS = ../../dev/zx/zxmmc.c ../../dev/zx/zxkeyboard.c
 DZSRCS += ../../dev/zx/devinput.c ../../dev/zx/bankbig.c ../../dev/zx/zxtty.c
 DDZSRCS =
-ASRCS = crt0.s pentagon.s zxvideo.s
-ASRCS += tricks.s commonmem.s
+AZSRCS = ../../dev/zx/nemoide.S
+ASRCS = crt0.S pentagon.S zxvideo.S
+ASRCS += tricks.S commonmem.S
 
-COBJS = $(CSRCS:.c=.rel)
-CDOBJS = $(CDSRCS:.c=.rel)
-AOBJS = $(ASRCS:.s=.rel)
-DOBJS = $(patsubst ../../dev/%.c,%.rel, $(DSRCS))
-DDOBJS = $(patsubst ../../dev/%.c,%.rel, $(DDSRCS))
-DZOBJS = $(patsubst ../../dev/zx/%.c,%.rel, $(DZSRCS))
-DDZOBJS = $(patsubst ../../dev/zx/%.c,%.rel, $(DDZSRCS))
-OBJS  = $(COBJS) $(CDOBJS) $(AOBJS) $(DOBJS) $(DDOBJS) $(DZOBJS) $(DDZOBJS)
+COBJS = $(CSRCS:.c=.o)
+CDOBJS = $(CDSRCS:.c=.o)
+AOBJS = $(ASRCS:.S=.o)
+DOBJS = $(patsubst ../../dev/%.c,%.o, $(DSRCS))
+DDOBJS = $(patsubst ../../dev/%.c,%.o, $(DDSRCS))
+AZOBJS = $(patsubst ../../dev/zx/%.c,%.o, $(AZSRCS))
+DZOBJS = $(patsubst ../../dev/zx/%.c,%.o, $(DZSRCS))
+DDZOBJS = $(patsubst ../../dev/zx/%.c,%.o, $(DDZSRCS))
+OBJS  = $(COBJS) $(CDOBJS) $(AOBJS) $(AZOBJS) $(DOBJS) $(DDOBJS) $(DZOBJS) $(DDZOBJS)
 
 CROSS_CCOPTS += -I../../dev/ -I../../dev/zx/
 
-CROSS_CC_SEG3 = --codeseg CODE3
+CROSS_CC_SEG3 = -Toverlay3
 
 all:	$(OBJS)
 
-$(COBJS): %.rel: %.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $<
+$(COBJS): %.o: %.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $< -o $@
 
-$(CDOBJS): %.rel: %.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
+$(CDOBJS): %.o: %.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $< -o $@
 
-$(DOBJS): %.rel: ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $<
+$(DOBJS): %.o: ../../dev/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $< -o $@
 
-$(DDOBJS): %.rel: ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
+$(DDOBJS): %.o: ../../dev/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $< -o $@
 
-$(DZOBJS): %.rel: ../../dev/zx/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $<
+$(DZOBJS): %.o: ../../dev/zx/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG3) -c $< -o $@
 
-$(DDZOBJS): %.rel: ../../dev/zx/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
+$(DDZOBJS): %.o: ../../dev/zx/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $< -o $@
 
-$(AOBJS): %.rel: %.s
-	$(CROSS_AS) $(ASOPTS) $<
+$(AOBJS): %.o: %.S
+	$(CROSS_AS) $(ASOPTS) $< -o $@
+
+$(AZOBJS): %.o: ../../dev/zx/%.S
+	$(CROSS_AS) $(ASOPTS) $< -o $@
 
 clean:
-	rm -f $(OBJS) *.lst *.asm *.sym *.rst *.rel core *~ 
-	rm -f block? loader.bin
+	rm -f $(OBJS) *.lst *.asm *.sym *.rst *.o core *~ 
+	rm -f loader.bin
 
-loader.bin: loader.s
-	sdasz80 -o loader.s
-	sdldz80 -i loader.rel
-	makebin -s 32768 loader.ihx loader.tmp
+loader.bin: loader.S
+	fcc -mz80 -c loader.S
+	ldz80 -b loader.o -o loader.tmp
 	dd if=loader.tmp bs=2048 skip=15 count=1 conv=sync of=loader.bin
 
 image: loader.bin

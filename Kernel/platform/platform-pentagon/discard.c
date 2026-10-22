@@ -12,12 +12,12 @@ void pagemap_init(void)
 	uint8_t i;
 
 	/* Pentagon uses 7FFD as follows
-		7: 256K
-		6: 128K
-		2: 64K
-		1: 32K
-		0: 16K
-		
+	   7: 256K
+	   6: 128K
+	   2: 64K
+	   1: 32K
+	   0: 16K
+
 	   The 1MB one uses bit 5 for 512K */
 
 	/* Add the rest of the first 256K */
@@ -26,13 +26,13 @@ void pagemap_init(void)
 
 	/* 128-256K */
 	for (i = 0; i < 8; i++)
-		pagemap_add(0x40|i);
+		pagemap_add(0x40 | i);
 
 	/* TODO: enable 512K support in pentagon.s */
 	if (ramsize == 512) {
 		for (i = 0; i < 8; i++) {
-			pagemap_add(0x80|i);
-			pagemap_add(0xC0|i);
+			pagemap_add(0x80 | i);
+			pagemap_add(0xC0 | i);
 		}
 	}
 	/* TODO: 512K is more complex.
@@ -40,20 +40,7 @@ void pagemap_init(void)
 	   - ATM uses FDFD bits 2-0 */
 }
 
-/* string.c
- * Copyright (C) 1995,1996 Robert de Bath <rdebath@cix.compulink.co.uk>
- * This file is part of the Linux-8086 C library and is distributed
- * under the GNU Library General Public License.
- */
-int strcmp(const char *d, const char *s)
-{
-	register char *s1 = (char *) d, *s2 = (char *) s, c1, c2;
-
-	while ((c1 = *s1++) == (c2 = *s2++) && c1);
-	return c1 - c2;
-}
-
-uint8_t plt_param(char *p)
+uint_fast8_t plt_param(char *p)
 {
 	if (strcmp(p, "kempston") == 0) {
 		kempston = 1;

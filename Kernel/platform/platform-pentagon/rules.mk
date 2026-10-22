@@ -1,7 +1,9 @@
 #
 #	ZX128 uses banked kernel images
 #
-CROSS_CCOPTS += --external-banker
+export CCROSS_CCOPTS=-Os
+export BANKED=-banked
+export CCBANKED=-banked
 
 CFLAGS += -Idev/zx/
 #
@@ -9,11 +11,11 @@ CFLAGS += -Idev/zx/
 #
 export BANKED=-banked
 #
-export CROSS_CC_SEG1=--codeseg CODE2
-export CROSS_CC_SEG3=--codeseg CODE1
-export CROSS_CC_SEG4=--codeseg CODE1
-export CROSS_CC_SYS1=--codeseg CODE1
-export CROSS_CC_SYS2=--codeseg CODE1
-export CROSS_CC_SYS3=--codeseg CODE1
-export CROSS_CC_SYS4=--codeseg CODE4
-export CROSS_CC_SYS5=--codeseg CODE4
+export CROSS_CC_SEG1=-Toverlay2
+export CROSS_CC_SEG3=-Toverlay1
+export CROSS_CC_SEG4=-Toverlay1
+export CROSS_CC_SYS1=-Toverlay1
+export CROSS_CC_SYS2=-Toverlay1
+export CROSS_CC_SYS3=-Toverlay1
+export CROSS_CC_SYS4=-Toverlay4
+export CROSS_CC_SYS5=-Toverlay4

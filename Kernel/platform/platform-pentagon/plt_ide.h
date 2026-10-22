@@ -7,17 +7,20 @@
  *	at least it's not using the high bits of the address.
  */
 
-__sfr __at 0x10 data;
-__sfr __at 0x30 error;
-__sfr __at 0x50 count;
-__sfr __at 0x70 sec;
-__sfr __at 0x90 cyll;
-__sfr __at 0xB0 cylh;
-__sfr __at 0xD0 devh;
-__sfr __at 0xF0 cmd;
-__sfr __at 0xF0 status;
+#define data	0x10
+#define error	0x30
+#define count	0x50
+#define sec	0x70
+#define cyll	0x90
+#define cylh	0xB0
+#define devh	0xD0
+#define cmd	0xF0
+#define status	0xF0
 
 #define IDE_REG_DATA		0x10
 #define IDE_REG_DATA_LATCH	0x11
 
 #define IDE_NONSTANDARD_XFER
+
+#define ide_read(x)	in(x)
+#define ide_write(x,y)	out(x,y)
