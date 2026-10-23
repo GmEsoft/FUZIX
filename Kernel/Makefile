@@ -197,6 +197,7 @@ clean:
 	rm -f hogs.txt.old tools/*~ version.c include/sysinfoblk.h tools/makeversion tools/trslabel
 	rm -f tools/atariboot tools/fontexpand font/font8x8_exp2.c tools/diskpad tools/visualize6809
 	rm -f *.rel *.lst *.sym *.o *.bin
+	rm -f dev/*.o dev/net/*.o
 	rm -f fuzix.hogs
 	+$(MAKE) -C platform/platform-$(TARGET) clean
 	+$(MAKE) -C tools/bankld clean
