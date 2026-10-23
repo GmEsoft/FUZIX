@@ -196,14 +196,15 @@ clean:
 	rm -f tools/bin2sna tools/bin2z80 tools/chkmdv tools/decbdragon tools/decb-image tools/decb-mooh hogs.txt
 	rm -f hogs.txt.old tools/*~ version.c include/sysinfoblk.h tools/makeversion tools/trslabel
 	rm -f tools/atariboot tools/fontexpand font/font8x8_exp2.c tools/diskpad tools/visualize6809
-	rm -f *.rel *.lst *.sym *.o *.bin
-	rm -f dev/*.o dev/net/*.o
+	rm -f *.rel *.lst *.sym *.o *.bin *.asm
+	rm -f dev/*.o dev/net/*.o dev/*.rel dev/net/*.rel
+	rm -f cpu-$(CPU)/*.o cpu-$(CPU)/*.rel cpu-$(CPU)/*.lst cpu-$(CPU)/*.sym
 	rm -f fuzix.hogs
 	+$(MAKE) -C platform/platform-$(TARGET) clean
 	+$(MAKE) -C tools/bankld clean
 	+$(MAKE) -C cpm-loader clean
 	+$(MAKE) -C cpm-loader-fcc clean
-	+$(MAKE) -C cpu-$(CPU) clean
+	+if [ -f cpu-$(CPU)/Makefile ]; then $(MAKE) -C cpu-$(CPU) clean; fi
 
 clean-all: clean
 	(cd tools/bankld; $(MAKE) clean)
