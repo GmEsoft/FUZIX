@@ -37,8 +37,8 @@ uputget:
         ld l, (ix + 6) ; src address
         ld h, (ix + 7)
         ; load DE with destination address (in userspace)
-        ld e, (ix + 4)
-        ld d, (ix + 5)
+        ld e, (ix + 8)
+        ld d, (ix + 9)
 	ld a, b
 	or c
 	ret
