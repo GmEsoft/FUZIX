@@ -47,7 +47,10 @@ $(NOBJS): %.o: ../../dev/net/%.c
 clean:
 	rm -f $(OBJS) $(JUNK)  core *~ fuzix.boot booter.tmp
 
-image: booter boot bootblock
+font:
+	ldz80 -b -D 0x0000 ../../font/font8x8.o -o font
+
+image: booter boot bootblock font
 	$(CROSS_LD) -b -C 0x9000 -O 0x4000 -X 0x7200 -f bXSsCLDB -o ../../fuzix.bin \
 	crt0.o commonmem.o vz200.o devlpr.o devtty.o video.o sd.o \
 	../../start.o ../../version.o ../../cpu-z80u/lowlevel-z80u-banked.o \
@@ -77,8 +80,7 @@ image: booter boot bootblock
 	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=288 seek=20 count=20
 	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=72 seek=40 count=56
 	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=57 seek=96 count=11
-	# TODO add FONT
-	dd if=../../fuzix.bin of=fuzix.boot bs=512 skip=56 seek=107 count=4
+	dd if=font of=fuzix.boot bs=512 seek=107 count=4
 
 booter: booter.S
 	fcc -mz80 -c booter.S

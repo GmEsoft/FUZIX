@@ -322,6 +322,7 @@ clear_line:
 	pop	de
 	inc	e
 	djnz	clear_line
+	pop	bc
 	ret
 clines_t:
 	call	m6847_tpos
@@ -355,6 +356,7 @@ _clear_across:
 	jr	z, ca_t
 
 	; TO DEBUG
+	pop	bc
 	ret
 	call	m6847_cpos
 	ld	e, 8
@@ -402,6 +404,7 @@ cursormake:
 	ld	(hl), a
 	add	hl, de
 	djnz	cursormake
+	pop	bc
 	ret
 cursorinv_t:
 	call	m6847_tpos
