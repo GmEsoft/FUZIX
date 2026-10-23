@@ -3,6 +3,7 @@
 U_DATA__TOTALSIZE	.equ	0x200	; 256+256 bytes @ 0x0100
 
 #define	CONFIG_SWAP
+#define	CONFIG_LOW_ROM
 
 PROGBASE		.equ	0x8800
 PROGLOAD		.equ	0x8800
