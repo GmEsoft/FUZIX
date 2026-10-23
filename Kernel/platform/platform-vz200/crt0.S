@@ -57,9 +57,9 @@ init:
 	ld	sp, kstack_top
 
 	;	Clear the BSS (will blow away the boot loader)
-	ld	hl, __data
-	ld	de, __data+1
-	ld	bc, __data_size-1
+	ld	hl, __bss
+	ld	de, __bss+1
+	ld	bc, __bss_size-1
 	ld	(hl), 0
 	ldir
 

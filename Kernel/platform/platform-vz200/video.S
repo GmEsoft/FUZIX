@@ -115,7 +115,7 @@ m6847_tpos:
 	ret
 
 getyx:
-	ld	hl, 6
+	ld	hl, 8
 	add	hl, sp
 	ld	e,(hl)		; Y
 	inc	hl

@@ -141,6 +141,7 @@ readl:
 	nop
 	ini
 	jr	nz, readl
+	pop	bc
 	jp	map_kernel_restore
 
 _sd_spi_tx_sector:
@@ -153,6 +154,7 @@ writel:
 	outi
 	nop
 	jr	nz, writel
+	pop	bc
 	jp	map_kernel_restore	
 
 ;
