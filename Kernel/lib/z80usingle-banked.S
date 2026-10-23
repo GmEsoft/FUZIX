@@ -332,5 +332,5 @@ nobufs:
 ;
 	.commondata
 
-	.ds 128
+	.ds 256
 _swapstack:
