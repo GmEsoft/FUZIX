@@ -33,7 +33,8 @@ db_state_layout.h: dbgen state-layout.def
 	./dbgen STATE <state-layout.def >db_state_layout.h
 
 clean:
-	rm -f  $(OBJ) booking core *~
+	rm -f $(OBJ) booking dbgen core *~
+	rm -f db_booking_layout.h db_customer_layout.h db_staff_layout.h db_state_layout.h
 
 rmbak:
 	rm -f *~ core

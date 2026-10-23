@@ -57,4 +57,5 @@ size.report: $(APPS)
 
 # Clean
 clean:
-	rm -f $(OBJS_MECH) $(OBJS_KB) $(APPS) $(SRCS_MECH:.c=) $(SRCS_KB:.c=) *.lst *.map size.report *.o *.rel *.bin *.data *.text *.debug
+	rm -f $(OBJS_MECH) $(OBJS_KB) $(APPS) $(SRCS_MECH:.c=) $(SRCS_KB:.c=) dbgen *.lst *.map size.report *.o *.rel *.bin *.data *.text *.debug
+	rm -f db_booking_layout.h db_customer_layout.h db_staff_layout.h db_state_layout.h

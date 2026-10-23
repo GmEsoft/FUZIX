@@ -44,8 +44,8 @@ copt: $(OBJ_COPT)
 	cp rules.$(USERCPU) copt.rules
 
 clean:
-	rm -f cc cc0 cc1 cc2 *.o core *~ *.asm *.lst *.sym *.map *.noi *.lk *.ihx *.tmp *.bin size.report
-	(cd support$(USERCPU); make clean)
+	rm -f cc cc0 cc1 cc2 copt copt.rules libcpu.a *.o core *~ *.asm *.lst *.sym *.map *.noi *.lk *.ihx *.tmp *.bin size.report
+	if [ -d support$(USERCPU) ]; then $(MAKE) -C support$(USERCPU) clean; fi
 
 rmbak:
 	rm -f *~ core

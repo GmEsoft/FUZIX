@@ -18,5 +18,5 @@ levee: $(OBJS) $(CRT0)
 	$(CC) $(CFLAGS) $(COPT) -c -DVT52=0 -DANSI=1 -o $@ $<
 
 clean:
-	rm -rf $(OBJS) *.lst *.sym *.map *.noi *.lk *.ihx *.tmp *~ *.o *.rel *.asm
+	rm -rf $(OBJS) *.lst *.sym *.map *.noi *.lk *.ihx *.tmp *~ *.o *.rel *.asm *.debug
 	rm -f levee *.bin levee-termcap

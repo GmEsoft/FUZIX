@@ -64,4 +64,5 @@ libz80.a: makeldst $(OBJ)
 
 clean:
 	rm -f *.o *.a
-	rm -f ldword/* stword/*
+	rm -f makeldst
+	rm -rf ldword stword ldbyte stbyte
