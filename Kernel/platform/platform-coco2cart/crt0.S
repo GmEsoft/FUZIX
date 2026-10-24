@@ -44,7 +44,8 @@ identified:
 		orcc #0x10
 stop:		bra stop
 
-; FIXME: where to abs this
-		.data
+		; Will be at 0x0400
+		.discard
+
 		.byte 0x15,0xC0,0xDE,0x4C,0x0C,0x02
 

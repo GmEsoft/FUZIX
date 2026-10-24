@@ -9,7 +9,7 @@ Supported hardware:
 	COCO SDC
 
 Please see config.h to select SDC or IDE support. There isn't room in such
-a small space for both and for a full high res display.
+a small space for both.
 
 Disk Layout
 ===========
@@ -25,9 +25,8 @@ User View
 =========
 0000-00FF	Interrupt stack
 0100-01FF	Vectors plus the swap stack
-0200-19FF	Display
-1A00-1BFF	udata/stack
-1C00-7FFF	Common, data and some kernel code
+0200-03FF	Display
+0400-7FFF	Common, data and some kernel code
 8000-FDFF	User space
 FE00-FEFF	Free
 FF00-FFFF	I/O etc
@@ -36,9 +35,9 @@ Kernel Mode View
 ================
 0000-00FF	Interrupt stack
 0100-01FF	Vectors plus swap stack
-0200-19FF	Display
-1A00-1BFF	udata/stack
-1C00-7FFF	Common, data and some kernel code
+0200-03FF	Display
+0400-05FF	udata/stack
+0600-7FFF	Common, data and some kernel code
 8000-BFFF	ROM
 C000-FEFF	Kernel
 FF00-FFFF	I/O etc

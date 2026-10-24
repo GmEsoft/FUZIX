@@ -27,7 +27,7 @@ CROSS_CCOPTS += -I../../dev/
 all: $(OBJS)
 
 $(COBJS): %$(BINEXT): %.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG2) -c $<
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG1) -c $<
 
 $(CIOBJS): %$(BINEXT): %.c
 	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG1) -c $<
@@ -48,7 +48,7 @@ clean:
 	rm -f *.o *~ fuzixide.rom fuzixsdc.rom fuxix.img
 
 image:
-	$(CROSS_LD) -b -X 0x0400 -C 0xC000 -S 0x1A00 -f CSsLDBbX -o ../../fuzix.bin -m fuzix.tmpmap \
+	$(CROSS_LD) -b -C 0xC000 -X 0x0400 -S 0x1000 -f CXSsLDBb -o ../../fuzix.bin -m fuzix.tmpmap \
 	crt0.o bootstrap.o commonmem.o coco2.o discard.o ../../mm/simple.o \
 	../../start.o ../../version.o ../../cpu-6809/lowlevel-6809.o \
 	tricks.o main.o ../../timer.o ../../kdata.o devices.o \
@@ -65,7 +65,7 @@ image:
 	# We now have C000-FFFF ROM
 	# 0400-7FFF single RAM block
 	# This is much simpler and storage size simply isn't an issue
-	dd if=../../fuzix.bin of=fuzixide.rom bs=1024 skip=48 count=16
+	dd if=../../fuzix.bin of=fuzixide.rom bs=16384 skip=3 count=1 conv=sync
 	dd if=../../fuzix.bin of=fuzix.ide bs=1024 skip=1 count=31
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
 
@@ -81,7 +81,7 @@ image:
 	../../syscall_exec16.o devtty.o ../../vt.o video.o  ../../syscall_fs3.o \
 	../../blk512.o ../../font/font8x8.o devsdc.o sdc.o ../../devinput.o devinput.o \
 	/opt/fcc/lib/6809/lib6809.a
-	dd if=../../fuzix-sdc.bin of=fuzixsdc.rom bs=1024 skip=48 count=16
+	dd if=../../fuzix-sdc.bin of=fuzixsdc.rom bs=16384 skip=3 count=1 conv=sync
 	dd if=../../fuzix-sdc.bin of=fuzix.sdc bs=1024 skip=1 count=31
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix-sdc.map
 

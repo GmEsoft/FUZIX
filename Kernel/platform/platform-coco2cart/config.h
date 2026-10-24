@@ -3,9 +3,9 @@
  */
 
 #define CONFIG_WITH_IDE
-#define CONFIG_WITH_SDC
+//#define CONFIG_WITH_SDC
 
-#define CONFIG_TD_NUM	3		/* 2 HD 1 SD */
+#define CONFIG_TD_NUM	2		/* 2 HD 1 SD */
 #define CONFIG_TD_IDE
 
 /* Enable to make ^Z dump the inode table for debug */
@@ -41,8 +41,8 @@ extern uint16_t swap_dev;
 
 /* Video terminal, not a serial tty */
 #define CONFIG_VT
-#define CONFIG_FONT8X8
-#define CONFIG_FONT8X8SMALL
+//#define CONFIG_FONT8X8
+//#define CONFIG_FONT8X8SMALL
 
 /* We can reclaim discard into buffers */
 #define CONFIG_DYNAMIC_BUFPOOL

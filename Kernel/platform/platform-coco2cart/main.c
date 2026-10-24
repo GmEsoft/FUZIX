@@ -23,7 +23,8 @@ void do_beep(void)
 
 void plt_discard(void)
 {
-	vid256x192();
-	kputs("\033Y  \033J");
+	/* Not enough room alas */
+//	vid256x192();
+//	kputs("\033Y  \033J");
 }
 

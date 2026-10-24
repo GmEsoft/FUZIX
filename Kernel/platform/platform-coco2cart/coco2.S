@@ -43,30 +43,30 @@ vectors:
 vectors_end:
 
 init_early:
-	ldx #null_handler
-	stx 1
-	lda #0x7E
-	sta 0
-	sta 0x0071		; BASIC cold boot flag (will get trashed by
+	ldx	#null_handler
+	stx	1
+	lda	#0x7E
+	sta	0
+	sta	0x0071		; BASIC cold boot flag (will get trashed by
 				; irq stack but hopefully still look bad)
 	;
 	;	Move the display
 	;
-	ldx #0xFFC7
-	clr ,x+			; Set F0
-	clr ,x++		; Clear F1-F6
-	clr ,x++
-	clr ,x++
-	clr ,x++
-	clr ,x++
-	clr ,x++
-	ldy #0x0100
-	ldx #vectors
+	ldx	#0xFFC7
+	clr	,x+			; Set F0
+	clr	,x++		; Clear F1-F6
+	clr	,x++
+	clr	,x++
+	clr	,x++
+	clr	,x++
+	clr	,x++
+	ldy	#0x0100
+	ldx	#vectors
 cpvec:
-	ldd ,x++
-	std ,y++
-	cmpx #vectors_end
-	bne cpvec
+	ldd	,x++
+	std	,y++
+	cmpx	#vectors_end
+	bne	cpvec
 	rts
 
 init_hardware:
@@ -104,27 +104,26 @@ _framedet:
         .common
 
 _plt_reboot:
-	orcc #0x10
-	clr 0xFFBE
-	lda #0x7e
-	sta 0x0071		; in case IRQ left it looking valid
-	jmp [0xFFFE]
+	orcc	#0x10
+	clr	0xFFBE
+	lda	#0x7e
+	sta	0x0071		; in case IRQ left it looking valid
+	jmp	[0xFFFE]
 
 _plt_monitor:
-	orcc #0x10
-	bra _plt_monitor
+	orcc	#0x10
+	bra	_plt_monitor
 
 ___hard_di:
-	tfr cc,b		; return the old irq state
-	orcc #0x10
+	tfr	cc,b		; return the old irq state
+	orcc	#0x10
 	rts
 ___hard_ei:
-	andcc #0xef
+	andcc	#0xef
 	rts
 
 ___hard_irqrestore:		; B holds the data
-	ldd 2,s
-	tfr b,cc
+	tfr	b,cc
 	rts
 
 ;
@@ -239,25 +238,24 @@ badswi_handler:
 ;	debug via printer port
 ;
 outchar:
-	sta 0xFF02
-	lda 0xFF20
-	ora #0x02
-	sta 0xFF20
-	anda #0xFD
-	sta 0xFF20
+	sta	0xFF02
+	lda	0xFF20
+	ora	#0x02
+	sta	0xFF20
+	anda	#0xFD
+	sta	0xFF20
 	rts
 
 	.common
 
 _need_resched:
-	.byte 0
+	.byte	0
 romin:
-	.byte 0
+	.byte	0
 romsave:
-	.byte 0
+	.byte	0
 
 	.buffers
 _bufpool:
-	.ds 520*5		; initial buffers
+	.ds	520*5		; initial buffers
 
-	; Discard will follow this

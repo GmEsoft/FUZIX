@@ -140,7 +140,7 @@ void tty_interrupt(void)
 	if (r & 0x8) {
 		r = *uart_data;
 		tty_inproc(2,r);
-	}	
+	}
 }
 
 uint8_t keymap[8];
@@ -337,6 +337,7 @@ void plt_reinterrupt(void)
 	do_plt_interrupt(1);
 }
 
+#if 0
 static struct display display[4] = {
 	/* Two variants of 256x192 with different palette */
 	/* 256 x 192 */
@@ -406,10 +407,6 @@ static struct videomap displaymap = {
 /* bit 7 - A/G 6 GM2 5 GM1 4 GM0 & INT/EXT 3 CSS */
 static uint8_t piabits[] = { 0xF0, 0xF8, 0xE0, 0xE8};
 
-static struct fontinfo fontinfo = {
-	32, 127, 0, 0, FONT_INFO_8X8
-};
-
 #define pia1b	((volatile uint8_t *)0xFF22)
 #define sam_v	((volatile uint8_t *)0xFFC0)
 
@@ -423,16 +420,6 @@ int gfx_ioctl(uint_fast8_t minor, uarg_t arg, char *ptr)
 		return vt_ioctl(minor, arg, ptr);
 
 	switch (arg) {
-	case VTFONTINFO:
-		return uput(&fontinfo, ptr, sizeof(fontinfo));
-	case VTSETFONT:
-//			size = base = 0;
-//		case VTSETUDG:
-		return uget(ptr, fontdata_8x8 + base, size);
-		case VTGETFONT:
-//			size = base = 0;
-//		case VTGETUDG:
-		return uput(fontdata_8x8 + base, ptr, size);
 	case GFXIOC_GETINFO:
 		return uput(&display[vmode], ptr, sizeof(struct display));
 	case GFXIOC_MAP:
@@ -466,6 +453,7 @@ int gfx_ioctl(uint_fast8_t minor, uarg_t arg, char *ptr)
 	}
 	return -1;
 }
+#endif
 
 /* This is used by the vt asm code, but needs to live at the top of the kernel */
 uint16_t cursorpos;

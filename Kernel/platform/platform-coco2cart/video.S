@@ -19,6 +19,10 @@
 	.export _video_cmd
 
 
+; No room currently for text mode so just disable it and point it at C000
+
+_fontdata_8x8	.equ	0xC000
+
 ;
 ;	TODO: could hide the text video functions and init in discard ?
 ;
@@ -75,8 +79,8 @@ vidaddr:
 ;	plot_char(int8_t y, int8_t x, uint16_t c)
 ;
 _plot_char:
-	ldy 2,s
-	lda 4,s
+	lda 2,s		; B = Y, A = X
+	ldy 3,s		; Y = char
 	tst vidmode
 	bne plot_cg3
 	bsr txtaddr
@@ -308,62 +312,64 @@ video_endptr:
 ;	clear_across(int8_t y, int8_t x, uint16_t l)
 ;
 _clear_across:
-	ldy 2,s		; count
-	ldd 4,s		; Y into A, X into B
-	tst vidmode
-	beq clat
-	jsr vidaddr	; X now holds the address
-	tfr y,d		; Shuffle so we are writng to X and the counter
-	lda #0xff
+	lda	2,s	; Y = B A = X
+	ldy	3,s	; count
+	tst	vidmode
+	beq	clat
+	jsr	vidaddr	; X now holds the address
+	tfr	y,d	; Shuffle so we are writng to X and the counter
+	lda	#0xff
 clearnext:
-	sta ,x
-	sta 32,x
-	sta 64,x
-	sta 96,x
-	sta 128,x
-	sta 160,x
-	sta 192,x
-	sta 224,x
-	leax 1,x
+	sta	,x
+	sta	32,x
+	sta	64,x
+	sta	96,x
+	sta	128,x
+	sta	160,x
+	sta	192,x
+	sta	224,x
+	leax	1,x
 	decb
-	bne clearnext
+	bne	clearnext
 	rts
 clat:
-	jsr txtaddr	; X now holds address
-	tfr y,d		; count into B
-	lda #$20
+	jsr	txtaddr	; X now holds address
+	tfr	y,d		; count into B
+	lda	#$20
 clatl:
-	sta ,x+
+	sta	,x+
 	decb
-	bne clatl
+	bne	clatl
 	rts
 ;
 ;	clear_lines(int8_t y, int8_t ct)
 ;
 _clear_lines:
-	ldd 2,s		; A is Y B is CT
-	tst vidmode
-	bne clines_cg3
-	clrb
-	jsr txtaddr	; Start of line into X
-	lsl 3,s		; max of 15 lines
-	lsl 3,s
-	lsl 3,s
-	lsl 3,s		; x 16 cos as dword
-	ldd #$2020
+	lda	2,s		; B is Y A is CT
+	beq	cldone
+	tst	vidmode
+	bne	clines_cg3
+	clra
+	jsr	txtaddr		; Start of line into X
+	lsl	2,s		; max of 15 lines
+	lsl	2,s
+	lsl	2,s
+	lsl	2,s		; x 16 as dword
+	ldd	#$2020
 clt:
-	std ,x++
-	dec 3,s		; 32 bytes per line max 16 lines in text
-	bne clt
+	std	,x++
+	dec	2,s		; 32 bytes per line max 16 lines in text
+	bne	clt
+cldone:
 	rts
 
 clines_cg3:
 	clrb			; A is Y B is now 0 (X)
 	jsr vidaddr		; X now holds ptr to line start
 	ldd #$ffff
-	lsl 3,s
-	lsl 3,s
-	lsl 3,s
+	lsl 2,s
+	lsl 2,s
+	lsl 2,s
 wipel:
 	std ,x++
 	std ,x++
@@ -381,41 +387,41 @@ wipel:
 	std ,x++
 	std ,x++
 	std ,x++
-	dec 3,s			; count of lines
+	dec 2,s			; count of lines
 	bne wipel
 	rts
 
 _cursor_on:
-	ldd  2,s
-	tst vidmode
-	bne con_cg3
-	jsr txtaddr
-	stx cursor_save
+	lda	2,s
+	tst	vidmode
+	bne	con_cg3
+	jsr	txtaddr
+	stx	cursor_save
 coff_txt:
-	lda #0x40
-	eora ,x
-	sta ,x
+	lda	#0x40
+	eora	,x
+	sta	,x
 	rts
 
 con_cg3:
-	jsr vidaddr
-	stx cursor_save
+	jsr	vidaddr
+	stx	cursor_save
 	; Fall through
 _cursor_off:
-	ldx cursor_save
-	tst vidmode
-	beq coff_txt
-	ldb _vtattr
-	bitb #0x80
-	bne nocursor
-	com ,x
-	com 32,x
-	com 64,x
-	com 96,x
-	com 128,x
-	com 160,x
-	com 192,x
-	com 224,x
+	ldx	cursor_save
+	tst	vidmode
+	beq	coff_txt
+	ldb	_vtattr
+	bitb	#0x80
+	bne	nocursor
+	com	,x
+	com	32,x
+	com	64,x
+	com	96,x
+	com	128,x
+	com	160,x
+	com	192,x
+	com	224,x
 nocursor:
 _vtattr_notify:
 _cursor_disable:
@@ -467,39 +473,39 @@ t_b:	ldb	,x+		; get a byte from src
 ;	Find the address we need on a pixel row basis
 ;
 vidptr:
-	ldu #VIDEO_BASE
-	ldd ,x++		; Y into B
-	lda #32
+	ldu	#VIDEO_BASE
+	ldd	,x++		; Y into B
+	lda	#32
 	mul
-	leau d,u
-	ldd ,x++		; X
-	leau d,u
+	leau	d,u
+	ldd	,x++		; X
+	leau	d,u
 	rts
 
 _video_cmd:
-	ldx 2,s
-	pshs u
-	bsr vidptr		; u now points to the screen
+	tfr	d,x
+	pshs	u
+	bsr	vidptr		; u now points to the screen
 nextline:
-	pshs u			; save it for the next line
+	pshs	u			; save it for the next line
 nextop:
-	ldb ,x+			; op code, 0 = end of line
-	beq endline
+	ldb	,x+			; op code, 0 = end of line
+	beq	endline
 oploop:
-	lda ,u			; do one screen byte
-	anda ,x
-	eora 1,x
-	sta ,u+
+	lda	,u			; do one screen byte
+	anda	,x
+	eora	1,x
+	sta	,u+
 	decb
-	bne oploop		; keep going for run
-	leax 2,x
-	bra nextop		; next triplet
+	bne	oploop		; keep going for run
+	leax	2,x
+	bra	nextop		; next triplet
 endline:
-	puls u			; get position back
-	leau 32,u		; down one scan line
-	ldb ,x+			; get next op - 0,0 means end and done
-	bne oploop
-	puls u,pc
+	puls	u		; get position back
+	leau	32,u		; down one scan line
+	ldb	,x+		; get next op - 0,0 means end and done
+	bne	oploop
+	puls	u,pc
 
 	.data
 cursor_save:
