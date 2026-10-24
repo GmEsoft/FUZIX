@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <getopt.h>
 
 #define MAX_FIELD	80	/* Pointers to the beginning of each field
 				 * are stored in columns[], if a line holds
@@ -219,84 +220,71 @@ void cut(void)
 
 int main(int argc, char *argv[])
 {
-    int i = 1;
-    int numberFilenames = 0;
+    int i;
+    int c;
+    int nflag = NOTSET;
     name = argv[0];
 
     if (argc == 1)
 	cuterror(USAGE);
 
-    while (i < argc) {
-	if (argv[i][0] == '-') {
-	    switch (argv[i++][1]) {
-	    case 'd':
-		if (mode == OPTIONC || mode == OPTIONB)
-		    warn(DELIMITER_NOT_APPLICABLE, "d");
-		if (i == argc)
-		    cuterror(USAGE);
-		delim = argv[i++][0];
-		break;
+    while ((c = getopt(argc, argv, "b:c:d:f:isn")) != EOF) {
+	switch (c) {
+	case 'd':
+	    if (mode == OPTIONC || mode == OPTIONB)
+		warn(DELIMITER_NOT_APPLICABLE, "d");
+	    delim = *optarg;
+	    break;
 
-	    case 'f':
-		if (i == argc)
-		    cuterror(USAGE);
-	        strlcpy(line, argv[i++], BUFSIZ);
-		if (mode == OPTIONC || mode == OPTIONB)
-		    warn(OVERRIDING_PREVIOUS_MODE, "f");
-		mode = OPTIONF;
-		break;
+	case 'f':
+	    strlcpy(line, optarg, BUFSIZ);
+	    if (mode == OPTIONC || mode == OPTIONB)
+		warn(OVERRIDING_PREVIOUS_MODE, "f");
+	    mode = OPTIONF;
+	    break;
 
-	    case 'b':
-		if (i == argc)
-		    cuterror(USAGE);
-	        strlcpy(line, argv[i++], BUFSIZ);
-		if (mode == OPTIONF || mode == OPTIONC)
-		    warn(OVERRIDING_PREVIOUS_MODE, "b");
-		mode = OPTIONB;
-		break;
+	case 'b':
+	    strlcpy(line, optarg, BUFSIZ);
+	    if (mode == OPTIONF || mode == OPTIONC)
+		warn(OVERRIDING_PREVIOUS_MODE, "b");
+	    mode = OPTIONB;
+	    break;
 
-	    case 'c':
-		if (i == argc)
-		    cuterror(USAGE);
-	        strlcpy(line, argv[i++], BUFSIZ);
-		if (mode == OPTIONF || mode == OPTIONB)
-		    warn(OVERRIDING_PREVIOUS_MODE, "c");
-		mode = OPTIONC;
-		break;
+	case 'c':
+	    strlcpy(line, optarg, BUFSIZ);
+	    if (mode == OPTIONF || mode == OPTIONB)
+		warn(OVERRIDING_PREVIOUS_MODE, "c");
+	    mode = OPTIONC;
+	    break;
 
-	    case 'i':
-		flag_i = SET;
-		break;
+	case 'i':
+	    flag_i = SET;
+	    break;
 
-	    case 's':
-		flag_s = SET;
-		break;
+	case 's':
+	    flag_s = SET;
+	    break;
 
-	    case '\0':		/* - means: read from stdin */
-		numberFilenames++;
-		break;
+	case 'n':		/* needed for Posix, but no effect here */
+	    nflag = SET;
+	    break;
 
-	    case 'n':		/* needed for Posix, but no effect here */
-		if (mode != OPTIONB)
-		    warn(OPTION_NOT_APPLICABLE, "n");
-		break;
-
-	    default:
-		warn(UNKNOWN_OPTION, &(argv[i - 1][1]));
-	    }
-	} else {
-	    i++;
-	    numberFilenames++;
+	default:
+	    cuterror(USAGE);
 	}
     }
 
     /* Here follow the checks, if the selected options are reasonable. */
 
+    /* -n only applies to -b */
+    if (nflag == SET && mode != OPTIONB)
+	warn(OPTION_NOT_APPLICABLE, "n");
+
     if (mode == OPTIONB)	/* since in Minix char == byte */
 	mode = OPTIONC;
 
     /* Flag -s is only allowed with -f, otherwise warn and reset flag_s */
-    if (flag_s == SET && (mode == OPTIONB || mode == OPTIONC)) {
+    if (flag_s == SET && mode != OPTIONF) {
 	warn(OPTION_NOT_APPLICABLE, "s");
 	flag_s = NOTSET;
     }
@@ -309,40 +297,16 @@ int main(int argc, char *argv[])
 
     get_args();
 
-    if (numberFilenames != 0) {
-	i = 1;
-	while (i < argc) {
-	    if (argv[i][0] == '-') {
-		switch (argv[i][1]) {
-		case 'f':
-		case 'c':
-		case 'b':
-		case 'd':
-		    i += 2;
-		    break;
-
-		case 'n':
-		case 'i':
-		case 's':
-		    i++;
-		    break;
-
-		case '\0':
-		    fd = stdin;
-		    i++;
-		    cut();
-		    break;
-
-		default:
-		    i++;
-		}
+    if (optind < argc) {
+	for (i = optind; i < argc; i++) {
+	    if (strcmp(argv[i], "-") == 0) {
+		fd = stdin;
+		cut();
+	    } else if ((fd = fopen(argv[i], "r")) == NULL) {
+		warn(FILE_NOT_READABLE, argv[i]);
 	    } else {
-		if ((fd = fopen(argv[i++], "r")) == NULL) {
-		    warn(FILE_NOT_READABLE, argv[i - 1]);
-		} else {
-		    cut();
-		    fclose(fd);
-		}
+		cut();
+		fclose(fd);
 	    }
 	}
     } else {
