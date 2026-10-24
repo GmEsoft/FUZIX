@@ -112,6 +112,7 @@ static int display_one_gpio(int i, int fd)
 		printf(" (unknown %u)", gpio.info.flags);
 	}
 	putchar('\n');
+	return 0;
 }
 
 static int display_all_gpio(int fd)
