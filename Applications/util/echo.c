@@ -23,7 +23,7 @@ int main(int argc, const char *argv[])
 	if (*(++p)) break;
 	p = *(++argv);
     }
-    
+
     while ((p = *argv++) != NULL) {
 	while ((c = *p++) != '\0') {
 	    if (c == '\\' && eflag) {
@@ -48,6 +48,6 @@ int main(int argc, const char *argv[])
 	if (*argv) putchar(' ');
     }
     if (!nflag) putchar('\n');
-    
-    return 0;
+
+    return !!ferror(stdout);
 }
