@@ -41,6 +41,7 @@ SRCSNS = \
 
 
 SRCS  = \
+	ar.c \
 	banner.c \
 	bd.c \
 	blkdiscard.c \
