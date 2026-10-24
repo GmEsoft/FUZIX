@@ -489,7 +489,7 @@ arg_t _profil(void)
 		return 0;
 	}
 
-	n =  = size >> (scale - 1);
+	n = size >> (scale - 1);
 	if (!valaddr_w(samples, n, n))
 		return -1;
 
