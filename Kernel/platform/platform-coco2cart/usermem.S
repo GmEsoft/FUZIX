@@ -19,23 +19,23 @@
 	.common
 
 __ugetc:
-	ldx	2,s
+	tfr	d,x
 	jsr	map_proc_always
 	ldb	,x
 	clra
 	jmp	map_kernel
 
 __ugetw:
-	ldx	2,s
+	tfr	d,x
 	jsr	map_proc_always
 	ldd	,x
 	jmp	map_kernel
 
 __uget:
 	pshs	u
-	ldu	4,s		; kernel
-	ldx	6,s		; user
-	ldy	8,s		; count
+	tfr	d,u		; kernel
+	ldx	4,s		; user
+	ldy	6,s		; count
 	jsr	map_proc_always
 ugetl:
 	lda	,x+
@@ -48,8 +48,7 @@ ugetl:
 	puls	u,pc
 
 __uputc:
-	ldd	2,s
-	ldx	4,s
+	ldx	2,s
 	jsr	map_proc_always
 	stb	,x
 	clra
@@ -57,8 +56,7 @@ __uputc:
 	jmp	map_kernel
 
 __uputw:
-	ldd	2,s
-	ldx	4,s
+	ldx	2,s
 	jsr	map_proc_always
 	std	,x
 	clra
@@ -68,9 +66,9 @@ __uputw:
 ;	X = source, user, size on stack
 __uput:
 	pshs	u
-	ldx	4,s	; kernel
-	ldu	6,s	; user address
-	ldy	8,s	; count
+	tfr	d,u	; kernel
+	ldu	4,s	; user address
+	ldy	6,s	; count
 	jsr	map_proc_always
 uputl:
 	lda	,x+
@@ -84,8 +82,8 @@ uputl:
 
 ; TODO: steal optimization from COCO2
 __uzero:
-	ldx	2,s
-	ldy	4,s
+	tfr	d,x
+	ldy	2,s
 	jsr	map_proc_always
 uzloop:
 	clr	,x+

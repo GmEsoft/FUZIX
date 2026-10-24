@@ -61,10 +61,10 @@ txtaddr:
 	lslb
 	lslb
 	lslb			; x 8 so keep unsigned
-	leay b,x		; and add four times
-	leay b,x
-	leay b,x
-	leay b,x
+	leax b,x		; and add four times
+	leax b,x
+	leax b,x
+	leax b,x
 	rts
 ;
 ;	Compute the video base address

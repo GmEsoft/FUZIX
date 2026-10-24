@@ -14,7 +14,7 @@
 ;	for a simple memory mapping.
 ;
 _devide_read_data:
-	ldx	2,s
+	tfr	d,x
 	pshs	dp
 	lda	#0xFF
 	tfr	a,dp
@@ -94,7 +94,7 @@ readword:
 	puls	dp,pc
 
 _devide_write_data:
-	ldx	2,s
+	tfr	d,x
 	pshs	dp
 	lda	#0xFF
 	tfr	a,dp
