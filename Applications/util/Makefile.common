@@ -144,33 +144,18 @@ all: $(APPS) $(APPSNS) $(APPTC) $(APPOTHER) size.report
 
 $(APPS): %: %.o
 	$(LINKER) $(CRT0) $^ -o $@ $(LINKER_OPT) $(LINKER_TAIL)
-ifdef STRIP_FINAL
-	$(STRIP) $(STRIP_OPT) $@
-endif
 
 $(APPSNS): %: %.o
 	$(LINKER) $(CRT0NS) $^ -o $@ $(LINKER_OPT) $(LINKER_TAIL)
-ifdef STRIP_FINAL
-	$(STRIP) $(STRIP_OPT) $@
-endif
 
 $(APPTC): %: %.o
 	$(LINKER) $(CRT0) $^ -o $@ -ltermcap$(USERCPU) $(LINKER_OPT) $(LINKER_TAIL)
-ifdef STRIP_FINAL
-	$(STRIP) $(STRIP_OPT) $@
-endif
 
 $(APPCURSES): %: %.o
 	$(LINKER) $(CRT0) $^ -o $@ -lcurses$(USERCPU) -ltermcap$(USERCPU) $(LINKER_OPT) $(LINKER_TAIL)
-ifdef STRIP_FINAL
-	$(STRIP) $(STRIP_OPT) $@
-endif
 
 fforth: %: %.o
 	$(LINKER) $(CRT0) $^ -o $@ $(LINKER_OPT) $(LINKER_TAIL)
-ifdef STRIP_FINAL
-	$(STRIP) $(STRIP_OPT) $@
-endif
 	
 size.report: $(APPS) $(APPSNS) $(APPTC)
 	ls -l $^ > $@

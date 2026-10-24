@@ -2,9 +2,6 @@ ROOT = ../..
 FUZIX_ROOT ?= $(abspath $(ROOT))
 USERCPU = armm0
 
-# The rpipico userland wants stripped ELF images.
-STRIP_FINAL = yes
-
 include Makefile.common
 
 # fforth is not part of Makefile.common yet (it needs some work first),

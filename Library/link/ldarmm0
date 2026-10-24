@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+#	Wrap the ARM binutils for the Cortex-M0 userland.  The RP2040 port
+#	loads stripped ELF images, so link and then strip the result.
+#
+TARGET=a.out
+ARGS=""
+#
+#	Find the target and strip out the -o foo option
+#
+while [[ $# -gt 0 ]]
+do
+	case "$1" in
+	-o)
+	TARGET="$2"
+	shift
+	shift
+	;;
+	-s)
+	# Stack size, not used by this port
+	shift
+	shift
+	;;
+	*)
+	ARGS+=' '"$1"
+	shift
+	;;
+esac
+done
+
+set -e
+arm-none-eabi-ld $ARGS -o "$TARGET"
+arm-none-eabi-strip "$TARGET"

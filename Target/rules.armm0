@@ -3,7 +3,7 @@ CC = arm-none-eabi-gcc
 ASM = arm-none-eabi-as
 AR = arm-none-eabi-ar
 STRIP = arm-none-eabi-strip
-LINKER = arm-none-eabi-ld
+LINKER = $(ROOT)/Library/link/ldarmm0
 CFLAGS = -std=c99 -mcpu=Cortex-M0plus -ffunction-sections -fdata-sections -fno-strict-aliasing -fomit-frame-pointer -fno-builtin -Wall -g -Os -isystem $(ROOT)/Library/include
 CFLAGS += -Wno-int-conversion -Wno-implicit-int
 LINKER_OPT = -L$(ROOT)/Library/libs -lc$(PLATFORM) -pie -static -no-dynamic-linker -z max-page-size=4
