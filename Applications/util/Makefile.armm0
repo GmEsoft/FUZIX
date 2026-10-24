@@ -1,4 +1,9 @@
 ROOT = ../..
-include $(ROOT)/Target/rules.armm0
-include Makefile.generic
+FUZIX_ROOT ?= $(abspath $(ROOT))
+USERCPU = armm0
 
+include Makefile.common
+
+# fforth is not part of Makefile.common yet (it needs some work first),
+# but the armm0 userland has always shipped it.
+all: fforth
