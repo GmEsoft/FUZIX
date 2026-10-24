@@ -174,59 +174,60 @@ static void printsep(char *name)
 static void lsfile(char *name, struct stat *statbuf, int flags)
 {
 #if	UIDGID
-	static char username[12];
+	static const char *username;
+	static char uname_num[6];
 	static int userid;
 	static BOOL useridknown;
-	static char groupname[12];
+	static const char *groupname;
+	static char gname_num[6];
 	static int groupid;
 	static BOOL groupidknown;
 	struct passwd *pwd;
 	struct group *grp;
 #endif
+#ifdef	S_ISLNK
 	static char buf[PATHLEN];
-	char *cp = buf;
 	int len;
+#endif
 
-	*cp = '\0';
-	if (flags & LSF_INODE) {
-		sprintf(cp, "%5d ", statbuf->st_ino);
-		cp += strlen(cp);
-	}
+	if (flags & LSF_INODE)
+		printf("%5d ", (int)statbuf->st_ino);
 	if (flags & LSF_LONG) {
-		cp += strlen(strcpy(cp, modestring(statbuf->st_mode)));
-		sprintf(cp, "%4d ", statbuf->st_nlink);
-		cp += strlen(cp);
+		fputs(modestring(statbuf->st_mode), stdout);
+		printf("%4d ", (int)statbuf->st_nlink);
 #if	UIDGID
 		if (!useridknown || (statbuf->st_uid != userid)) {
 			if ((pwd = getpwuid(statbuf->st_uid)) != NULL)
-				strcpy(username, pwd->pw_name);
-			else
-				sprintf(username, "%d", statbuf->st_uid);
+				username = pwd->pw_name;
+			else {
+				snprintf(uname_num, sizeof(uname_num), "%d",
+					 (int)statbuf->st_uid);
+				username = uname_num;
+			}
 			userid = statbuf->st_uid;
 			useridknown = 1;
 		}
-		sprintf(cp, "%-8s ", username);
-		cp += strlen(cp);
+		printf("%-8s ", username);
 		if (!groupidknown || (statbuf->st_gid != groupid)) {
 			if ((grp = getgrgid(statbuf->st_gid)) != NULL)
-				strcpy(groupname, grp->gr_name);
-			else
-				sprintf(groupname, "%d", statbuf->st_gid);
+				groupname = grp->gr_name;
+			else {
+				snprintf(gname_num, sizeof(gname_num), "%d",
+					 (int)statbuf->st_gid);
+				groupname = gname_num;
+			}
 			groupid = statbuf->st_gid;
 			groupidknown = 1;
 		}
-		sprintf(cp, "%-8s ", groupname);
-		cp += strlen(cp);
+		printf("%-8s ", groupname);
 #endif
 		if (S_ISDEV(statbuf->st_mode))
-			sprintf(cp, "%3d,%-3d  ",
+			printf("%3d,%-3d  ",
 				statbuf->st_rdev >> 8, statbuf->st_rdev & 0xFF);
 		else
-			sprintf(cp, "%8ld ", (long) statbuf->st_size);
-		cp += strlen(cp);
-		sprintf(cp, "%-12s ", timestring(&statbuf->st_mtime));
+			printf("%8ld ", (long) statbuf->st_size);
+		printf("%-12s ", timestring(&statbuf->st_mtime));
 	}
-	fputs(buf, stdout);
 	fputs(name, stdout);
 #ifdef	S_ISLNK
 	if ((flags & LSF_LONG) && S_ISLNK(statbuf->st_mode)) {
@@ -253,6 +254,7 @@ static void listfiles(char *name)
 	static char fullname[PATHLEN], *cp, **newlist;
 	static int listsize;
 	char **list, *n;
+	size_t len;
 	int i, listused;
 
 	if (LSTAT(name, &statbuf) < 0) {
@@ -293,12 +295,20 @@ static void listfiles(char *name)
 		if (!(flags & LSF_ALL) && dp->d_name[0] == '.')
 			continue;
 		fullname[0] = '\0';
+		len = 0;
 		if ((*name != '.') || (name[1] != '\0')) {
-			strcpy(fullname, name);
-			if (!endslash)
-				strlcat(fullname, "/", sizeof(fullname));
+			len = strlcpy(fullname, name, sizeof(fullname));
+			if (len < sizeof(fullname) && !endslash)
+				len = strlcat(fullname, "/", sizeof(fullname));
 		}
-		strlcat(fullname, dp->d_name, sizeof(fullname));
+		if (len < sizeof(fullname))
+			len = strlcat(fullname, dp->d_name, sizeof(fullname));
+		if (len >= sizeof(fullname)) {
+			fprintf(stderr, "ls: %s/%s: path too long\n",
+				name, dp->d_name);
+			bad |= 2;
+			continue;
+		}
 		if (listused >= listsize) {
 			newlist = realloc(list,
 				((sizeof(char **)) * (listsize + LISTSIZE)));
