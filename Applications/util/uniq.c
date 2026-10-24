@@ -29,7 +29,7 @@ int  equal(char *, char *);
 void show(char *, int);
 int  uniq(void);
 void usage(void);
-int  getline(char *, int);
+int  xgetline(char *, int);
 
 int main(int argc, char *argv[])
 {
@@ -84,6 +84,9 @@ int main(int argc, char *argv[])
 	argc--;
     }
 
+    if (argc)
+	usage();
+
     uniq();
     fflush(stdout);
 
@@ -136,13 +139,13 @@ int uniq(void)
 
     /* Setup */
     prevline = buf1;
-    if (getline(prevline, 1024) < 0) return (0);
+    if (xgetline(prevline, 1024) < 0) return (0);
     seen = 1;
     nowline = buf2;
 
     /* Get nowline and compare if not equal, dump prevline and swap
      * pointers else continue, bumping seen count */
-    while (getline(nowline, 1024) > 0) {
+    while (xgetline(nowline, 1024) > 0) {
 	if (!equal(prevline, nowline)) {
 	    show(prevline, seen);
 	    seen = 1;
@@ -164,7 +167,7 @@ void usage(void)
     exit(1);
 }
 
-int getline(char *buf, int count)
+int xgetline(char *buf, int count)
 {
     int c;
     int ct = 0;
