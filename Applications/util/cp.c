@@ -816,9 +816,22 @@ int main(int argc, char **argv)
 	optstring = getfl();
 	while ((i = getopt(argc, argv, optstring)) != EOF) {
 		switch (i) {
-		case 'b':
-			bflag = atol(optarg);
+		case 'b': {
+			char *end;
+			long n;
+
+			errno = 0;
+			n = strtol(optarg, &end, 10);
+			if (errno || *end || n <= 0 ||
+			    (unsigned long)n > (size_t)-1) {
+				fprintf(stderr,
+					"%s: invalid block size '%s'\n",
+					progname, optarg);
+				usage();
+			}
+			bflag = n;
 			break;
+		}
 		case 'd':
 			dflag = 1;
 			break;
