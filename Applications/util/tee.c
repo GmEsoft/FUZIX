@@ -1,24 +1,24 @@
 /*
   Copyright (c) 1987,1997, Prentice Hall
   All rights reserved.
-  
+
   Redistribution and use of the MINIX operating system in source and
   binary forms, with or without modification, are permitted provided
   that the following conditions are met:
-  
+
      * Redistributions of source code must retain the above copyright
        notice, this list of conditions and the following disclaimer.
-  
+
      * Redistributions in binary form must reproduce the above
        copyright notice, this list of conditions and the following
        disclaimer in the documentation and/or other materials provided
        with the distribution.
-  
+
      * Neither the name of Prentice Hall nor the names of the software
        authors or contributors may be used to endorse or promote
        products derived from this software without specific prior
        written permission.
-  
+
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS, AUTHORS, AND
   CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
   INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -31,7 +31,7 @@
   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
   OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
   EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/  
+*/
 /* tee - pipe fitting			Author: Paul Polderman */
 
 /* stdio use removed Alan Cox 2015 */
@@ -56,9 +56,9 @@ void writes(const char *p)
 
 int main(int argc, char *argv[])
 {
-  char iflag = 0, aflag = 0;
+  char iflag = 0, aflag = 0, err = 0;
   static char buf[CHUNK_SIZE];
-  int i, s, n;
+  register int i, s, n;
 
   argv++;
   --argc;
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 		iflag++;
 		break;
 	    case 'a':		/* Append to outputfile(s), instead of
-			 * overwriting them. */
+				 * overwriting them. */
 		aflag++;
 		break;
 	    default:
@@ -95,10 +95,12 @@ int main(int argc, char *argv[])
   if (iflag) signal(SIGINT, SIG_IGN);
 
   while ((n = read(0, buf, CHUNK_SIZE)) > 0) {
-	for (i = 0; i < s; i++) write(fd[i], buf, n);
+	for (i = 0; i < s; i++)
+	  if (write(fd[i], buf, n) != n)
+	    err |= 1;
   }
 
   for (i = 0; i < s; i++)	/* Close all fd's */
-	close(fd[i]);
-  return 0;
+	err |= close(fd[i]);
+  return !!err;
 }
