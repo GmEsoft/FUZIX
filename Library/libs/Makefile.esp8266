@@ -5,7 +5,7 @@ export PLATFORM
 CC_OPT = -ffunction-sections -fdata-sections -fno-strict-aliasing -fomit-frame-pointer -fno-builtin -Wall -Os -c -I../include -I../include/esp8266
 ASM_OPT = -g
 # copied in from kernel tree
-KRN_HEADERS = userstructs.h
+KRN_HEADERS = userstructs.h drivewire.h
 KRN_HEADERS_SRC = $(addprefix ../../Kernel/include/,$(KRN_HEADERS))
 KRN_HEADERS_COPY = $(addprefix ../include/sys/,$(KRN_HEADERS))
 SRC_CRT0 = crt0_esp8266.S crt0nostdio_esp8266.S

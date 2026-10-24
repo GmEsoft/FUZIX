@@ -101,7 +101,7 @@ burn: image
 	#esptool --port /dev/ttyUSB0 write_flash 0x00000 image.elf-0x00000.bin -ff 80m -fm dout
 	
 clean:
-	rm -f $(OBJS) $(JUNK)  core *~
+	rm -f $(OBJS) $(JUNK)  core *~ *.elf
 
 IMAGES = $(FUZIX_ROOT)/Images/$(TARGET)
 

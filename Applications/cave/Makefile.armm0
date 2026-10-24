@@ -24,7 +24,7 @@ advent: $(CRT0) $(OBJ)
 	$(STRIP) $(STRIP_OPT) -o $@ $@.debug
 
 clean:
-	rm -f $(OBJS) $(OBJSNS) $(APPS) $(APPSNS) $(SRCS:.c=) core *~ *.asm *.lst *.sym *.map *.noi *.lk *.ihx *.tmp *.bin size.report *.o advent.db advgen
+	rm -f $(OBJS) $(OBJSNS) $(APPS) $(APPSNS) $(SRCS:.c=) core *~ *.asm *.lst *.sym *.map *.noi *.lk *.ihx *.tmp *.bin size.report *.o *.debug advent advent.db advgen
 
 rmbak:
 	rm -f *~ core

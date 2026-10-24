@@ -5,7 +5,7 @@ export PLATFORM
 CC_OPT = -std=c99 -mcpu=Cortex-M0plus -ffunction-sections -fdata-sections -fno-strict-aliasing -fomit-frame-pointer -fno-builtin -Wall -g -Os -c -I../include
 ASM_OPT = -g -mcpu=cortex-m0plus -mthumb
 # copied in from kernel tree
-KRN_HEADERS = userstructs.h
+KRN_HEADERS = userstructs.h drivewire.h
 KRN_HEADERS_SRC = $(addprefix ../../Kernel/include/,$(KRN_HEADERS))
 KRN_HEADERS_COPY = $(addprefix ../include/sys/,$(KRN_HEADERS))
 SRC_CRT0 = crt0_$(PLATFORM).S crt0nostdio_$(PLATFORM).S
