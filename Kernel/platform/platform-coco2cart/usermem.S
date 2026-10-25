@@ -66,7 +66,7 @@ __uputw:
 ;	X = source, user, size on stack
 __uput:
 	pshs	u
-	tfr	d,u	; kernel
+	tfr	d,x	; kernel
 	ldu	4,s	; user address
 	ldy	6,s	; count
 	jsr	map_proc_always

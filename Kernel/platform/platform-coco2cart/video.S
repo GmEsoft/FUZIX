@@ -262,6 +262,7 @@ vscrolln:
 ;	Never used in text mode
 ;
 _scroll_down:
+	rts
 	pshs u
 	ldu #VIDEO_END
 	leax -256,u
