@@ -30,8 +30,8 @@
 #define MAX_BLKDEV  	3	/* 2 IDE drives + 1 SPI */
 #define SD_DRIVE_COUNT	1	/* Could be higher with multiple CS used */
 #define CONFIG_SD               /* enable if SD  interface present */
-#define CONFIG_IDE              /* enable if IDE interface present */
-#define CONFIG_SCSI             /* enable if SCSI interface present */
+//#define CONFIG_IDE              /* enable if IDE interface present */
+//#define CONFIG_SCSI             /* enable if SCSI interface present */
 
 //#define CONFIG_GPT
 

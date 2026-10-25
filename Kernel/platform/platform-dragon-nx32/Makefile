@@ -64,7 +64,7 @@ wrap: wrap.c
 
 image: wrap
 	$(CROSS_LD) -b -o ../../fuzix.bin -m fuzix.tmpmap \
-	-S 0x1C00 -f SsbXCLDB \
+	-S 0x2000 -f SsbXCLDB \
 	crt0.o commonmem.o usermem_sam.o \
 	dragon.o $(MEMOBJ) ../../mm/bankfixed.o \
 	../../start.o ../../version.o ../../cpu-6809/lowlevel-6809.o \
@@ -78,7 +78,8 @@ image: wrap
 	devinput.o devlpr.o devtty.o libc.o ../../vt.o video.o ../../font/font8x8.o \
 	devide.o blkdev.o ide.o devide_discard.o mbr.o gpt.o \
 	devsd.o devsd_discard.o spi.o devscsi.o devscsi_discard.o \
-	scsi_tc3.o discard.o /opt/fcc/lib/6809/lib6809.a
+	discard.o /opt/fcc/lib/6809/lib6809.a
+# scsi_tc3.o
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
 	./wrap < ../../fuzix.bin >fuzix.decb
 #	../../tools/pad256 ../../fuzix.bin

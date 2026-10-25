@@ -26,7 +26,7 @@ sammap0	.equ 0xFFDE
 
 ; Sets ramsize, procmem, membanks
 size_ram:
-	ldx #0x8000	; test location, no code can be preloaded here!
+	ldx #0xFEFF	; test location, no code can be preloaded here!
 	clra
 zbank:	sta banksel	; clear test byte on all possible banks
 	clr ,x

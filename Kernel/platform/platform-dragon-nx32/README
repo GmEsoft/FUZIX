@@ -1,3 +1,25 @@
+TODO
+====
+
+Currently being converted to fcc.
+
+For the moment
+- Trimmed the devices a chunk to make it fit
+
+To Fix
+- Switch from blkdev to tinydisk to get space back
+- Add a second stage loader so we can load how we want
+- Switch to overlays and loading into 2 x 32K high banks
+- Add swap
+
+We can stuff the code, literals and probably common code into two banks
+of high 32K. That will leave us 0x2000-0x3FFF or similar for unbanked data
+and buffers which would let us not only do more stuff but also run bigger
+binaries with some copying - networking probably included. Can also push
+alt screens into banks too when not displaying. Discard can also sit
+above data nicely for as 4000-7FF or 6000-7FFF or somesuch
+would be user so fully recoverable space
+
 dragon-nx32
 ===========
 

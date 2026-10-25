@@ -69,6 +69,6 @@ void write_tail(unsigned addr)
 
 int main(int argc, char *argv[])
 {
-    write_decb(0x1C00, 0xFE00 - 0x1C00);
-    write_tail(0x1C00);
+    write_decb(0x2000, 0xFE00 - 0x2000);
+    write_tail(0x2000);
 }
