@@ -244,13 +244,15 @@ x3:
         ; now we're in a safe state for _switchin to return in the parent
 	; process.
 
+	.export YYY
+YYY:
 	lda	fork_proc_ptr
 	ldx	fork_proc_ptr+1
 	sta	@tmp
 	stx	@tmp+1
 	ldy	#P_TAB__P_PAGE2_OFFSET
 	lda	(@tmp),y
-
+	tay
 	; Y = swap slot
 	jsr	swapout_new
 
@@ -313,6 +315,7 @@ writeout:
 	jsr	writepage
 	ldx	@tmp5+1
 	inx
+	inx
 	bne	writeout
 	; Everything is now on disk
 	rts
@@ -364,7 +367,7 @@ writepage:
 	; partition
 	stx	@tmp+1
 	sta	@tmp
-	ldy	#0x20		; READ
+	ldy	#0x30		; WRITE
 	jsr	disksetup
 	ldx	@tmp+1
 	lda	@tmp
@@ -381,7 +384,7 @@ readpage:
 	; @tmp4/5low counts the disk block numnber
 	stx	@tmp+1
 	sta	@tmp
-	ldy	#0x30		; WRITE
+	ldy	#0x20		; READ
 	jsr	disksetup
 	; Do the disk command, now transfer the bytes
 	ldx	@tmp+1
@@ -431,6 +434,7 @@ even:
 	adc	#0
 	sta	@tmp5
 	; tmp4-5 is now a 24bit LBA
+	pla
 	rts
 
 	.commondata
