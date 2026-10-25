@@ -61,7 +61,7 @@ ugetl:
 __uputc:
 	pshs	cc
 	orcc	#0x10
-	ldd	3,s
+	ldx	3,s
 	jsr	map_proc_always
 	stb	,x
 	jsr	map_kernel
@@ -72,7 +72,7 @@ __uputc:
 __uputw:
 	pshs	cc
 	orcc	#0x10
-	ldd	3,s
+	ldx	3,s
 	jsr	map_proc_always
 	std	,x
 	jsr	map_kernel
@@ -121,4 +121,4 @@ zdone:
 	jsr	map_kernel
 	clra
 	clrb
-	puls cc,pc
+	puls	cc,pc
