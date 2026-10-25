@@ -32,7 +32,7 @@ DATREGB     equ    PREG3          ; second data register
 ;;;   takes: sdcpage = rawfalg, X = data address
 ;;;   returns: nothing
 _sdc_write_data:
-	ldx	2,s
+	tfr	d,x
 	pshs	u
 	ldy	#PREG2		; set Y to point at data reg a
 	ldd 	#64*256+4      	; A = chunk count (64), B = bytes per chunk (4)
@@ -53,7 +53,7 @@ wrChnk: ldu    	,x             	; get 2 data bytes from source
 ;;;   takes: sdcpage = rawflag, X = data address
 ;;;   returns: nothing
 _sdc_read_data:
-	ldx	2,s
+	tfr	d,x
 	pshs	u
 	ldy	#PREG2	        ; set Y to point to data reg a
 	ldd    	#32*256+8       ; A = chunk count (32), B = bytes per chunk (8)

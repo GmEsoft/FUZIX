@@ -34,7 +34,7 @@ _plt_switchout:
 	pshs	d,u
 	sts	_udata + U_DATA__U_SP	; this is where the SP is restored in _switchin
 
-        ; find another (or same) process to run, returned in X
+        ; find another (or same) process to run, returned in D
         jsr	_getproc
         jsr	_switchin
         ; we should never get here
@@ -57,14 +57,12 @@ _switchin:
 	inc	_inswap
 	; get process table
 	lda	P_TAB__P_PAGE_OFFSET+1,x	; LSB of 16-bit page no
-
-	tsta
 	bne	not_swapped
 
 	lds	#0x0200		;	$1xx is vectors and swap stack
 
 	ldx	_udata + U_DATA__U_PTAB
-	ldx	P_TAB__P_PAGE_OFFSET+1, x
+	ldb	P_TAB__P_PAGE_OFFSET+1, x
 	beq	not_swapout		;	it's dead don't swap it out
 	ldd	_udata + U_DATA__U_PTAB
 	andcc	#0xef
@@ -188,7 +186,7 @@ udsave:
 	; good, it reduces thrash
 	ldx	fork_proc_ptr
 	ldd	P_TAB__P_PID_OFFSET,x
-	; Clean up and return
+	; Clean up and return child pid
 	puls	d,u
 	; TODO - for now return with ints off as we were called. This should
 	; eventually go away
