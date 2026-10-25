@@ -27,9 +27,9 @@ static void crt9128_write_reg(uint8_t reg, uint8_t value)
 
 static uint8_t crt9128_read_char(void)
 {
+	int timeout = 0xA000;
 	*((volatile uint8_t *)CRT9128_ADDRESS_REG) = CRT9128_REG_CHARACTER;
 	*((volatile uint8_t *)CRT9128_DATA_REG);
-	int timeout = 0xA000;
 	while (!crt9128_done() && --timeout);
 	if (timeout == 0)
 		crt9128_write_reg(CRT9128_REG_CHIP_RESET, 0);
@@ -38,15 +38,15 @@ static uint8_t crt9128_read_char(void)
 
 static void crt9128_fill(uint16_t end_addr, uint8_t character)
 {
-	crt9128_write_reg(CRT9128_REG_FILADD, end_addr >> 4);
 	int timeout = 0xA000;
+	crt9128_write_reg(CRT9128_REG_FILADD, end_addr >> 4);
 	while (!crt9128_done() && --timeout);
 	if (timeout == 0)
 		crt9128_write_reg(CRT9128_REG_CHIP_RESET, 0);
 	crt9128_write_reg(CRT9128_REG_CHARACTER, character);
 }
 
-static void crt9128_set_cursor_address(uint16_t addr)
+static void crt9128_set_ca(uint16_t addr)
 {
 	int timeout = 0xA000;
 	while (!crt9128_done() && --timeout);
@@ -71,7 +71,7 @@ void crt9128_init(void)
 	crt9128_write_reg(CRT9128_REG_MODE_REGISTER, 0);
 	crt9128_write_reg(CRT9128_REG_ATTDAT, attdat);
 	crt9128_set_tos_line(vram_start_line);
-	crt9128_clear_lines(0, display_lines);
+	crt9128_clines(0, display_lines);
 }
 
 /* return cursor address as a bonus */
@@ -84,7 +84,7 @@ static uint16_t crt9128_set_cursor(uint8_t newy, uint8_t newx)
 	if (vram_line >= vram_lines)
 		vram_line -= vram_lines;
 	cur_addr = vram_line * data_row_length + newx;
-	crt9128_set_cursor_address(cur_addr);
+	crt9128_set_ca(cur_addr);
 	return cur_addr;
 }
 
@@ -98,13 +98,13 @@ static void crt9128_blank_hidden_line(void)
 		start_addr = (vram_lines - 1) * data_row_length;
 	else
 		start_addr = end_addr - data_row_length;
-	crt9128_set_cursor_address(start_addr);
+	crt9128_set_ca(start_addr);
 	crt9128_fill(end_addr, ' ');
 }
 
 /* interface to Kernel/vt.c VT52 emulation */
 
-void crt9128_clear_across(int8_t y, int8_t x, int16_t num)
+void crt9128_cacross(int8_t y, int8_t x, int16_t num)
 {
 	uint16_t end_addr;
 
@@ -113,7 +113,7 @@ void crt9128_clear_across(int8_t y, int8_t x, int16_t num)
 }
 
 /* also sets cursor to first cleared line */
-void crt9128_clear_lines(int8_t y, int8_t num)
+void crt9128_clines(int8_t y, int8_t num)
 {
 	uint16_t end_addr;
 
@@ -123,7 +123,7 @@ void crt9128_clear_lines(int8_t y, int8_t num)
 	crt9128_fill(end_addr, ' ');
 }
 
-void crt9128_scroll_up(void)
+void crt9128_scrup(void)
 {
 	crt9128_blank_hidden_line();
 	if (vram_start_line == vram_lines - 1)
@@ -133,7 +133,7 @@ void crt9128_scroll_up(void)
 	crt9128_set_tos_line(vram_start_line);
 }
 
-void crt9128_scroll_down(void)
+void crt9128_scrdown(void)
 {
 	crt9128_blank_hidden_line();
 	if (vram_start_line == 0)
@@ -149,13 +149,13 @@ void crt9128_plot_char(int8_t y, int8_t x, uint16_t c)
 	crt9128_write_reg(CRT9128_REG_CHARACTER, c & 0x7f);
 }
 
-void crt9128_cursor_off(void)
+void crt9128_coff(void)
 {
 	attdat |= CRT9128_ATTDAT_CURSOR_SUPRESS;
 	crt9128_write_reg(CRT9128_REG_ATTDAT, attdat);
 }
 
-void crt9128_cursor_on(int8_t newy, int8_t newx)
+void crt9128_con(int8_t newy, int8_t newx)
 {
 	crt9128_set_cursor(newy, newx);
 
