@@ -1,3 +1,4 @@
+# 1 "floppy.S"
 ;
 ;	Core floppy routines for the Microbee 2791 FDC
 ;	Based on the 6809 code
@@ -7,13 +8,10 @@
 ;	FIXME: precompensation
 ;	FIXME: density, size etc
 ;
-	.globl _fd_reset
-	.globl _fd_operation
-	.globl _fd_motor_on
-	.globl fd_nmi_handler
-
-	.globl map_kernel
-	.globl map_proc_always
+	.export _fd_reset
+	.export _fd_operation
+	.export _fd_motor_on
+	.export fd_nmi_handler
 
 FDCREG	.equ	0x40
 FDCTRK	.equ	0x41
@@ -21,7 +19,6 @@ FDCSEC	.equ	0x42
 FDCDATA	.equ	0x43
 FDCCTRL	.equ	0x48
 
-	.module floppy
 ;
 ;	interrupt register reports 0x80 for interrut, 0x40 for drq
 ;	(0x20 is the unrelated reset button)
@@ -45,7 +42,7 @@ DIRECT	.equ	3		; 0 = read 2 = write 1 = status
 DATA	.equ	4
 USER	.equ	6
 
-	.area	_COMMONMEM
+	.common
 ;
 ;	Simple routine for pauses
 ;
@@ -80,7 +77,7 @@ boring_nmi:
 ;	Preserve HL, DE
 ;
 waitdisk:
-	ld	bc, #0
+	ld	bc, 0
 waitdisk_l:
 	in	a, (FDCREG)
 	bit	0, a
@@ -93,7 +90,7 @@ waitdisk_l:
 	djnz	waitdisk_l
 	dec	c
 	jr	nz, waitdisk_l
-	ld	a, #0xD0	; reset
+	ld	a, 0xD0			; reset
 	out	(FDCREG), a
 	ex	(sp),hl
 	ex	(sp),hl
@@ -113,14 +110,14 @@ fdsetup:
 ;
 ;	Are we on side 0 or side 1 ?
 ;
-	ld	a, SECTOR(ix)
+	ld	a, (ix + SECTOR)
 	cp 	#11
 	jr	c, side0
 ;
 ;	Set up for side 1 access
 ;
 	sub	#10
-	ld	SECTOR(ix), a
+	ld	(ix + SECTOR), a
 	ld	a, (fdcctrl)
 	set	2, a		; correct for standard FDC not DreamDisc
 	jr	side1
@@ -136,15 +133,15 @@ side1:
 
 	ld	a, (de)
 	out	(FDCTRK), a
-	cp	TRACK(ix)
+	cp	(ix + TRACK)
 ;	jr	z, fdiosetup
 
 	;
 	;	So we can verify
 	;
-	ld	a, TRACK(ix)
+	ld	a, (ix + TRACK)
 	out	(FDCDATA), a
-	ld	a, SECTOR(ix)
+	ld	a, (ix + SECTOR)
 	out	(FDCSEC), a
 	;
 	;	Need to seek the disk
@@ -152,42 +149,42 @@ side1:
 	ld	a, #0x19	; seek at 6ms steps. Slightly conservative
 				; to allow for older drives
 	out	(FDCREG), a
-	ld	b, #100
+	ld	b, 100
 seekwt:	djnz	seekwt
 	call	waitdisk
 	jr	nz, setuptimeout
-	and	#0x18		; error bits
+	and	0x18		; error bits
 	jr	z, fdiosetup
 	; seek failed, not good
 setuptimeout:			; NE = bad
-	ld	a, #0xff	; we have no idea where we are, force a seek
+	ld	a, 0xff		; we have no idea where we are, force a seek
 	ld	(de), a		; zap track info
 	ret
 ;
 ;	Head in the right place
 ;
 fdiosetup:
-	ld	a, TRACK(ix)
+	ld	a, (ix + TRACK)
 	ld	(de), a		; save track
 
-	ld	a, SECTOR(ix)
+	ld	a, (ix + SECTOR)
 	out	(FDCSEC), a
 	in	a, (FDCREG)	; Clear any pending status
 
-	ld	c, CMD(ix)
+	ld	c, (ix + CMD)
 
 	ld	de, #0		; timeout handling
 	
-	ld	a, DIRECT(ix)
+	ld	a, (ix + DIRECT)
 	dec	a
 	ld	a, (fdcctrl)
 	ld	d, a			; we need this in a register
 					; to meet timing
-	ld	a, USER(ix)
+	ld	a, (ix + USER)
 	or	a
 	call	nz, map_proc_always
 
-	ld	a, #1
+	ld	a, 1
 	ld	(fdc_active), a		; NMI pop and jump
 	jr	z, fdio_in
 	jr	nc, fdio_out
@@ -261,7 +258,7 @@ fdio_nmiout:
 	jr	fdxferdone
 
 fdxferbad:
-	ld	a, #0xff
+	ld	a, 0xff
 	ret
 
 ;
@@ -282,17 +279,18 @@ _fd_reset:
 	pop	hl
 	push	hl
 	push	de
+	push	bc
 	ld	a, (fdcctrl)
 	out	(FDCCTRL), a
-	ld	a, #1
+	ld	a, 1
 	out	(FDCSEC), a
 	xor	a
 	out	(FDCTRK), a
-	ld	a, #0x0D	; use 6ms stepping
+	ld	a, 0x0D	; use 6ms stepping
 	out	(FDCREG), a	; restore
 	ld	a, #0xFF
 	ld	(hl), a		; Zap track pointer
-	ld	b, #0
+	ld	b, 0
 _fdr_wait:
 	djnz	_fdr_wait
 	
@@ -300,31 +298,39 @@ _fdr_wait:
 	cp	#0xff
 	ret	z
 	and	#0x99		; Error bit from the reset
+	pop	bc
 	ret	nz
 	ld	(hl), a		; Track 0 correctly hit (so 0)
 	ret
 ;
-;	fd_operation(uint16_t *cmd, uint16_t *drive)
+;	fd_operation(uint8_t *cmd, uint8_t *drive)
 ;
 ;	The caller must ensure the drive has been selected and the motor is
 ;	running.
 ;
 _fd_operation:
-	pop	bc		; return address
-	pop	hl		; command
-	pop	de		; drive track ptr
-	push	de
-	push	hl
+	ld	hl,2
+	add	hl,sp
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	; HL = cmd DE = drive
 	push	bc
 	push	ix
 	push	hl
 	pop	ix
-	ld	l, DATA(ix)
-	ld	h, DATA+1(ix)
+	ld	l, (ix+DATA)
+	ld	h, (ix+DATA+1)
 	call	fdsetup		; Set up for a command
 	ld	l, a
-	ld	h, #0
+	ld	h, 0
 	pop	ix
+	pop	bc
 	ret
 ;
 ;	C interface fd_motor_on(uint16_t drivesel)
@@ -343,6 +349,7 @@ _fd_motor_on:
 	pop	hl
 	push	hl
 	push	de
+	push	bc
 	;
 	;	Select drive
 	;
@@ -357,12 +364,13 @@ _fd_motor_on:
 ;
 ;	All is actually good
 ;
-	ld	hl, #0
+	pop	bc
+	ld	hl, 0
 	ret
 
 curdrive:
-	.db	0xff
+	.byte	0xff
 fdcctrl:
-	.db	0
+	.byte	0
 fdc_active:
-	.db	0
+	.byte	0

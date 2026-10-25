@@ -8,42 +8,41 @@
 #include <devhd.h>
 #include <ubee.h>
 
-__sfr __at 0x04 cmos_reg;
-__sfr __at 0x07 cmos_read;
+#define CMOS_REG	0x04
+#define CMOS_READ	0x07
 
 extern int strcmp(const char *, const char *);
 
 void has_cmos_rtc(void)
 {
 	/* See if the week looks valid - probably want a stronger check */
-	cmos_reg = 0x06;
-	if (cmos_read == 0 || cmos_read > 7)
+	out(CMOS_REG, 0x06);
+	if (in(CMOS_READ) == 0 || in(CMOS_READ) > 7)
 		panic("RTC required");
 }
 
 void map_init(void)
 {
-
 }
 
-__sfr __at 0x58 portswitch;
-__sfr __at 0x45 probe_reg;
-__sfr __at 0x41 fdc_cyl;
-__sfr __at 0x48 fdc_stat;
+#define FDC_CYL		0x41
+#define PROBE_REG	0x45
+#define FDC_STAT	0x48
+#define PORTSWITCH	0x58
 
 void do_diskprobe(uint8_t *p)
 {
-	probe_reg = 0x5A;
+	out(PROBE_REG, 0x5A);
 	/* probe_reg is read/write same value for both controllers so if it
 	   doesn't work we have no disk */
-	if (probe_reg != 0x5A)
+	if (in(PROBE_REG) != 0x5A)
 		return;
 	/* If it mirrored check if a second value mirrors */
-	if (fdc_cyl == 0x5A) {
-		probe_reg = 0x22;
-		if (fdc_cyl == 0x22) {
+	if (in(FDC_CYL) == 0x5A) {
+		out(PROBE_REG, 0x22);
+		if (in(FDC_CYL) == 0x22) {
 			/* It's a floppy */
-			if (fdc_stat & 0x0F)
+			if (in(FDC_STAT) & 0x0F)
 				*p = DISK_TYPE_FDC_D;	/* Dream disc */
 			else
 				*p = DISK_TYPE_FDC;
@@ -51,8 +50,8 @@ void do_diskprobe(uint8_t *p)
 		}
 	}
 	/* Double check */
-	probe_reg = 0x22;
-	if (probe_reg != 0x22)
+	out(PROBE_REG, 0x22);
+	if (in(PROBE_REG) != 0x22)
 		return;
 	*p = DISK_TYPE_HDC;
 }
@@ -62,9 +61,9 @@ static const char *diskname[4] = { NULL, "2793", "DreamDisc", "WD1010" };
 
 void diskprobe(void)
 {
-	portswitch = 0;
+	out(PORTSWITCH, 0);
 	do_diskprobe(disk_type);
-	portswitch = 1;
+	out(PORTSWITCH, 1);
 	do_diskprobe(disk_type + 1);
 	/* Hard case: two of the same */
 	if (disk_type[0] == disk_type[1]) {
@@ -72,11 +71,11 @@ void diskprobe(void)
 		if (!disk_type[0])
 			return;
 		/* We might have internal and external the same ? */
-		probe_reg = 0x5C;
-		portswitch = 0;
-		probe_reg = 0x00;
-		portswitch = 1;
-		if (probe_reg != 0x5C)
+		out(PROBE_REG, 0x5C);
+		out(PORTSWITCH, 0);
+		out(PROBE_REG, 0x00);
+		out(PORTSWITCH, 1);
+		if (in(PROBE_REG) != 0x5C)
 			disk_type[1] = 0;
 	}
 	kprintf(dcstr, 0, diskname[disk_type[0]]);
@@ -125,7 +124,7 @@ void pagemap_init(void)
 	}
 }
 
-uint8_t plt_param(char *p)
+uint_fast8_t plt_param(char *p)
 {
 	/* Q: do we need to remember we are running at 6.75MHz anywhere ? */
 	if (strcmp(p, "turbo") == 0) {

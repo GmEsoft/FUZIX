@@ -45,44 +45,40 @@ tcflag_t termios_mask[NUM_DEV_TTY + 1] = {
 };
 
 /* Write to system console */
-void kputchar(char c)
+void kputchar(uint_fast8_t c)
 {
 	if (c == '\n')
 		tty_putc(1, '\r');
 	tty_putc(1, c);
 }
 
-uint8_t tty_writeready(uint8_t minor)
+ttyready_t tty_writeready(uint_fast8_t minor)
 {
-	minor;
 	return TTY_READY_NOW;
 }
 
-void tty_putc(uint8_t minor, unsigned char c)
+void tty_putc(uint_fast8_t minor, uint_fast8_t c)
 {
-	minor;
+	uint8_t ch = c;
 	/* FIXME: eventually add support for 64x16 text as well */
 	if (vmode == 0)
-		vtoutput(&c, 1);
+		vtoutput(&ch, 1);
 }
 
-void tty_setup(uint8_t minor, uint8_t flags)
+void tty_setup(uint_fast8_t minor, uint_fast8_t flags)
 {
-	minor;
 }
 
-void tty_sleeping(uint8_t minor)
+void tty_sleeping(uint_fast8_t minor)
 {
-	minor;
 }
 
-int tty_carrier(uint8_t minor)
+int tty_carrier(uint_fast8_t minor)
 {
-        minor;
 	return 1;
 }
 
-void tty_data_consumed(uint8_t minor)
+void tty_data_consumed(uint_fast8_t minor)
 {
 }
 
@@ -111,7 +107,7 @@ static uint8_t keyboard_tc[15][8] = {
 	{ KEY_F10, '9', 'o', 'l', 0, KEY_BS, KEY_ENTER, ',' },
 	/* 5x */
 	{ KEY_F11, '0', 'p', ';', KEY_DEL, '`', '\\', '.' },
-	{ KEY_F12, '-', '[', '\'', 0, '=', ']', '/' },
+	{ KEY_F12, '-', '[', '\'', 0, '=', ']', '/' }
 	/* 60 shift 67 ctrl 70 alt */
 };
 
@@ -133,7 +129,7 @@ static uint8_t shift_keyboard_tc[15][8] = {
 	{ KEY_F10, '(', 'O', 'L', 0, KEY_BS, KEY_ENTER, '<' },
 	/* 5x */
 	{ KEY_F11, ')', 'P', ':', KEY_DEL, '"', '|', '>' },
-	{ KEY_F12, '_', '{', '\'', 0, '+', '}', '?' },
+	{ KEY_F12, '_', '{', '\'', 0, '+', '}', '?' }
 	/* 67 shift 6F ctrl 77 alt */
 };
 
@@ -164,15 +160,15 @@ static void keydecode_tc(void)
 	tty_inproc(1, c);
 }
 
-__sfr __at 0x02	tc256_kstat;
-__sfr __at 0x18 tc256_kcode;
+#define TC256_KSTAT	0x02
+#define TC256_KCODE	0x18
 
 /* In order to make most of the code follow the same logic as the scan
    keyboad we basically fake a scan keyboard using the keycodes we get */
 static void keymap_down(uint8_t c)
 {
 	keybyte = c >> 3;
-	keybit = c & 7; 
+	keybit = c & 7;
 	if (keybyte < 15) {
 		keymap[keybyte] |= (1 << keybit);
 		keysdown++;
@@ -191,7 +187,7 @@ static void keymap_up(uint8_t c)
 /* 256TC */
 void kbd_interrupt(void)
 {
-	uint8_t x = tc256_kcode;
+	uint8_t x = in(TC256_KCODE);
 	newkey = 0;
 	if (x & 0x80)
 		keymap_down(x & 0x7F);
@@ -327,7 +323,7 @@ static const struct fontinfo fontinfo = {
 
 /* FIXME: need to make sure we have done the rest of the stuff to get all
    the fonts into 'from RAM' mode */
-int gfx_ioctl(uint8_t minor, uarg_t arg, char *ptr)
+int gfx_ioctl(uint_fast8_t minor, uarg_t arg, char *ptr)
 {
     uint16_t size = 0x400;
     uint8_t *base = (uint8_t *)0x8C00;

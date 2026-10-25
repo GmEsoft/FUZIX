@@ -15,7 +15,8 @@ uint16_t swap_dev = 0xFFFF;
 void plt_idle(void)
 {
 	if (ubee_model == UBEE_256TC)
-		__asm halt __endasm;
+//FIXME		__asm halt __endasm
+		;
 	else {
 		/* Try to make the keyboard suck as little as possible */
 		irqflags_t irq = di();
@@ -30,14 +31,14 @@ void do_beep(void)
 
 static uint8_t has_rtc;
 
-__sfr __at 0x02 pia0b;
-__sfr __at 0x04 cmos_reg;
-__sfr __at 0x07 cmos_read;
+#define PIA0B		0x02
+#define CMOS_REG	0x04
+#define CMOS_READ	0x07
 
-uint8_t plt_rtc_secs(void)
+uint_fast8_t plt_rtc_secs(void)
 {
-	cmos_reg = 0x00;
-	return cmos_read;
+	out(CMOS_REG, 0x00);
+	return in(CMOS_READ);
 }
 
 /*
@@ -55,13 +56,13 @@ uint8_t plt_rtc_secs(void)
 void plt_interrupt(void)
 {
 	static uint8_t icount;
-	uint8_t r = pia0b;
+	uint8_t r = in(PIA0B);
 	/* TODO: printer interrupt */
 	if (ubee_model == UBEE_256TC && (r & 0x02))
 		kbd_interrupt();
 	if (r & 0x80) {
-		cmos_reg = 0x0C;
-		if (cmos_read & 0x40) {
+		out(CMOS_REG, 0x0C);
+		if (in(CMOS_READ) & 0x40) {
 			icount++;
 			timer_interrupt();
 			/* Turn 8Hz into 10Hz */
@@ -85,7 +86,7 @@ struct blkbuf *bufpool_end = bufpool + NBUFS;
  */
 void plt_discard(void)
 {
-	uint16_t discard_size = (uint16_t)udata - (uint16_t)bufpool_end;
+	uint16_t discard_size = (uint16_t)&udata - (uint16_t)bufpool_end;
 	bufptr bp = bufpool_end;
 
 	discard_size /= sizeof(struct blkbuf);

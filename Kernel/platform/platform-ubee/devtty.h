@@ -17,7 +17,7 @@ extern uint8_t vtchar;
 extern void vwrite(void);
 extern void do_cursor_on(void);
 
-extern int gfx_ioctl(uint8_t minor, uarg_t arg, char *ptr);
+extern int gfx_ioctl(uint_fast8_t minor, uarg_t arg, char *ptr);
 
 extern void map_video_font(void);
 extern void unmap_video_font(void);

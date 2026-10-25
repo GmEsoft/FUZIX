@@ -6,41 +6,41 @@ CSRCS += devices.c main.c vt.c ide.c
 
 DISCSRCS = discard.c
 
-ASRCS = ubee.s crt0.s
-ASRCS += tricks.s commonmem.s floppy.s
+ASRCS = ubee.S crt0.S
+ASRCS += tricks.S commonmem.S floppy.S
 
-DISCARD_DSRCS = ../../dev/devide_discard.c
-DSRCS = ../../dev/blkdev.c ../../dev/devide.c ../../dev/mbr.c
+#DISCARD_DSRCS = ../../dev/devide_discard.c
+DSRCS = ../../dev/blkdev.c ../../dev/mbr.c #../../dev/devide.c
 
 NSRCS = ../../dev/net/net_native.c
 
-COBJS = $(CSRCS:.c=.rel)
-AOBJS = $(ASRCS:.s=.rel)
-NOBJS = $(patsubst ../../dev/net/%.c,%.rel, $(NSRCS))
-DISCOBJS = $(DISCSRCS:.c=.rel)
-DISCARD_DOBJS = $(patsubst ../../dev/%.c,%.rel, $(DISCARD_DSRCS))
-DOBJS = $(patsubst ../../dev/%.c,%.rel, $(DSRCS))
+COBJS = $(CSRCS:.c=.o)
+AOBJS = $(ASRCS:.S=.o)
+NOBJS = $(patsubst ../../dev/net/%.c,%.o, $(NSRCS))
+DISCOBJS = $(DISCSRCS:.c=.o)
+DISCARD_DOBJS = $(patsubst ../../dev/%.c,%.o, $(DISCARD_DSRCS))
+DOBJS = $(patsubst ../../dev/%.c,%.o, $(DSRCS))
 
 OBJS  = $(COBJS) $(AOBJS) $(NOBJS) $(DISCOBJS) $(DOBJS) $(DISCARD_DOBJS)
 
 all:	$(OBJS)
 
-$(COBJS): %.rel: %.c
+$(COBJS): %.o: %.c
 	$(CROSS_CC) $(CROSS_CCOPTS) -c $<
 
-$(DISCOBJS): %.rel: %.c
+$(DISCOBJS): %.o: %.c
 	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
 
-$(DOBJS): %.rel: ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) -c $<
+$(DOBJS): %.o: ../../dev/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) -c $< -o $@
 
-$(DISCARD_DOBJS): %.rel: ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
+$(DISCARD_DOBJS): %.o: ../../dev/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $< -o $@
 
-$(NOBJS): %.rel: ../../dev/net/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) -c $<
+$(NOBJS): %.o: ../../dev/net/%.c
+	$(CROSS_CC) $(CROSS_CCOPTS) -c $< -o $@
 
-$(AOBJS): %.rel: %.s
+$(AOBJS): %.o: %.S
 	$(CROSS_AS) $(ASOPTS) $<
 
 clean:
@@ -48,9 +48,9 @@ clean:
 	rm -f fuzix.ss80 bootstrap.bin
 
 image:
-	sdasz80 -o bootstrap.s
-	sdldz80 -m -i bootstrap.rel
-	makebin -s 640 bootstrap.ihx | dd of=bootstrap.bin bs=128 skip=1
+	fcc -mz80 -c bootstrap.S
+	ldz80 -b bootstrap.o -o bootstrap.tmp
+	dd if=bootstrap.tmp of=bootstrap.bin bs=128 skip=1
 	dd if=/dev/zero of=fuzix.ss80 bs=512 count=800
 	dd if=bootstrap.bin of=fuzix.ss80 conv=notrunc
 	dd if=../../fuzix.bin of=fuzix.ss80 bs=512 seek=1 conv=notrunc

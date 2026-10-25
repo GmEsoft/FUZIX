@@ -18,7 +18,7 @@
 #define FD_READ		0x80
 #define FD_WRITE	0xA0
 
-__sfr __at 0x58	fdc_devsel;
+#define FDC_DEVSEL	0x58
 
 static uint8_t motorct;
 static uint8_t fd_selected = 0xFF;
@@ -43,7 +43,7 @@ static uint8_t selmap_dd[4] = { 0x01, 0x02, 0x04, 0x08 };
 #define DDC_SINGLE	0x40
 
 
-static int fd_transfer(uint8_t minor, bool is_read, uint8_t rawflag)
+static int fd_transfer(uint_fast8_t minor, bool is_read, uint_fast8_t rawflag)
 {
     blkno_t block;
     uint16_t dptr;
@@ -60,7 +60,6 @@ static int fd_transfer(uint8_t minor, bool is_read, uint8_t rawflag)
             return -1;
 
     if (fd_selected != minor) {
-        uint8_t err;
         /* FIXME: We force DD for now. Side isn't handled here */
         err = fd_motor_on(selmap[minor & 0x7F]|FDC_DOUBLE);
         if (err)
@@ -104,11 +103,11 @@ bad:
     return -1;
 }
 
-int fd_open(uint8_t minor, uint16_t flag)
+int fd_open(uint_fast8_t minor, uint16_t flag)
 {
     uint8_t sel = (minor & 0x80) ? 1 : 0;
     flag;
-    fdc_devsel = sel;
+    out(FDC_DEVSEL, sel);
     if((disk_type[sel] != DISK_TYPE_FDC && disk_type[sel] != DISK_TYPE_FDC_D) ||
             minor >= MAX_FD) {
         udata.u_error = ENODEV;
@@ -117,16 +116,14 @@ int fd_open(uint8_t minor, uint16_t flag)
     return 0;
 }
 
-int fd_read(uint8_t minor, uint8_t rawflag, uint8_t flag)
+int fd_read(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 {
-    flag;
-    fdc_devsel = (minor & 0x80) ? 1: 0;
+    out(FDC_DEVSEL, (minor & 0x80) ? 1: 0);
     return fd_transfer(minor, true, rawflag);
 }
 
-int fd_write(uint8_t minor, uint8_t rawflag, uint8_t flag)
+int fd_write(uint_fast8_t minor, uint_fast8_t rawflag, uint_fast8_t flag)
 {
-    flag;rawflag;minor;
-    fdc_devsel = (minor & 0x80) ? 1: 0;
+    out(FDC_DEVSEL, (minor & 0x80) ? 1: 0);
     return fd_transfer(minor, false, rawflag);
 }
