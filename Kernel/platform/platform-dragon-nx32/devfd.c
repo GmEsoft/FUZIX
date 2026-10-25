@@ -18,13 +18,13 @@ extern uint8_t fd_tab[];
 
 static uint8_t motor_timeout = 0;
 
-static inline void fd_motor_busy(void)
+static void fd_motor_busy(void)
 {
     motorct++;
     motor_timeout = 240;
 }
 
-static inline void fd_motor_idle(void)
+static void fd_motor_idle(void)
 {
     motorct--;
 }
@@ -82,7 +82,7 @@ static int fd_transfer(uint_fast8_t minor, bool is_read, uint_fast8_t rawflag)
     cmd[4] = is_read ? OPDIR_READ: OPDIR_WRITE;
     cmd[5] = (uint16_t)udata.u_dptr >> 8;
     cmd[6] = (uint16_t)udata.u_dptr & 0xFF;
-        
+
     while (count < udata.u_nblock) {
         for (tries = 0; tries < 4 ; tries++) {
             err = fd_operation(cmd, driveptr);

@@ -33,7 +33,7 @@
 #define CONFIG_IDE              /* enable if IDE interface present */
 #define CONFIG_SCSI             /* enable if SCSI interface present */
 
-#define CONFIG_GPT
+//#define CONFIG_GPT
 
 /* Video terminal, not a serial tty */
 #define CONFIG_VT

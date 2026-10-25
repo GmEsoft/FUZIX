@@ -31,6 +31,8 @@ void do_beep(void)
  */
 void plt_discard(void)
 {
+#if 0
+  /* TODO once booting and laid out etc */
   extern uint8_t discard_size;
   bufptr bp = bufpool_end;
 
@@ -44,4 +46,5 @@ void plt_discard(void)
     bp->bf_dev = NO_DEVICE;
     bp->bf_busy = BF_FREE;
   }
+#endif
 }

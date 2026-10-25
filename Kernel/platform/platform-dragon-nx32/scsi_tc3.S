@@ -1,17 +1,15 @@
-	.module scsi_tcs
+#include "kernel.def"
+#include "../../cpu-6809/kernel09.def"
 
-	include "kernel.def"
-	include "../../cpu-6809/kernel09.def"
+	.export _si_read
+	.export _si_write
+	.export _si_writecmd
+	.export _si_select
+	.export _si_clear
+	.export _si_reset
+	.export _si_deselect
 
-	.globl _si_read
-	.globl _si_write
-	.globl _si_writecmd
-	.globl _si_select
-	.globl _si_clear
-	.globl _si_reset
-	.globl _si_deselect
-
-	.area .common
+	.common
 
 ;
 ;	For the moment we only allow one scsi adapter compiled in. That
@@ -21,8 +19,9 @@
 ;	FIXME: read/write need to honour user/kernel swap etc flags
 ;	here. For now this will only work for simple testing stuff
 ;
-_si_read:			; X is pointer
-	pshs y,u
+_si_read:			; D is pointer
+	tfr d,x
+	pshs u
 	tfr s,u			; u holds our frame pointer to throw
 	bsr waitreq		; an exception
 	ldy #_si_dcb+16		; length word
@@ -33,10 +32,11 @@ _si_read:			; X is pointer
 	leay -1,y
 	bne _si_read
 	clrb			; Return 0
-	puls y,u,pc
+	puls u,pc
 
 _si_write:			; X is pointer, dcb block gives length
-	pshs y,u
+	tfr d,x
+	pshs u
 	tfr s,u			; u holds our frame pointer to throw
 	bsr waitreq		; an exception
 	ldy _si_dcb+16		; length word
@@ -47,12 +47,12 @@ _si_write:			; X is pointer, dcb block gives length
 	leay -1,y
 	bne _si_write
 	clrb			; Return 0
-	puls y,u,pc
+	puls u,pc
 timeout:
 	tfr u,s			; Throw an exception
 si_busfailw:
 	ldb #-1
-	puls y,u,pc
+	puls u,pc
 
 ;
 ;	Must preserve B and X
@@ -68,7 +68,7 @@ waitreql:
 	bne waitreql
 	rts
 
-	.area .text
+	.code
 
 mpi_scsi:
 	ldb #_cartslots
@@ -78,7 +78,7 @@ mpi_scsi:
 	jmp _mpi_set_slot
 	
 _si_writecmd:			; DCB, B is len (check B or X)
-	pshs y,u
+	pshs u
 	tfr s,u			; Required exception frame for waitreq
 _si_writecmdl:
 	jsr waitreq
@@ -90,10 +90,10 @@ _si_writecmdl:
 	decb
 	bne _si_writecmdl
 	clrb			; Return 0
-	puls y,u,pc
+	puls u,pc
 si_busfail:
 	ldb #-1			; Error (should sort some codes for type!)
-	puls y,u,pc
+	puls u,pc
 
 _si_select:			; Select device
 	bsr mpi_scsi		; Set the MPI
@@ -143,7 +143,7 @@ _si_deselect:
 	beq si_rts
 	jmp _mpi_set_slot
 
-	.area .data
+	.data
 
-si_savedslot
-	.db 255			; No restore (eg no MPI)
+si_savedslot:
+	.byte	255			; No restore (eg no MPI)

@@ -73,7 +73,7 @@ struct hdb_rom_id {
 	uint8_t id;
 	const char *name;
 };
-        
+
 static struct hdb_rom_id hdb[] = {
         { "ID", CART_IDE, "IDE-CHS" },
         { "LB", CART_IDE, "IDE-LBA" },
@@ -105,11 +105,11 @@ static struct cart_rom_id *cart_lookup(uint16_t hash)
 	do {
 		if (cart->hash == hash)
 			return cart;
-	} while(cart++->hash);
+	} while((cart++)->hash);
 	return NULL;
 }
 
-static inline int keycmp(uint16_t *k1, uint16_t *k2)
+static int keycmp(uint16_t *k1, uint16_t *k2)
 {
 	return (*k1 == *k2);
 }
@@ -120,7 +120,7 @@ static struct hdb_rom_id *hdb_lookup(uint16_t key)
 	do {
 		if (keycmp(&key, (uint16_t *)id->key))
 			return id;
-	} while(id++->id);
+	} while((id++)->id);
 	return NULL;
 }
 
@@ -156,7 +156,7 @@ void map_init(void)
 		else
 			kprintf("%d:%cUnknown(%x)",
 				i, i == bslot ? '*':' ', hash);
-				
+
 		/* The analysis needs to be in asm as we need to page in
 		   the ROM to peer at it */
 		if (rom->id == CART_HDBDOS) {

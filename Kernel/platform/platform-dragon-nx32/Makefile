@@ -1,11 +1,11 @@
 ifneq ($(MOOH),)
-ASOPTS += --defsym MOOH=1
+ASOPTS += -DMOOH=1
 CROSS_CCOPTS += -DMOOH=1
-MEMSRC = mem-nx32-mooh.s
+MEMSRC = mem-nx32-mooh.S
 else
-MEMSRC = mem-nx32.s
+MEMSRC = mem-nx32.S
 endif
-MEMOBJ = $(MEMSRC:.s=$(BINEXT))
+MEMOBJ = $(MEMSRC:.S=$(BINEXT))
 
 CSRCS = devlpr.c devtty.c devfd.c ttydw.c devinput.c
 CSRCS += vc.c devices.c main.c libc.c
@@ -19,22 +19,22 @@ DSRCS = ../../dev/devdw.c ../../dev/blkdev.c ../../dev/devide.c \
 DDSRCS = ../../dev/devide_discard.c ../../dev/devscsi_discard.c ../../dev/mbr.c \
          ../../dev/gpt.c ../../dev/devsd_discard.c
 
-ASRCS = crt0.s dragon.s $(MEMSRC) video.s ide.s spi.s scsi_tc3.s
-ASRCS += tricks.s commonmem.s usermem_sam.s floppy.s ../../dev/drivewire/drivewire.s
-ASRCS += multihead.s vc_asm.s
+ASRCS = crt0.S dragon.S $(MEMSRC) video.S ide.S spi.S scsi_tc3.S
+ASRCS += tricks.S commonmem.S usermem_sam.S floppy.S ../../dev/drivewire/drivewire.S
+ASRCS += multihead.S vc_asm.S
 
 COBJS = $(CSRCS:.c=$(BINEXT))
 CDOBJS = $(CDSRCS:.c=$(BINEXT))
-AOBJS = $(ASRCS:.s=$(BINEXT))
+AOBJS = $(ASRCS:.S=$(BINEXT))
 DOBJS = $(patsubst ../../dev/%.c,%.o, $(DSRCS))
 DDOBJS = $(patsubst ../../dev/%.c,%.o, $(DDSRCS))
 OBJS  = $(COBJS) $(CDOBJS) $(AOBJS) $(DOBJS) $(DDOBJS)
 
 CROSS_CCOPTS += -I../../dev/
 
-../../dev/drivewire/drivewire.o: ASOPTS += --defsym BECKER=$(BECKER)
+../../dev/drivewire/drivewire.o: ASOPTS += -DBECKER=$(BECKER)
 
-JUNK = $(CSRCS:.c=.o) $(ASRCS:.s=.o)
+JUNK = $(CSRCS:.c=.o) $(ASRCS:.S=.o)
 
 all: $(OBJS)
 
@@ -45,38 +45,40 @@ $(CDOBJS): %$(BINEXT): %.c
 	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
 
 $(DOBJS): %$(BINEXT): ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG2) -c $<
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEG2) -c $< -o $@
 
 $(DDOBJS): %$(BINEXT): ../../dev/%.c
-	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $<
+	$(CROSS_CC) $(CROSS_CCOPTS) $(CROSS_CC_SEGDISC) -c $< -o $@
 
-$(AOBJS): %$(BINEXT): %.s
+$(AOBJS): %$(BINEXT): %.S
 	$(CROSS_AS) $(ASOPTS) $< -o $*.o
 
 clean:
 	rm -f $(OBJS) $(JUNK)
 
-dwfuz.bin: dwload.asm
-	lwasm --pragma=condundefzero -r -b -odwfuz.bin dwload.asm -DFUZIX -DRAMORG=0x600 -DBECKER
+#dwfuz.bin: dwload.asm
+#	lwasm --pragma=condundefzero -r -b -odwfuz.bin dwload.asm -DFUZIX -DRAMORG=0x600 -DBECKER
 
-image: dwfuz.bin
-	$(CROSS_LD) -o ../../fuzix.bin -Map=../../fuzix.map --script=fuzix.link --oformat=decb \
+image:
+	$(CROSS_LD) -b -o ../../fuzix.bin -m fuzix.tmpmap \
+	-C 0x2000 -f SCLbXsDB \
 	crt0.o commonmem.o usermem_sam.o \
-	dragon.o $(MEMOBJ) ../../bankfixed.o \
+	dragon.o $(MEMOBJ) ../../mm/bankfixed.o \
 	../../start.o ../../version.o ../../cpu-6809/lowlevel-6809.o \
 	tricks.o main.o ../../timer.o ../../kdata.o devfd.o floppy.o devices.o \
 	multihead.o crt9128.o vc.o vc_asm.o \
-	../../dev/drivewire/drivewire.o devdw.o ttydw.o ../../memalloc_none.o \
+	../../dev/drivewire/drivewire.o devdw.o ttydw.o ../../mm/memalloc_none.o \
 	../../devio.o ../../filesys.o ../../process.o ../../inode.o ../../syscall_fs.o \
 	../../syscall_proc.o ../../syscall_other.o ../../mm.o ../../swap.o \
 	../../tty.o ../../devsys.o ../../usermem.o ../../syscall_fs2.o ../../syscall_exec16.o \
 	../../syscall_fs3.o ../../syscall_exec.o ../../blk512.o ../../devinput.o \
-	devinput.o devlpr.o devtty.o libc.o ../../vt.o video.o ../../font8x8.o \
+	devinput.o devlpr.o devtty.o libc.o ../../vt.o video.o ../../font/font8x8.o \
 	devide.o blkdev.o ide.o devide_discard.o mbr.o gpt.o \
 	devsd.o devsd_discard.o spi.o devscsi.o devscsi_discard.o \
-	scsi_tc3.o discard.o
-	../../tools/pad256 ../../fuzix.bin
-	../../tools/lw-checkmap ../../fuzix.map
+	scsi_tc3.o discard.o /opt/fcc/lib/6809/lib6809.a
+	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
+#	../../tools/pad256 ../../fuzix.bin
+#	../../tools/lw-checkmap ../../fuzix.map
 
 IMAGES = $(FUZIX_ROOT)/Images/$(TARGET)
 
