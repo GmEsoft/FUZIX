@@ -19,13 +19,13 @@
 
     - sd_spi_raise_cs(), sd_spi_lower_cs(): raise or lower the CS line.
 
-    - sd_spi_transmit_byte(): transmit a single byte
+    - sd_spi_tx_byte(): transmit a single byte
 
-    - sd_spi_receive_byte(): receive a single byte
+    - sd_spi_rx_byte(): receive a single byte
 
-    - sd_spi_transmit_sector(): transmit a 512-byte sector (params in blk_op)
+    - sd_spi_tx_sector(): transmit a 512-byte sector (params in blk_op)
 
-    - sd_spi_receive_sector(): receive a 512-byte sector (params in blk_op)
+    - sd_spi_rx_sector(): receive a 512-byte sector (params in blk_op)
 */
 
 
@@ -42,11 +42,11 @@ void devsd_init(void);
 void sd_spi_clock(bool go_fast) SD_SPI_CALLTYPE;
 void sd_spi_raise_cs(void);
 void sd_spi_lower_cs(void);
-void sd_spi_transmit_byte(uint_fast8_t byte) SD_SPI_CALLTYPE;
-uint_fast8_t sd_spi_receive_byte(void);
+void sd_spi_tx_byte(uint_fast8_t byte) SD_SPI_CALLTYPE;
+uint_fast8_t sd_spi_rx_byte(void);
 
-bool sd_spi_receive_sector(void);
-bool sd_spi_transmit_sector(void);
+bool sd_spi_rx_sector(void);
+bool sd_spi_tx_sector(void);
 
 uint_fast8_t sd_spi_try_release(void);
 

@@ -43,21 +43,21 @@ uint_fast8_t devsd_transfer_sector(void)
     barrier();
 
     for(attempt=0; attempt<8; attempt++){
-	if(sd_send_command(blk_op.is_read ? CMD17 : CMD24, 
+	if(sd_send_command(blk_op.is_read ? CMD17 : CMD24,
                     /* for byte addressed cards, shift LBA to convert to byte address */
                     (blk_op.blkdev->driver_data & CT_BLOCK) ? blk_op.lba : (blk_op.lba << 9)
                     ) == 0){
 	    if(blk_op.is_read){
                 success = (sd_spi_wait(false) == 0xFE);
                 if(success)
-                    sd_spi_receive_sector();
+                    sd_spi_rx_sector();
             }else{
                 success = false;
                 if(sd_spi_wait(true) == 0xFF){
-                    sd_spi_transmit_byte(0xFE);
-                    sd_spi_transmit_sector();
-                    sd_spi_transmit_byte(0xFF); /* dummy CRC */
-                    sd_spi_transmit_byte(0xFF);
+                    sd_spi_tx_byte(0xFE);
+                    sd_spi_tx_sector();
+                    sd_spi_tx_byte(0xFF); /* dummy CRC */
+                    sd_spi_tx_byte(0xFF);
                     /* Was the data accepted ? */
                     success = ((sd_spi_wait(false) & 0x1F) == 0x05);
                 }
@@ -72,7 +72,7 @@ uint_fast8_t devsd_transfer_sector(void)
 		/* Leave CS asserted so the write can complete */
 		deferredwrite = 1;
 	}
-	
+
 	if(success) {
             sd_drive = SD_DRIVE_NONE;
 	    return 1;
@@ -90,14 +90,14 @@ void sd_spi_release(void)
 {
 	if (deferredwrite) {
 		for (;;) {
-			uint_fast8_t b = sd_spi_receive_byte();
+			uint_fast8_t b = sd_spi_rx_byte();
 			if (b != 0x00)
 				break;
 		}
 		deferredwrite = 0;
 	}
 	sd_spi_raise_cs();
-	sd_spi_receive_byte();
+	sd_spi_rx_byte();
 }
 
 #ifdef CONFIG_SPI_SHARED
@@ -120,14 +120,14 @@ uint_fast8_t sd_spi_try_release(void)
     if (deferredwrite == 0)
         return 0;
     /* Fetch a byte and see if the card is done */
-    b = sd_spi_receive_byte();
+    b = sd_spi_rx_byte();
     /* 0 indicates it is not complete - busy */
     if (b == 0x00)
         return 1;
     /* The card finished, free the bus */
     deferredwrite = 0;
     sd_spi_raise_cs();
-    sd_spi_receive_byte();
+    sd_spi_rx_byte();
     /* bus is free */
     return 0;
 }
@@ -141,7 +141,7 @@ uint_fast8_t sd_spi_wait(bool want_ff)
     timer = set_timer_ms(500);
 
     while(true){
-        b = sd_spi_receive_byte();
+        b = sd_spi_rx_byte();
         if(want_ff){
             if(b == 0xFF)
                 break;
@@ -169,7 +169,7 @@ int sd_send_command(uint_fast8_t cmd, uint32_t arg)
     if (cmd & 0x80) {   /* ACMD<n> is the command sequense of CMD55-CMD<n> */
         cmd &= 0x7F;
         res = sd_send_command(CMD55, 0);
-        if (res > 1) 
+        if (res > 1)
             return res;
     }
 
@@ -180,36 +180,36 @@ int sd_send_command(uint_fast8_t cmd, uint32_t arg)
         return 0xFF;
 
     /* Send command packet */
-    sd_spi_transmit_byte(cmd);                        /* Start + Command index */
+    sd_spi_tx_byte(cmd);                        /* Start + Command index */
 #if !defined(__SDCC) && !defined(SDCC)
-    sd_spi_transmit_byte((unsigned char)(arg >> 24)); /* Argument[31..24] */
-    sd_spi_transmit_byte((unsigned char)(arg >> 16)); /* Argument[23..16] */
-    sd_spi_transmit_byte((unsigned char)(arg >> 8));  /* Argument[15..8] */
-    sd_spi_transmit_byte((unsigned char)arg);         /* Argument[7..0] */
+    sd_spi_tx_byte((unsigned char)(arg >> 24)); /* Argument[31..24] */
+    sd_spi_tx_byte((unsigned char)(arg >> 16)); /* Argument[23..16] */
+    sd_spi_tx_byte((unsigned char)(arg >> 8));  /* Argument[15..8] */
+    sd_spi_tx_byte((unsigned char)arg);         /* Argument[7..0] */
 #else
     {
         unsigned char *p;
         /* sdcc sadly unable to figure this out for itself yet */
         p = ((unsigned char *)&arg)+3;
-        sd_spi_transmit_byte(*(p--));                     /* Argument[31..24] */
-        sd_spi_transmit_byte(*(p--));                     /* Argument[23..16] */
-        sd_spi_transmit_byte(*(p--));                     /* Argument[15..8] */
-        sd_spi_transmit_byte(*p);                         /* Argument[7..0] */
+        sd_spi_tx_byte(*(p--));                     /* Argument[31..24] */
+        sd_spi_tx_byte(*(p--));                     /* Argument[23..16] */
+        sd_spi_tx_byte(*(p--));                     /* Argument[15..8] */
+        sd_spi_tx_byte(*p);                         /* Argument[7..0] */
     }
 #endif
     /* there's only a few commands (in native mode) that need correct CRCs */
     n = 0x01;                                                /* Dummy CRC + Stop */
     if (cmd == CMD0) n = 0x95;                               /* Valid CRC for CMD0(0) */
     if (cmd == CMD8) n = 0x87;                               /* Valid CRC for CMD8(0x1AA) */
-    sd_spi_transmit_byte(n);
+    sd_spi_tx_byte(n);
 
     /* Receive command response */
 /*    if (cmd == CMD12)  - ignore first reply byte anyway because it may
       be floating bus */
-    sd_spi_receive_byte();     /* Skip a stuff byte when stop reading */
+    sd_spi_rx_byte();     /* Skip a stuff byte when stop reading */
     n = 20;                             /* Wait for a valid response */
     do {
-        res = sd_spi_receive_byte();
+        res = sd_spi_rx_byte();
     } while ((res & 0x80) && --n);
 
     return res;         /* Return with the response value */

@@ -56,19 +56,19 @@ void sd_init_drive(uint8_t drive)
 
     blk->transfer = devsd_transfer_sector;
     blk->driver_data = (sd_drive & DRIVE_NR_MASK) | card_type;
-    
+
     /* read and compute card size */
     if(sd_send_command(CMD9, 0) == 0 && sd_spi_wait(false) == 0xFE){
         for(n=0; n<16; n++)
-            csd[n] = sd_spi_receive_byte();
+            csd[n] = sd_spi_rx_byte();
         if ((csd[0] >> 6) == 1) {
             /* SDC ver 2.00 */
-            blk->drive_lba_count = ((uint32_t)csd[9] 
+            blk->drive_lba_count = ((uint32_t)csd[9]
                                    + (uint32_t)((unsigned int)csd[8] << 8) + 1) << 10;
         } else {
             /* SDC ver 1.XX or MMC*/
             n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
-            blk->drive_lba_count = (csd[8] >> 6) + ((unsigned int)csd[7] << 2) 
+            blk->drive_lba_count = (csd[8] >> 6) + ((unsigned int)csd[7] << 2)
                                    + ((unsigned int)(csd[6] & 3) << 10) + 1;
             blk->drive_lba_count <<= (n-9);
         }
@@ -95,7 +95,7 @@ int sd_spi_init(void)
 
     sd_spi_clock(false);
     for (n = 20; n; n--)
-        sd_spi_receive_byte(); /* send dummy clocks -- at least 80 required; we send 160 */
+        sd_spi_rx_byte(); /* send dummy clocks -- at least 80 required; we send 160 */
 
     card_type = CT_NONE;
 
@@ -105,14 +105,14 @@ int sd_spi_init(void)
         timer = set_timer_sec(2);
         if (sd_send_command(CMD8, (uint32_t)0x1AA) == 1) {    /* SDHC */
             /* Get trailing return value of R7 resp */
-            for (n = 0; n < 4; n++) ocr[n] = sd_spi_receive_byte();
+            for (n = 0; n < 4; n++) ocr[n] = sd_spi_rx_byte();
             /* The card can work at vdd range of 2.7-3.6V */
             if (ocr[2] == 0x01 && ocr[3] == 0xAA) {
                 /* Wait for leaving idle state (ACMD41 with HCS bit) */
                 while(!timer_expired(timer) && sd_send_command(ACMD41, (uint32_t)1 << 30));
                 /* Check CCS bit in the OCR */
                 if (!timer_expired(timer) && sd_send_command(CMD58, 0) == 0) {
-                    for (n = 0; n < 4; n++) ocr[n] = sd_spi_receive_byte();
+                    for (n = 0; n < 4; n++) ocr[n] = sd_spi_rx_byte();
                     card_type = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;   /* SDv2 */
                 }
             }
