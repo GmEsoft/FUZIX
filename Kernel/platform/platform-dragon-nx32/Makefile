@@ -59,9 +59,12 @@ clean:
 #dwfuz.bin: dwload.asm
 #	lwasm --pragma=condundefzero -r -b -odwfuz.bin dwload.asm -DFUZIX -DRAMORG=0x600 -DBECKER
 
-image:
+wrap: wrap.c
+	$(CC) -Wall -pedantic $< -o $@
+
+image: wrap
 	$(CROSS_LD) -b -o ../../fuzix.bin -m fuzix.tmpmap \
-	-C 0x2000 -f SCLbXsDB \
+	-S 0x1C00 -f SsbXCLDB \
 	crt0.o commonmem.o usermem_sam.o \
 	dragon.o $(MEMOBJ) ../../mm/bankfixed.o \
 	../../start.o ../../version.o ../../cpu-6809/lowlevel-6809.o \
@@ -77,6 +80,7 @@ image:
 	devsd.o devsd_discard.o spi.o devscsi.o devscsi_discard.o \
 	scsi_tc3.o discard.o /opt/fcc/lib/6809/lib6809.a
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
+	./wrap < ../../fuzix.bin >fuzix.decb
 #	../../tools/pad256 ../../fuzix.bin
 #	../../tools/lw-checkmap ../../fuzix.map
 
@@ -88,5 +92,5 @@ diskimage:
 	# Add the file system
 	dd if=$(IMAGES)/filesys8.img of=$(IMAGES)/disk.img bs=512 seek=2048 conv=notrunc
 	# Write the rest of the images to the disks
-	dd if=../../fuzix.bin of=$(IMAGES)/disk.img bs=512 seek=64 conv=notrunc
+	dd if=fuzix.decb of=$(IMAGES)/disk.img bs=512 seek=64 conv=notrunc
 	cp dwfuz.bin $(IMAGES)

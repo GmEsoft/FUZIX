@@ -94,7 +94,7 @@ map1:	sta sammap1
 
 map_proc_always:
 	pshs a
-	lda U_DATA__U_PAGE+1		; LSB of 16-bit page
+	lda _udata + U_DATA__U_PAGE+1		; LSB of 16-bit page
 map_set_a:
 	sta map_copy
 	bmi map1a

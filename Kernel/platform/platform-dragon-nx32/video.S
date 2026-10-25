@@ -50,7 +50,7 @@ vidaddr:
 _m6847_plot_char:
 	lda	2,s			; get X B = Y
 	bsr	vidaddr		; preserves X (holding the char)
-	tfr	x,d
+	ldd	3,s
 plot_patch:
 	andb	#0x7f		; mask char - patched on vtattr change
 	rolb			; multiply by 8
@@ -59,8 +59,7 @@ plot_patch:
 	rola
 	rolb
 	rola
-	; FIXME VT_ALTCHAR
-	ldx	4,s		; character
+	tfr	d,x
 	leax	_fontdata_8x8-256,x
 ; relative to font
 	ldb	_vtattr
@@ -330,7 +329,7 @@ _m6847_vtattr_notify:
 lowchar:
         ldd #0xC47F
 setmode:
-	std plot_patch+1
+	std plot_patch
 _m6847_cursor_disable:
 	rts
 ;

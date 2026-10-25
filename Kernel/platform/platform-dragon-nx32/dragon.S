@@ -24,18 +24,20 @@
 #include "../../cpu-6809/kernel09.def"
 
 
-	.abs
-	.org	0x0100
+
+	.discard
 
 	;
 	;	At 0x100 as required by the Dragon ROM
 	;
+vectors:
 	jmp badswi_handler			; 0x100
 	jmp badswi_handler			; 0x103
 	jmp unix_syscall_entry 			; 0x106
 	jmp fd_nmi_handler			; 0x109
 	jmp interrupt_handler			; 0x10C
 	jmp firq_handler			; 0x10F
+vectors_end:
 
 	.buffers
 
@@ -56,6 +58,13 @@ init_early:
 	lda	#0x7E
 	sta	0
 	sta	0x0071		; BASIC cold boot flag
+	ldx	#vectors
+	ldu	#0x0100
+nextvec:
+	ldd	,x++
+	std	,u++
+	cmpx	#vectors_end
+	bne	nextvec
 	rts
 
 init_hardware:
