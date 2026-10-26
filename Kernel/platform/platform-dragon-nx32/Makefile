@@ -12,12 +12,12 @@ CSRCS += vc.c devices.c main.c libc.c
 
 CDSRCS = discard.c
 
-DSRCS = ../../dev/devdw.c ../../dev/blkdev.c ../../dev/devide.c \
+DSRCS = ../../dev/devdw.c ../../dev/tinydisk.c ../../dev/tinyide.c \
         ../../dev/crt9128.c \
-        ../../dev/devsd.c ../../dev/devscsi.c
+        ../../dev/tinysd.c ../../dev/tinyscsi.c
 
-DDSRCS = ../../dev/devide_discard.c ../../dev/devscsi_discard.c ../../dev/mbr.c \
-         ../../dev/gpt.c ../../dev/devsd_discard.c
+DDSRCS = ../../dev/tinyide_discard.c ../../dev/tinyscsi_discard.c \
+	 ../../dev/tinydisk_discard.c ../../dev/tinysd_discard.c
 
 ASRCS = crt0.S dragon.S $(MEMSRC) video.S ide.S spi.S scsi_tc3.S
 ASRCS += tricks.S commonmem.S usermem_sam.S floppy.S ../../dev/drivewire/drivewire.S
@@ -76,8 +76,8 @@ image: wrap
 	../../tty.o ../../devsys.o ../../usermem.o ../../syscall_fs2.o ../../syscall_exec16.o \
 	../../syscall_fs3.o ../../syscall_exec.o ../../blk512.o ../../devinput.o \
 	devinput.o devlpr.o devtty.o libc.o ../../vt.o video.o ../../font/font8x8.o \
-	devide.o blkdev.o ide.o devide_discard.o mbr.o gpt.o \
-	devsd.o devsd_discard.o spi.o devscsi.o devscsi_discard.o \
+	tinyide.o tinydisk.o ide.o tinyide_discard.o tinydisk_discard.o \
+	tinysd.o tinysd_discard.o spi.o tinyscsi.o tinyscsi_discard.o \
 	discard.o /opt/fcc/lib/6809/lib6809.a
 # scsi_tc3.o
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map

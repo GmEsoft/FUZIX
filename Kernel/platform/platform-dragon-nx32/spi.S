@@ -3,7 +3,8 @@
 ;
 
 	.export _spi_setup
-	.export _sd_spi_clock
+	.export _sd_spi_slow
+	.export _sd_spi_fast
 	.export _sd_spi_lower_cs
 	.export _sd_spi_raise_cs
 	.export _sd_spi_tx_byte
@@ -39,16 +40,19 @@ spigood:
 	ldb	#1
 	rts
 
-
 ;
 ;	May need to switch clocks too
-;
-_sd_spi_clock:
-	cmpb	 #0			
-	beq	slow
-	ldd	#ECE*256+0x01	; external 45MHz clock on, divide by 4
-	bra	clkset
-slow:	ldd	#0x0000		; internal clock, phi/2 -> 0.89MHz/2 = 445kHz
+
+_sd_spi_fast:
+	; external 45MHz clock on, divide by 4
+	ldd	#ECE*256+0x01
+	std	SPICTRL
+	rts
+
+_sd_spi_slow:
+	; internal clock, phi/2 -> 0.89MHz/2 = 445kHz
+	clra
+	clrb
 clkset:	std	SPICTRL
 	rts
 
@@ -89,26 +93,36 @@ rxwait:
 
 	.common
 ;
-;	Swap not done yet.
-;
 ;	The SPI clock must be in fast mode here as we don't poll the busy
 ;	bits but know that by the time the CPU arrives at the next byte
 ;	the transaction is done. Note - we don't have to worry about the
 ;	interrupt situation here, we drive the clocks so if we go off for
 ;	an interrupt all is fine.
 ;
-_sd_spi_rx_sector:
+spisetup:
 	tfr	d,x
-	pshs	dp
-	lda	#0xFF
-	tfr	a,dp
-	ldx	_blk_op
 	leay	512,x
 	sty	endspi
-	lda	_blk_op+2
-	beq	rdspi
-	jsr	map_proc_always
-rdspi:	lda	#ECE+FRX		; FRX on, external clock on
+	lda	#0xFF
+	tfr	a,dp
+	lda	_td_raw
+#ifndef CONFIG_SWAP
+	lbne	map_proc_always
+	rts
+#else
+	beq	domap
+	rts
+domap:
+	cmpa	#1
+	lbeq	map_proc_always
+	lda	_td_page
+	jmp	map_for_swap
+#endif
+
+_sd_spi_rx_sector:
+	pshs	dp
+	bsr	spisetup
+	lda	#ECE+FRX		; FRX on, external clock on
 	sta	@SPICTRL
 	lda	@SPIDATA		; read old value, triggers shifting in new
 read8:
@@ -132,17 +146,9 @@ read8:
 	puls	dp,pc
 
 _sd_spi_tx_sector:
-	tfr	d,x
 	pshs	dp
-	lda	#0xFF
-	tfr	a,dp
-	ldx	_blk_op
-	leay	512,x
-	sty	endspi
-	lda	_blk_op+2
-	beq	wrspi
-	jsr	map_proc_always
-wrspi:	lda	#ECE		; ext clock, no FRX
+	bsr	spisetup
+	lda	#ECE		; ext clock, no FRX
 	sta	SPICTRL
 write8:
 	ldd	,x++

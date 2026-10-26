@@ -13,20 +13,31 @@
 ;
 ;	Standad mapping for Glennside style IDE
 ;
+idesetup:
+	tfr	d,x
+	leay	512,x
+	sty	endp
+	lda	#0xFF
+	tfr	a,dp
+	lda	_td_raw
+#ifndef CONFIG_SWAP
+	lbne	map_proc_always
+	rts
+#else
+	bne	domap
+	rts
+domap:
+	cmpa	#1
+	lbeq	map_proc_always
+	lda	_td_page
+	jmp	map_for_swap
+#endif
 ;
 ;	Not yet supporting swap
 ;
 _devide_read_data:
-	tfr	d,x
 	pshs	dp
-	lda	#0xFF
-	tfr	a,dp
-	ldx	_blk_op
-	leay	512,x
-	sty	endp
-	tst	_blk_op+2
-	beq	readword
-	jsr	map_proc_always
+	jsr	idesetup
 readword:
 	lda	@IDEDATA
 	ldb	@IDEDATA_L		; latched
@@ -37,16 +48,8 @@ readword:
 	puls	dp,pc
 
 _devide_write_data:
-	tfr	d,x
 	pshs	dp
-	lda	#0xFF
-	tfr	a,dp
-	ldx	_blk_op
-	leay	512,x
-	sty	endp
-	tst	_blk_op+2
-	beq	writeword
-	jsr	map_proc_always
+	jsr	idesetup
 writeword:
 	ldd	,x++
 	stb	@IDEDATA_L
@@ -57,4 +60,3 @@ writeword:
 	puls	dp,pc
 
 endp:	.word	0
-

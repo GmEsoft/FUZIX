@@ -9,10 +9,10 @@
 #include <vt.h>
 #include <graphics.h>
 #include <devtty.h>
-#include <blkdev.h>
-#include <devide.h>
-#include <devscsi.h>
-#include <devsd.h>
+#include <tinydisk.h>
+#include <tinyide.h>
+#include <tinyscsi.h>
+#include <tinysd.h>
 #include <device.h>
 #include <carts.h>
 
@@ -21,7 +21,7 @@ struct devsw dev_tab[] =  /* The device driver switch table */
 // minor    open         close        read      write       ioctl
 // -----------------------------------------------------------------
   /* 0: /dev/hd		Hard disc block devices (SD and IDE) */
-  {  blkdev_open,  no_close,	blkdev_read,	blkdev_write,	blkdev_ioctl },
+  {  td_open,  no_close,	td_read,	td_write,	td_ioctl },
   /* 1: /dev/fd		Floppy disc block devices  */
   {  fd_open,     no_close,    fd_read,   fd_write,   no_ioctl },
   /* 2: /dev/tty	TTY devices */
@@ -54,7 +54,7 @@ uint8_t scsi_slot = 3;		/* Again by convention */
 
 static uint8_t old_slot;
 
-void ide_select(uint8_t device)
+void ide_select(void)
 {
   if (cartslots > 1)
     old_slot = mpi_set_slot(ide_slot);
@@ -72,19 +72,21 @@ void device_init(void)
 {
     int i;
 
-#ifdef CONFIG_SD
+#ifdef CONFIG_TD_SD
     if (spi_setup())
-        devsd_init();
+        sd_probe();
 #endif
-#ifdef CONFIG_IDE
+#ifdef CONFIG_TD_IDE
     i = cart_find(CART_IDE);
     if (i >= 0) {
       ide_base = cartaddr[i] ? cartaddr[i]: ide_base;
       ide_slot = i;
-      devide_init();
+      kprintf("IDE at @0x%x.\n", ide_base);
+      ide_probe();
     }
 #endif
-#ifdef CONFIG_SCSI
+#ifdef CONFIG_TD_SCSI
+  /* TODO */
     i = cart_find(CART_TC3);
     if (i >= 0) {
       scsi_slot = i;
