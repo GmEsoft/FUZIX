@@ -71,7 +71,7 @@ static void size_fzx2(char *name, uint8_t *buf, int endian)
 		printf(" base text data  bss   size  hex filename\n");
 		head = 1;
 	}
-	printf("%5x%5x%5x%5x%7d%5x %s\n", basepage, txtsz, datsz, bsssz, txtsz + datsz + bsssz, txtsz + datsz + bsssz, name);
+	printf("%5x%5x%5x%5x%7u%5x %s\n", basepage, txtsz, datsz, bsssz, txtsz + datsz + bsssz, txtsz + datsz + bsssz, name);
 }
 
 static void size(const char *p)
