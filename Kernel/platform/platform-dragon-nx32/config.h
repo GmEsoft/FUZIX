@@ -34,7 +34,8 @@
 #define IDE_IS_8BIT(x)	0
 #define CONFIG_TD_IDE_SELECT
 #define TD_SD_NUM	1	/* Could be higher with multiple CS used */
-//#define CONFIG_SCSI             /* enable if SCSI interface present */
+// Not possible to fit all of IDE SD and SCSI at once currently
+//#define CONFIG_TD_SCSI             /* enable if SCSI interface present */
 
 /* Video terminal, not a serial tty */
 #define CONFIG_VT

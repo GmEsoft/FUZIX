@@ -56,9 +56,6 @@ $(AOBJS): %$(BINEXT): %.S
 clean:
 	rm -f $(OBJS) $(JUNK)
 
-#dwfuz.bin: dwload.asm
-#	lwasm --pragma=condundefzero -r -b -odwfuz.bin dwload.asm -DFUZIX -DRAMORG=0x600 -DBECKER
-
 wrap: wrap.c
 	$(CC) -Wall -pedantic $< -o $@
 
@@ -82,8 +79,6 @@ image: wrap
 # scsi_tc3.o
 	perl -lpe '$$_=hex' fuzix.tmpmap | paste -d" " - fuzix.tmpmap  |  sort -n |  cut -d" " -f 2- >../../fuzix.map
 	./wrap < ../../fuzix.bin >fuzix.decb
-#	../../tools/pad256 ../../fuzix.bin
-#	../../tools/lw-checkmap ../../fuzix.map
 
 IMAGES = $(FUZIX_ROOT)/Images/$(TARGET)
 
@@ -94,4 +89,3 @@ diskimage:
 	dd if=$(IMAGES)/filesys8.img of=$(IMAGES)/disk.img bs=512 seek=2048 conv=notrunc
 	# Write the rest of the images to the disks
 	dd if=fuzix.decb of=$(IMAGES)/disk.img bs=512 seek=64 conv=notrunc
-	cp dwfuz.bin $(IMAGES)

@@ -110,13 +110,13 @@ spisetup:
 	lbne	map_proc_always
 	rts
 #else
-	beq	domap
+	bne	domap
 	rts
 domap:
 	cmpa	#1
 	lbeq	map_proc_always
 	lda	_td_page
-	jmp	map_for_swap
+	jmp	map_proc_a
 #endif
 
 _sd_spi_rx_sector:

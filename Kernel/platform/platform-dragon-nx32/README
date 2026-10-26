@@ -1,25 +1,3 @@
-TODO
-====
-
-Currently being converted to fcc.
-
-For the moment
-- Trimmed the devices a chunk to make it fit
-
-To Fix
-- Switch from blkdev to tinydisk to get space back
-- Add a second stage loader so we can load how we want
-- Switch to overlays and loading into 2 x 32K high banks
-- Add swap
-
-We can stuff the code, literals and probably common code into two banks
-of high 32K. That will leave us 0x2000-0x3FFF or similar for unbanked data
-and buffers which would let us not only do more stuff but also run bigger
-binaries with some copying - networking probably included. Can also push
-alt screens into banks too when not displaying. Discard can also sit
-above data nicely for as 4000-7FF or 6000-7FFF or somesuch
-would be user so fully recoverable space
-
 dragon-nx32
 ===========
 
@@ -40,12 +18,25 @@ The MOOH cartridge is different, but is here set up to mimic the same
 The port reserves the internal RAM at 0-0x7FFF plus bank 0 for the kernel.
 
 The port can use the cartridge's SD card or DriveWire to mount the root
-filesystem, and most userland tools are working.
+filesystem.
 
 The SDBOOT boot loader (https://gitlab.com/tormod/sdboot) can be used
 to boot from an SD card.
 
 Swapping to disk is supported over DriveWire (device 2049 = drive 1).
+
+TODO
+====
+
+o	Switch to banked setup using 2 x 32K banks for the code with
+	some of it copied into both for literals and shared code. Would
+	give us room for networking and stuff like that
+	(needs a new bootloader)
+o	Remove CONFIG_SMALL once banked
+o	Look at moving other video screens into banked space
+o	6847T1 niceities ? (eg a mode setting for 6847T1 mode on
+	text consoles)
+o	Resurrect the TC3 SCSI
 
 Emulating in XRoar
 ==================

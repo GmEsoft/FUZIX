@@ -30,7 +30,7 @@ domap:
 	cmpa	#1
 	lbeq	map_proc_always
 	lda	_td_page
-	jmp	map_for_swap
+	jmp	map_proc_a
 #endif
 ;
 ;	Not yet supporting swap

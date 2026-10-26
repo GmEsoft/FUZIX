@@ -23,3 +23,5 @@ SPICS			    equ 0x01	     ; hardcode SEL0 for now
 PROGBASE                    equ 0x8000       ; programs and data start here
 
 NBUFS			    equ 4
+
+#define CONFIG_SWAP
