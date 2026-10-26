@@ -16,7 +16,7 @@
 #define ide_write(x,y)	(x) = (y)
 #elif defined(CONFIG_TINYIDE_INDIRECT)
 extern uint8_t ide_read(uint_fast8_t r);
-extern void ide_write(uint_fast8_t r, uint_fast8_t v); 
+extern void ide_write(uint_fast8_t r, uint_fast8_t v);
 #else
 #define	ide_read(x)	(*(x))
 #define ide_write(x,y)	(*(x) = (y))
@@ -39,5 +39,12 @@ void ide_probe(void);
 void ide_std_reset(void);
 
 void ide_reset(void);	/* Optional caller provided */
+#ifdef CONFIG_TD_IDE_SELECT
+void ide_select(void);
+void ide_deselect(void);
+#else
+#define ide_select()
+#define ide_deselect()
+#endif
 
 #endif

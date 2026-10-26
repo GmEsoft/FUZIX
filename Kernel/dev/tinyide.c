@@ -11,7 +11,9 @@ uint8_t ide_unit;
 
 int ide_xfer(uint_fast8_t dev, bool is_read, uint32_t lba, uint8_t *dptr)
 {
+    uint_fast8_t r;
     ide_unit = dev;
+    ide_select();
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
     ide_write(devh, (ide_unit & 1) ? 0xF0 : 0xE0) ;	/* LBA, device */
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
@@ -30,9 +32,9 @@ int ide_xfer(uint_fast8_t dev, bool is_read, uint32_t lba, uint8_t *dptr)
       devide_write_data(dptr);
 
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
-    if (ide_read(status) & 0x01)	/* Error */
-      return 0;
-    return 1;
+    r = ide_read(status) & 0x01; 	/* Error */
+    ide_deselect();
+    return !!r;
 }
 
 #ifdef CONFIG_TD_IDE_CHS
@@ -51,8 +53,10 @@ int ide_chs_xfer(uint_fast8_t drive, bool is_read, uint32_t lba, uint8_t *dptr)
     uint32_t sector;
     uint32_t head;
     uint16_t cyl;
+    uint_fast8_t r;
 
     ide_unit = drive;
+    ide_select();
 
     /* Avoid the expensive 32bit maths (on 8bit anyway) by spotting
        further requests on the same head/cylinder as for those we just
@@ -94,9 +98,9 @@ int ide_chs_xfer(uint_fast8_t drive, bool is_read, uint32_t lba, uint8_t *dptr)
       devide_write_data(dptr);
 
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
-    if (ide_read(status) & 0x01)	/* Error */
-      return 0;
-    return 1;
+    r = ide_read(status) & 0x01;	/* Error */
+    ide_deselect();
+    return !!r
 }
 #endif
 
@@ -105,12 +109,15 @@ int ide_ioctl(uint_fast8_t dev, uarg_t request, char *unused)
     if (request != BLKFLSBUF)
         return -1;
     ide_unit = dev;
+    ide_select();
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
     ide_write(devh , (dev & 0x01) ? 0xF0 : 0xE0) ;	/* LBA, device */
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
     while(!(ide_read(status) & 0x40));	/* Wait DRDY */
     ide_write(cmd, 0xE7);
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
+    ide_deselect();
+    /* Error check TODO */
     return 0;
 }
 

@@ -50,7 +50,6 @@ static void ide_identify(int dev, uint8_t *buf)
 	register uint8_t *dptr = buf;
         int i;
 
-        ide_unit = dev;
 
 	giveup = set_timer_ms(2000);
 
@@ -142,7 +141,7 @@ static void ide_register(uint_fast8_t unit)
 		td_register(unit, ide_chs_xfer, ide_ioctl, 1);
 		return;
 	}
-#endif	
+#endif
 	td_register(unit, ide_xfer, ide_ioctl, 1);
 }
 
@@ -152,12 +151,15 @@ void ide_probe(void)
 	unsigned chs = 0;
 	uint8_t *buf = (uint8_t *)tmpbuf();
 	for (n = 0 ; n < TD_IDE_NUM; n += 2) {
+	        ide_unit = n;
+	        ide_select();
 #ifdef CONFIG_TINYIDE_RESET
 		ide_reset();
 #endif
 		/* Issue an EDD if we can - timeout -> no drives */
 		/* Now issue an identify for each drive */
 		ide_identify(n, buf);
+		ide_deselect();
 		if (ide_present && n < TD_IDE_NUM - 1)
 			ide_identify(n + 1, buf);
 		if (ide_present & (1 << n))
