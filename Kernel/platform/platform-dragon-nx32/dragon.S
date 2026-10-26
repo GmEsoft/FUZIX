@@ -289,7 +289,8 @@ _hdb_type:
 	.export _jsread
 
 _jsread:
-	; Buffer is in X on entry
+	tfr	d,x
+	; Buffer is in D on entry
 	pshs	u
 	lda	#$FF
 	sta	$FF02		; Keyboard scan lines off
