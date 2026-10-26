@@ -32,7 +32,7 @@ CROSS_CCOPTS += -I../../dev/ -I../platform-dragon-nx32/
 
 ../../dev/drivewire/drivewire.o: ASOPTS += --defsym BECKER=$(BECKER)
 
-JUNK = $(CSRCS:.c=.o) $(ASRCS:.s=.o)
+JUNK = $(CSRCS:.c=.o) $(ASRCS:.s=.o) *~ 
 
 all: $(OBJS)
 

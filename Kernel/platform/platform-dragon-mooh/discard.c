@@ -26,7 +26,7 @@ void pagemap_init(void)
 	pagemap_add(3);	/* was used while loading, replaced by 3F */
 }
 
-uint8_t plt_param(char *p)
+uint_fast8_t plt_param(char *p)
 {
 	if (strcmp(p, "over") == 0 || strcmp(p, "overclock") == 0) {
 		*((volatile uint8_t *)0xFFD7) = 0;
@@ -64,7 +64,7 @@ struct hdb_rom_id {
 	uint8_t id;
 	const char *name;
 };
-        
+
 static struct hdb_rom_id hdb[] = {
         { "ID", CART_IDE, "IDE-CHS" },
         { "LB", CART_IDE, "IDE-LBA" },
@@ -147,7 +147,7 @@ void map_init(void)
 		else
 			kprintf("%d:%cUnknown(%x)",
 				i, i == bslot ? '*':' ', hash);
-				
+
 		/* The analysis needs to be in asm as we need to page in
 		   the ROM to peer at it */
 		if (rom->id == CART_HDBDOS) {

@@ -4,39 +4,30 @@
 ; Copyright 2015-2018 Tormod Volden
 ;
 
-	.module mem_mooh
-
 	; exported
-	.globl reloc
-	.globl size_ram
-	.globl map_kernel
-	.globl map_proc
-	.globl map_proc_a
-	.globl map_proc_always
-	.globl map_save
-	.globl map_restore
-	.globl copybank
-	.globl mmu_remap_x
-
-	; imported
-	.globl _ramsize
-	.globl _procmem
-	.globl _membanks
-	.globl _internal32k
-	.globl start
+	.export reloc
+	.export size_ram
+	.export map_kernel
+	.export map_proc
+	.export map_proc_a
+	.export map_proc_always
+	.export map_save
+	.export map_restore
+	.export copybank
+	.export mmu_remap_x
 
 ; mmuctl  equ 0xFF90
 ; mmuen   equ 0x40
 ; crmen   equ 0x08
 ; mmutask equ 0xFF91
 
-	include "kernel.def"
-	include "../../cpu-6809/kernel09.def"
+#include "kernel.def"
+#include "../../cpu-6809/kernel09.def"
 
-	.area .discard
+	.discard
 
 ; Sets ramsize, procmem, membanks
-size_ram
+size_ram:
 	; we know what we should have
 	lda #56
 	sta _membanks	; not really used anywhere
@@ -46,21 +37,21 @@ size_ram
 	std _procmem	; minus 64KB for kernel
 	rts
 
-	.area .common
+	.common
 
 ; must preserve register a but not x
-map_kernel
+map_kernel:
 	clr map_copy
 	clr 0xff91	; MMU task 0
 	rts
 
-map_restore
+map_restore:
 	lda map_store
 	beq map_kernel
 	; fall-through
 
-* might be called with interrupts enabled from drivers
-map_proc_always
+; might be called with interrupts enabled from drivers
+map_proc_always:
 	pshs cc,a
 	lda #1
 	orcc #0x10
@@ -68,8 +59,8 @@ map_proc_always
 	sta 0xff91	; MMU task 1
 	puls cc,a,pc
 
-* called by I/O drivers (also for swapping)
-map_proc
+; called by I/O drivers (also for swapping)
+map_proc:
 	cmpx #0
 	beq map_kernel
 	pshs cc
@@ -78,14 +69,14 @@ map_proc
 	pshs cc,pc
 
 * called directly by switchin
-map_proc_a
+map_proc_a:
 	jsr mmu_remap_x
 	lda #1
 	sta map_copy
 	sta 0xff91	; MMU task 1
 	rts
 
-mmu_remap_x
+mmu_remap_x:
 	ldy #0xFFA9
 	ldb #7
 maplp	lda ,x+
@@ -94,7 +85,7 @@ maplp	lda ,x+
 	bne maplp
 	rts
 
-map_save
+map_save:
 	lda map_copy
 	sta map_store
 	rts
@@ -104,7 +95,7 @@ map_save
 
 ; we simply copy the full 8KB bank here
 
-copybank
+copybank:
 	pshs	dp,x,y,u
 	ldx	0xFFA4		; save the two MMU regs on stack
 	pshs	x
@@ -112,7 +103,7 @@ copybank
 	sts	save_sp
 	lds	#0xC000		; top of DEST
 	ldu	#0xA000+7	; top of SRC
-smash@	leau	-14,u
+smash:	leau	-14,u
 	pulu	dp,d,x,y	; transfer 7 bytes at a time
 	pshs	dp,d,x,y	; 6 times.. 42 bytes per loop
 	leau	-14,u
@@ -131,21 +122,24 @@ smash@	leau	-14,u
 	pulu	dp,d,x,y
 	pshs	dp,d,x,y
 	cmpu	#0x8002+42+7	; end of copy? (leave space for interrupt) - bottom of SRC
-	bne	smash@		; no repeat
+	bne	smash		; no repeat
 	leax	-7,u		; pick up SRC in X
 	ldu	save_sp		; restore stack...
 	exg	u,s		; ... and DEST now in U
-safe@	ldy	,--x		; move last 44 bytes with a normal stack
+safe:	ldy	,--x		; move last 44 bytes with a normal stack
 	ldd	,--x		; 4 bytes per loop
 	pshu	d,y
 	cmpx	#0x8000		; reached bottom of SRC?
-	bne	safe@
+	bne	safe
 	puls	x
 	stx	0xFFA4		; restore MMU regs
 	puls	dp,x,y,u,pc
 
-	.area .commondata
+	commondata
 
-map_store	.dw 0
-map_copy	.dw 0
-save_sp		.dw 0
+map_store:
+	.word	0
+map_copy:
+	.word	0
+save_sp:
+	.word	0
