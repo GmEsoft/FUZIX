@@ -8,10 +8,18 @@ copy and even in theory disk to REU direct transfer. That would allow us to
 keep the buffers in REU space and also read/write the disk really fast in
 CF mode.
 
-At this point we can get to starting /init but then things go very downhill
-which is not surprising as the 6502 syscall side code needs a fair bit of
-work for this kind of memory model. Currently it's running on machines where
-we can swap the ZP/stack using memory banking which is *much* easier.
+## To Look At
+
+- Switch to a proper keyboard scan routine maybe
+- Colour attributes + ink/paper/border
+- Graphics mode setting (but really need more memory for a full 2K video)
+- Write scroll_down
+- Performance is horrible
+
+Our performance is mainly bounded by the speed of the disk sector transfers
+on the 1MHz 6502, especially the way they are arranged for writes on the
+IDE64. Unfortunately VICE appears to have broken CF emulation and 8bit mode
+doesn't seem to work right.
 
 ## Memory Map
 
@@ -19,25 +27,15 @@ we can swap the ZP/stack using memory banking which is *much* easier.
 0100-01FF	Stack
 0200-03FF	C64 Kernal owns
 0400-07FF	Screen
-(0800-0FFF	font ?)
-0800-3FFF	Kernel data/buffers etc
-4000-7FFF	Always user
+0800-0BFF	Font (would be nice to get a full 2K font in but no room)
+0C00-3FFF	Kernel data/buffers etc
+4000-7FFF	Always user (discard during boot)
 8000-AFFF	Cartridge (banked 4 ways - kernel), RAM user
 B000-BFFF	Cartridge (same code in each 4K bank)
 C000-FEFF	User, D000-DFFF becoems I/O when cartridge is paged in
 E000-FFFF	Becomes kernal when cartridge paged in so icky mess
 		with vectors
-FF00-FFFF	REU trigger, vectors (maybe put istack here)
-
-## Issues
-
-Pretty much as Atari 8bit. In fact very similar ports except for a few
-drivers. See notes on WIP atari 8bit.
-
-Disk I/O requires accessing Dxxx. We have user memory at Dxxx and it's not
-possible to have both mapped at once. Therefore like MSX1 we will need to
-bounce stuff in that range or keep flipping back and forth for that case
-which *might* be better.
+FF00-FFFF	REU trigger, vectors
 
 ### Kernal
 
@@ -49,52 +47,13 @@ Kernal requires most of 0200-03FF which isn't too bad and hogs E000-FFFF
 in cartridge mapped mode which is actually fine (except for the high vectors
 it's all user anyway)
 
-Vectors:
-0314/5	IRQ
-0316/7	BRK
-0318/9	NMI
+We try and be polite and co-exist with KERNAL. Our keyboard handling has
+to duplicate some KERNAL code because it assumes it won't be called from
+an interrupt.
 
-ZP: Probably safe to use 02 to 8F if avoiding BASIC
-90-FF avoid
-
-JSR $FF81 to initialize the VIC
-JSR $FF84 to initialize the devices early in cartridge init
-JSR $FF8D XY = address, set carry, copies vectors in XY to 0314-0332
-A= 0 JSR $FF90 ; shut up kernel error printing
-JSR $FFE4 - gets a char from the keyboard queue, does all the work for us if
-the IRQs are running.  0 = non char. Need to remap from PETSCII 8(
-
-For RAM side we need to do the following on an IRQ to match kernal
-
-	PHA
-	TXA
-	PHA
-	TYA
-	PHA
-	TSX
-	LDA	0x0104,X
-	AND	0x10
-	BEQ	IS_IRQ
-	JMP	(0316)
-IS_IRQ:	JMP	(0314)
-
-Then our handler needs to figure out how to call the provided vector and
-wrap it so that our pre-emption doesn't blow stuff up
-
-	PHA
-	PHA
-	PHA
-	PHP		; for the RTI
-	JSR	(OLDVEC)	; will pop 3 words and RTI
-	JSR	OUR_STUFF
-	PLA
-	TAY
-	PLA
-	TAX
-	PLA
-	RTI
-
-
+I've not tried playing with the various IEC helpers and stuff but with
+error reporting off they ought to be usable with luck so some tools to move
+files to and from the Commodore floppies etc might be doable.
 
 ## VICE
 

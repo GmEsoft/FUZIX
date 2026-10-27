@@ -1,5 +1,5 @@
 ;
-;	Atari 8bit Experiments
+;	C64 8bit Experiments
 ;
 
 	.export init_early
@@ -64,14 +64,6 @@ reg1:	.word	0
 reg2:	.word	0
 reg3:	.word	0
 reg4:	.word	0
-old_kbank:
-	.byte	0
-old_kmap:
-	.byte	0
-old_mmu:
-	.byte	0
-sparezp:			; Keeps the usp even for the disk load
-	.byte	0
 
 usp:	.word	0
 
@@ -136,6 +128,13 @@ x0:	rts
 	.commondata
 
 oldvec:	.word	0
+
+old_kbank:
+	.byte	0
+old_kmap:
+	.byte	0
+old_mmu:
+	.byte	0
 
 	.literal
 
@@ -213,7 +212,8 @@ program_vectors_k:
 ;
 map_proc_always:
 	pha
-	; HIRAM and LORAM off, I/O off
+	; HIRAM, LORAM off and CHAREN on
+	; Gives us a full RAM map with no I/O (except 0/1)
 	lda	@0x01
 	and	#0xFC
 	sta	@0x01
@@ -231,10 +231,16 @@ map_proc:
 ;
 ;	Need to adjust this to the map_kernel and save semantic ?
 ;
+;	HIRAM, LORAM and CHAREN high
+;	Cartridge at 8000-BFFF
+;	RAM at C000-CFFF
+;	I/O at D000-DFFF
+;	KERNAL at E000-FFFF	(we have no choice on that one)
+;
 map_kernel:
 	pha
 	lda	@0x01		; Switch the banked cart into the map
-	ora	#3
+	ora	#7
 	sta	@0x01
 	pla
 	rts
@@ -246,10 +252,10 @@ map_restore:
 	pha
 	txa
 	pha
-	ldx	@old_kbank	; Restore any temporary saved bank
-	stx	@old_kmap	; if we IRQ during a kernel user access
+	ldx	old_kbank	; Restore any temporary saved bank
+	stx	old_kmap	; if we IRQ during a kernel user access
 	sta	CARTPORT,x
-	lda	@old_mmu
+	lda	old_mmu
 	sta	@mmu
 	pla
 	tax
@@ -262,9 +268,9 @@ map_restore:
 map_save_kernel:
 	pha
 	lda	@mmu
-	sta	@old_mmu
-	lda	@old_kmap
-	sta	@old_kbank
+	sta	old_mmu
+	lda	old_kmap
+	sta	old_kbank
 	lda	@mmu
 	ora	#3		; Map in kernel
 	sta	@mmu		; which kernel bank doesn't matter
@@ -321,12 +327,12 @@ __bank_1_2:
 b1call:
 	stx	@tmp
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	pha
 	lda	#ROM0
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT+ROM0
 	pla
 	rts
@@ -345,12 +351,12 @@ __bank_2_1:
 b2call:
 	stx	@tmp
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	pha
 	lda	#ROM1
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT+ROM1
 	pla
 	rts
@@ -369,12 +375,12 @@ __bank_3_1:
 b3call:
 	stx	@tmp
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	pha
 	lda	#ROM2
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT+ROM2
 	pla
 	rts
@@ -393,12 +399,12 @@ __bank_4_1:
 b4call:
 	stx	@tmp
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	pha
 	lda	#ROM3
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT+ROM3
 	pla
 	rts
@@ -417,12 +423,12 @@ __bank_5_1:
 b5call:
 	stx	@tmp
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	pha
 	lda	#ROM4
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT+ROM4
 	pla
 	rts
@@ -438,45 +444,45 @@ __bank_5_4:
 
 __stub_1:
 __bank_0_1:
-	lda	@old_kmap
+	lda	old_kmap
 	pha		; not ideal we need to see if this is too much stack
 	lda	#ROM0
 bnk0h:
 	stx	@tmp
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	jsr	jsrtmpy
 	tay
 	stx	@tmp
 	pla
 	tax
-	sta	@old_kmap
+	sta	old_kmap
 	sta	CARTPORT,x
 	ldx	@tmp
 	tya
 	rts
 __stub_2:
 __bank_0_2:
-	lda	@old_kmap
+	lda	old_kmap
 	pha		; not ideal we need to see if this is too much stack
 	lda	#ROM1
 	bne	bnk0h
 __stub_3:
 __bank_0_3:
-	lda	@old_kmap
+	lda	old_kmap
 	pha		; not ideal we need to see if this is too much stack
 	lda	#ROM2
 	bne	bnk0h
 __stub_4:
 __bank_0_4:
-	lda	@old_kmap
+	lda	old_kmap
 	pha		; not ideal we need to see if this is too much stack
 	lda	#ROM3
 	bne	bnk0h
 __stub_5:
 __bank_0_5:
-	lda	@old_kmap
+	lda	old_kmap
 	pha		; not ideal we need to see if this is too much stack
 	lda	#ROM4
 	bne	bnk0h
@@ -521,14 +527,14 @@ vector:
 
 vector_map:
 	lda	@mmu
-	sta	@old_mmu
+	sta	old_mmu
 	ora	#3
 	sta	@mmu		; Remember old MMU state, map in KERNAL
 	bne	vector_do
 
 vector2:
 	lda	@mmu
-	sta	@old_mmu	; Remember existing MMU
+	sta	old_mmu	; Remember existing MMU
 vector_do:
 #if 1
 	cld
@@ -549,7 +555,7 @@ vector3:
 ;	Kick EXEC back out if not expected. We'll sort out our mappings
 ;	again in the IRQ handler core
 ;
-	lda	@old_mmu
+	lda	old_mmu
 	sta	@mmu
 ;	Save our zero page bits (and thus the C stack etc). The save
 ;	area is task specific so if we task switch all is good
@@ -939,63 +945,22 @@ x11:
 	.export _devide_read_data
 	.export _devide_write_data
 
-	; asm entry points using XA
-	.export devide_read_data
-	.export devide_write_data
-
-;
-;	Disk I/O into S and Z. Much fun and games as we need to avoid
-;	bits of them used as our tiny swap stack
-;
-;	TODO: optimize
-;
-read_zp:
-	ldy	#0
-skip_kz:
-	lda	0xDE20
-	iny
-	lda	0xDE31	; Can we skip these ?
-	iny
-	cpy	#@usp
-	bne	skip_kz
-	; Threw away the MMU and low ZP save
-user_z:	lda	0xDE20
-	sta	0,y
-	iny
-	lda	0xDE31
-	sta	0,y
-	iny
-	bne	user_z
-	; Ok we now have the stack. We are squatting on 100-110 for our tiny
-	; swap stack
-skip_s:	lda	0xDE20
-	iny
-	lda	0xDE32
-	iny
-	cpy	#0x10
-	bne	skip_s
-kern_s:	lda	0xDE20
-	sta	0x100,y
-	iny
-	lda	0xDE31
-	sta	0x100,y
-	iny
-	bne	kern_s
-	rts
-
 _devide_read_data:
 	jsr	__pop
-devide_read_data:
 	sta	@tmp3
 	stx	@tmp3+1		; Save the target
-	cpx	#0
-	beq	read_zp		; Very special, 6502 joy
-	cpx	#0xE0
-	bcs	read_fast
-	cpx	#0xCE
-	bcc	read_fast
-	tax			; CE00-CFFF will come up in exec so check
-	beq	read_fast	; to the byte!
+	sta	@tmp3
+	stx	@tmp3+1		; Save the target
+	txa
+	and	#0xF0		; Check the 4K range is not I/O
+	cmp	#0xD0
+	beq	read_slow	; In the I/O window
+	lda	@tmp3+1
+	cmp	#0xCF
+	bne	read_fast
+	; Trying cases CE01-CFFF will spill into I/O
+	lda	@tmp3
+	beq	read_fast
 
 	;	Slow path
 	;	CE01-DFFF are never kernel reads
@@ -1005,7 +970,7 @@ read_slow:
 	lda	@mmu
 	and	#0xFC
 	tax
-	inx
+	inx			; MMU with I/O mapped
 	jsr	hd_rslow256
 	inc	@tmp3+1
 	jsr	hd_rslow256
@@ -1024,6 +989,7 @@ hd_rslow256:
 	dex
 	stx	@mmu
 	sta	(@tmp3),y
+	inx
 	iny
 	bne	hd_rslow256
 	rts
@@ -1041,13 +1007,12 @@ read_fast:
 	ora	#1
 	sta	@mmu
 hd_kmap:
+	inc	0xD020
 	ldy	#0
 	jsr	hd_read256
 	inc	@tmp3+1
 	jsr	hd_read256
-hd_unmap:
-	lda	_td_raw
-	beq	no_remap
+	dec	0xD020
 	jmp	map_kernel
 
 hd_read256:
@@ -1058,49 +1023,60 @@ hd_read256:
 	sta	(@tmp3),y
 	iny
 	bne	hd_read256
-no_remap:
 	rts
 
 _devide_write_data:
 	jsr	__pop
-devide_write_data:
 	sta	@tmp3
 	stx	@tmp3+1		; Save the target
-	cpx	#0xE0
-	bcs	write_fast
-	cpx	#0xCE
-	bcc	write_fast
-	tax			; CE00-CFFF will come up in exec so check
-	beq	write_fast	; to the byte!
+	txa
+	and	#0xF0		; Check the 4K range is not I/O
+	cmp	#0xD0
+	beq	write_slow	; In the I/O window
+	lda	@tmp3+1
+	cmp	#0xCF
+	bne	write_fast
+	; Trying cases CE01-CFFF will spill into I/O
+	lda	@tmp3
+	beq	write_fast
 
 	;	Slow path
 	;	CE01-DFFF are never kernel reads
 	;	REU would avoid so much pain!
 write_slow:
 	ldy	#0
+	;	HIRAM and LORAM off, CHAREN on - all RAM
 	lda	@mmu
 	and	#0xFC
 	tax
+	; 	Save MMU bits to use in X
 	jsr	hd_wslow256
 	inc	@tmp3+1
 	jsr	hd_wslow256
 	jmp	map_kernel
 
 hd_wslow256:
+	;	100	RAM at D000
+	stx	@mmu
+	iny
+	lda	(@tmp3),y	; Load behind I/O window
+	inx
+	;	101	I/O at D000
+	stx	@mmu		; I/O in but user
+	sta	0xDE31
+	dey
+	dex
+	;	100	RAM at D000
 	stx	@mmu
 	lda	(@tmp3),y	; Load behind I/O window
 	inx
+	;	101	I/O at D000
 	stx	@mmu		; I/O in but user
 	sta	0xDE20
-	iny
+	;	Back to 100 for next loop
 	dex
-	stx	@mmu
-	lda	(@tmp3),y	; Load behind I/O window
-	inx
-	stx	@mmu		; I/O in but user
-	sta	0xDE32
 	iny
-	dex
+	iny
 	bne	hd_wslow256
 	rts
 
@@ -1111,13 +1087,21 @@ write_fast:
 	;
 	lda	_td_raw
 	beq	hd_kmapw
-	jsr	map_proc_always
+	; Map user except for the I/O window
+	lda	@mmu
+	and	#0xFC
+	ora	#1
+	sta	@mmu
 hd_kmapw:
+	inc	0xD020
+	inc	0xD020
 	ldy	#0
 	jsr	hd_write256
 	inc	@tmp3+1
 	jsr	hd_write256
-	jmp	hd_unmap
+	dec	0xD020
+	dec	0xD020
+	jmp	map_kernel
 
 ; This one is a shade more complicated. Write the bytes swapped in order
 ; TODO: would it be better to have a tmp4 thats tmp3 + 1 and avoid the
@@ -1125,10 +1109,11 @@ hd_kmapw:
 
 hd_write256:
 	lda	(@tmp3),y
-	sta	0xDE20
+	tax
 	iny
 	lda	(@tmp3),y
 	sta	0xDE31
+	stx	0xDE20
 	iny
 	bne	hd_write256
 	rts

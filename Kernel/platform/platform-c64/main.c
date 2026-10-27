@@ -33,36 +33,29 @@ uint_fast8_t plt_param(char *p)
 
 void device_init(void)
 {
-	extern uint8_t swapdevh, swaplba[3];
 	uint8_t minor;
 #ifdef CONFIG_TD_IDE
 	ide_probe();
 #endif
-	minor = swap_dev & 0x0F;
-	/* Our custom swap logic is a bit restrictive */
-	if ((swap_dev & 0xFF00) != 0 || minor > CONFIG_TD_MAX_PART)
-		panic("swap required on primary device");
-	/* Configure the swap helper values */
-	swapdevh = 0xE0;	/* primary only for now */
-	if (minor) {
-		/* LBA offset of partition for 24bits */
-		swaplba[0] = td_lba[0][minor];
-		swaplba[1] = td_lba[0][minor] >> 8;
-		swaplba[2] = td_lba[0][minor] >> 16;
-	}
+	if (swap_dev == 0xFFFF)
+		panic("swap required");
 }
+
+static uint8_t last_t = 0;
 
 void plt_interrupt(void)
 {
-	uint8_t dummy;
-
+	/* Oddly the 24 bit tick is big endian */
+	uint8_t t = *(volatile uint8_t *)0x00A2;
+	uint8_t delta;
+	/* Calc difference between 60th ticks and current ticks. Wrap as needed */
+	delta = t - last_t;
 	tty_poll();
-#if 0
-	if (via[13] & 0x40) {
-		dummy = via[4]; /* Reset interrupt */
+	/* Run our 10Hz internal processing */
+	if (delta >= 6) {
+		last_t = t;
 		timer_interrupt();
 	}
-#endif
 }
 
 /* TODO: put these into the asm bits */

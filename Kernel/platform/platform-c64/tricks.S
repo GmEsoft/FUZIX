@@ -71,52 +71,118 @@ _switchin:
 	stx	switch_proc_ptr+1
 
 ;	jsr	outxa
+
+	;
+	;	We are going to read in memory over the C stack so we
+	;	need a private stack. The actual stack to use when loaded
+	;	is in the ZP we will restore in a bit. For now use the
+	;	scratch C stack
+	;
+	lda	#<swapstack
+	ldx	#>swapstack
+	sta	@sp
+	stx	@sp+1
+
+	; Check if we are the task in memory anyway
 	ldy	#P_TAB__P_PAGE_OFFSET
 	lda	(@tmp2),y
-	bne	not_swapped		; strange
+	jne	not_swapped
 
-	; Is the old task dead - in which case skip swap out
-	lda	_udata + U_DATA__U_PTAB
-	sta	@tmp1
-	lda	_udata + U_DATA__U_PTAB+1
-	sta	@tmp1+1
-	lda	(@tmp1),y
-	beq	old_dead
-
-	tsx
-	stx	@tmp3
-
-
-	jsr	swapout		; kick the process out of memory
-
-	; At this point the memory is free for re-use
-old_dead:
-	; Get our pointer back
 	lda	switch_proc_ptr
 	ldx	switch_proc_ptr+1
-	sta	@tmp2
-	stx	@tmp2+1
+	jsr	__push
+	jsr	_swapinout
+	jmp	x2
+	nop
+x2:
+	.export XXX
+XXX:
 
-	ldy	#P_TAB__P_PAGE2_OFFSET
-	lda	(@tmp2),y
+	;	We can swap ourself out on our own stack just
+	;	fine. What ends up on disk has the correct S area
+	;	and mostly correct ZP. We can wory about ZP on the return
 
-	ldx	#0x10			; mini swap stack
+	; Now the hairy bit. We have a last sector to read in that
+	; holds ZP and S for the new task. We have to do this one inline.
+	;
+	; _swapper ends with the IDE done the block before the one we need
+	; so we need to do this last one in asm with no stack!
+
+	; Point at LBA holding S and ZP
+
+waitbusy:
+	lda	0xDE27		; wait not busy
+	bmi	waitbusy
+
+	; Move LBA on one
+	inc	0xDE23
+	bne	lbaset
+	inc	0xDE24
+	bne	lbaset
+	inc	0xDE25
+lbaset:
+	; One sector to read
+	lda	#1
+	sta	0xDE22		; 1 sector
+
+waitbusy2:
+	lda	0xDE27		; wait not busy
+	bmi	waitbusy2
+
+	lda	#0x20
+	sta	0xDE27		; READ
+waitdrq:
+	lda	0xDE27
+	and	#0x08
+	beq	waitdrq
+
+	;
+	; We need to avoid using the stack or ZP at this point
+
+	; Discard the memory mapping register bits
+	lda	0xDE20
+	lda	0xDE31
+	; Copy ZP
+	ldx	#2
+load_zp:
+	lda	0xDE20
+	sta	0x0000,x
+	inx
+	lda	0xDE31
+	sta	0x0000,x
+	inx
+	bne	load_zp
+load_s:
+	lda	0xDE20
+	sta	0x0100,x
+	inx
+	lda	0xDE31
+	sta	0x0100,x
+	inx
+	bne	load_s
+
+waitbusy3:
+	lda	0xDE27
+	bmi	waitbusy3
+
+	lda	0xDE27		; Status (TODO check & 1)
+
+	; We are now in the old tasks ZP and S but our S register
+	; points to the wrong place. Fix this so we have a usable stack
+
+	; We now have a valid ZP and S again
+
+not_swapped:
+	ldx	_udata + U_DATA__U_SP
 	txs
 
-	; A is the task index to swap in
-	jsr	swapin
-
 	lda	switch_proc_ptr
-	ldx	switch_proc_ptr+1
 	sta	@tmp2
-	stx	@tmp2+1
-
-        ; check u_data->u_ptab matches what we wanted
-	lda	_udata + U_DATA__U_PTAB
-	cmp	@tmp2
+	cmp	_udata + U_DATA__U_PTAB
 	bne	switchinfail
-	lda	_udata + U_DATA__U_PTAB+1
-	cmp	@tmp2+1
+	lda	switch_proc_ptr+1
+	sta	@tmp2+1
+	cmp	_udata + U_DATA__U_PTAB+1
 	bne	switchinfail
 
 	lda	#P_RUNNING
@@ -127,18 +193,11 @@ old_dead:
 	sta	_runticks
 	sta	_runticks+1
 
-        ; restore machine state -- note we may be returning from either
-        ; _switchout or _dofork
-        ldx	_udata + U_DATA__U_SP
-	txs
-
-	; ------- Stack now valid again
-
+	;	Recover the saved stack state
 	pla
-	sta	sp+1
+	sta	@sp+1
 	pla
-	sta	sp
-not_swapped:
+	sta	@sp
 	lda	_udata + U_DATA__U_ININTERRUPT
         beq	swtchdone		; in ISR, leave interrupts off
 	cli
@@ -173,21 +232,15 @@ _dofork:
 	sta	fork_proc_ptr
 	stx	fork_proc_ptr+1
 
-	ldy	#P_TAB__P_PID_OFFSET
-	sta	@tmp2
-	stx	@tmp2+1
-
         ; Save the stack pointer and critical registers.
 	; 6502 at least doesn't have too many of those 8)
 
-        ; When this process (the parent) is switched back in, it will be as if
-        ; it returns with the value of the child's pid.
-	lda	(@tmp2),y
+        ; When this process (the child) is switched back in, it will be as if
+        ; it returns with the fork return of 0
+	; FIXME can we just drop these and ret 0 given doing parent first ?
+	lda	#0
 	pha
-	iny
-	lda	(@tmp2),y
 	pha
-
         ; save kernel stack pointer -- when it comes back in the child we'll be in
         ; _switchin which will immediately return (appearing to be _dofork()
 	; returning) the child PID.
@@ -195,17 +248,21 @@ _dofork:
 	pha
 	lda	@sp+1
 	pha
+	.export YYY
+YYY:
 	tsx
 	stx	_udata + U_DATA__U_SP
 
+	; Get a workspace for the childs udata and kstack
+
 	jsr	_tmpbuf
-	jmp	x2
+	jmp	x4
 	nop
-x2:
+x4:
 	sta	tmpbuf_ptr
 	stx	tmpbuf_ptr+1
 
-	; XA now points at a 512 byte work place
+	; XA now points at a 512 byte workspace
 	sta	@tmp
 	stx	@tmp+1
 
@@ -215,9 +272,10 @@ x2:
 	sta	@tmp1+1
 	ldy	#0
 	ldx	#2
+	; Copy the parent udata and kstack into the child
 udcopy:
-	lda	(@tmp),y
-	sta	(@tmp1),y
+	lda	(@tmp1),y
+	sta	(@tmp),y
 	iny
 	bne	udcopy
 	inc	@tmp+1
@@ -226,10 +284,10 @@ udcopy:
 	bne	udcopy
 
 	; Ok we have the udata stashed in the tmpbuf
-	; FIXME: save tmpbuf somewhere
 
-	lda	@tmp
-	ldx	@tmp+1
+	;  makeproc(proc, &newudata);
+	lda	tmpbuf_ptr
+	ldx	tmpbuf_ptr+1
 	jsr	__push
 	lda	fork_proc_ptr
 	ldx	fork_proc_ptr+1
@@ -237,32 +295,33 @@ udcopy:
 
 	; Back into C to turn the tmpbuf into the child udata
 	jsr	_makeproc
-	jmp	x3
+	jmp	x5
 	nop
-x3:
+x5:
 
         ; now we're in a safe state for _switchin to return in the parent
 	; process.
 
-	.export YYY
-YYY:
+	lda	tmpbuf_ptr
+	ldx	tmpbuf_ptr+1
+	jsr	__push
+
 	lda	fork_proc_ptr
 	ldx	fork_proc_ptr+1
-	sta	@tmp
-	stx	@tmp+1
-	ldy	#P_TAB__P_PAGE2_OFFSET
-	lda	(@tmp),y
-	tay
-	; Y = swap slot
-	jsr	swapout_new
+	jsr	__push
 
+	; swapout_new(ptptr, &newudata)
+	jsr	_swapout_new
+	jmp	x6
+	nop
+x6:
 	lda	tmpbuf_ptr
 	ldx	tmpbuf_ptr+1
 	jsr	__push
 	jsr	_tmpfree
-	jmp	x4
+	jmp	x7
 	nop
-x4:
+x7:
 	; Now swap is done clean up the stack
 	pla
 	pla
@@ -284,163 +343,7 @@ x4:
 
         rts
 
-;
-;	Swappers. On most systems we do this in C via the usual disk I/O
-;	but because of our 6502 ZP and stack we need to do this directly
-;
-
-swapout:
-	sty	@tmp4
-	jsr	slot_to_blk
-	lda	#<_udata
-	ldx	#>_udata
-	jmp	swapit
-swapout_new:
-	sty	@tmp4
-	jsr	slot_to_blk
-	lda	tmpbuf_ptr
-	ldx	tmpbuf_ptr+1
-swapit:
-	; Write page in XA to the disk slot
-	jsr	writepage
-	; Now write the ZP
-	ldx	#0
-	txa
-	jsr	writepage
-	; Now write the program out
-	ldx	#0x40
-writeout:
-	stx	@tmp5+1
-	lda	#0
-	jsr	writepage
-	ldx	@tmp5+1
-	inx
-	inx
-	bne	writeout
-	; Everything is now on disk
-	rts
-
-swapin:
-	sta	@tmp4
-	jsr	slot_to_blk
-	lda	#<_udata
-	ldx	#>_udata
-	jsr	readpage
-	lda	#0
-	tax
-	jsr	readpage
-	ldx	#0x40
-readin:
-	stx	@tmp5+1
-	lda	#0
-	jsr	readpage
-	ldx	@tmp5+1
-	inx
-	bne	readin
-	; Everything is now back in RAM
-	rts
-
-disksetup:
-	;	Transfer from user as swapping (udata and ZP/S are always
-	; 	mapped anyway)
-	lda	#1
-	sta	_td_raw
-	lda	_swapdevh
-	sta	0xDE26
-	; TODO wait for ready
-	lda	@tmp5
-	sta	0xDE25
-	lda	@tmp4+1
-	sta	0xDE24
-	lda	@tmp4
-	sta	0xDE23
-	lda	#1
-	sta	0xDE22
-	; TODO wait for ready
-	sty	0xDE27		; command
-	; TODO wait for DRQ
-	rts
-
-writepage:
-	; Write 512 bytes from the main memory map at XA to disk
-	; @tmp4/5low counts the disk block number relative to the swap
-	; partition
-	stx	@tmp+1
-	sta	@tmp
-	ldy	#0x30		; WRITE
-	jsr	disksetup
-	ldx	@tmp+1
-	lda	@tmp
-	jsr	devide_write_data
-	; TODO wait for DRQ drop/ready
-	jmp	diskstat
-
-readpage:
-	; Read 512 bytes from disk into the main memory map at XA
-	; magically avoids reading over the kernel @tmp and lowest 16 bytes
-	; of page 1
-	; This however forces us to do all the work in asm unlike "normal"
-	; ports
-	; @tmp4/5low counts the disk block numnber
-	stx	@tmp+1
-	sta	@tmp
-	ldy	#0x20		; READ
-	jsr	disksetup
-	; Do the disk command, now transfer the bytes
-	ldx	@tmp+1
-	lda	@tmp
-	jsr	devide_read_data
-diskstat:
-	lda	0xD527
-	pha
-diskbump:
-	; Move on a sector
-	inc	@tmp4
-	bne	bdone
-	inc	@tmp4+1
-	bne	bdone
-	inc	@tmp5
-bdone:	pla
-	; Returns status
-	rts
-
-;
-;	Turn a swap slot into a disk LBA
-;
-slot_to_blk:
-	pha
-	lda	@tmp4
-	; Expand @tmp4 into the offset, for the moment cheat and use 64K
-	; chunks and assume swap isn't huge
-	; 64K is 128 sectors TODO use proper size
-	ldx	#0
-	clc
-	adc	@tmp4
-	clc
-	ror	a
-	bcc	even
-	ldx	#0x80
-even:
-	; AX is now the offset relative to swap
-	pha
-	txa
-	adc	_swaplba
-	tax
-	pla
-	adc	_swaplba+1
-	stx	@tmp4
-	sta	@tmp4+1
-	lda	_swaplba+2
-	adc	#0
-	sta	@tmp5
-	; tmp4-5 is now a 24bit LBA
-	pla
-	rts
-
 	.commondata
-
-	.export _swapdevh
-	.export _swaplba
 
 switch_proc_ptr:
 	.word	0
@@ -448,9 +351,6 @@ fork_proc_ptr:
 	.word	0 ; (C type is struct p_tab *) -- address of child process p_tab entry
 tmpbuf_ptr:
 	.word	0
-; Swap info .. precomputed earlier. We might need to add drive info
-; if we support the later dual drive IDE64 TODO
-_swaplba:
-	.byte	0, 0, 0
-_swapdevh:
-	.byte	0
+
+	.ds	256
+swapstack:

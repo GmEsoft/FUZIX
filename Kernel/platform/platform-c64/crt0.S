@@ -103,9 +103,6 @@ docopy2:
 	; Everything is zero fill or on cartridge anyway
 	; TODO: zero fill more if needed ?
 
-	.export XXX
-
-XXX:
 	; We are currently in discard so we can now page in overlay1
 	jsr	bootfinal	; Linker will resolve this as a bank switch
 	jmp	x1

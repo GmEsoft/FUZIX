@@ -21,7 +21,9 @@
 #define CONFIG_DYNAMIC_SWAP
 #define SWAPBASE 0x4000		/* Special handling needed on the in part ! */
 #define SWAPTOP  0xFE00
-#define SWAP_SIZE 0x60		/* including the udata */
+#define SWAP_SIZE 0x61		/* including the udata and S/ZP */
+#define CONFIG_SWAP_6502	/* need to handle S and ZP specially */
+#define CONFIG_PARENT_FIRST	/* We write the child to media */
 
 #define swap_map(x)	((uint8_t *)(x))
 
@@ -31,7 +33,7 @@
 #define MAX_MAPS	1
 #define MAP_SIZE	0xBE00U
 
-#define TICKSPERSEC 50	    /* Ticks per second */
+#define TICKSPERSEC	10	    /* Ticks per second */
 
 /* We've not yet made the rest of the code - eg tricks match this ! */
 #define MAPBASE	    0x4000  /* We map from 4000 */

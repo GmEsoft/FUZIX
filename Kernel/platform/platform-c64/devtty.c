@@ -85,7 +85,17 @@ uint8_t shiftkeyboard[8][8] = {
 void tty_poll(void)
 {
 	uint8_t c = keyread();
-	if (c)
+	if (c == 0)
+		return;
+	if (c > 0x40 && c < 0x5B)
+		c += 0x20;
+	else if (c >= 0xC0 && c <= 0xDB) {
+		c &= 31;
+		c += 0x40;
+	}
+	if (c > 0x80)
+		kprintf("?%x", c);
+	else if (c)
 		vt_inproc(1, c);
 #if 0
 	uint8_t c = keyscan();
