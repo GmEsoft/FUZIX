@@ -23,6 +23,7 @@ int ide_xfer(uint_fast8_t dev, bool is_read, uint32_t lba, uint8_t *dptr)
     ide_write(cyll, lba >> 8);
     ide_write(sec, lba);
     ide_write(count, 1);
+
     while(!(ide_read(status) & 0x40));	/* Wait DRDY */
     ide_write(cmd, is_read ? 0x20 : 0x30);
     while(!(ide_read(status) & 0x08));	/* Wait DRQ */
@@ -34,7 +35,7 @@ int ide_xfer(uint_fast8_t dev, bool is_read, uint32_t lba, uint8_t *dptr)
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
     r = ide_read(status) & 0x01; 	/* Error */
     ide_deselect();
-    return !!r;
+    return !r;
 }
 
 #ifdef CONFIG_TD_IDE_CHS
@@ -100,7 +101,7 @@ int ide_chs_xfer(uint_fast8_t drive, bool is_read, uint32_t lba, uint8_t *dptr)
     while(ide_read(status) & 0x80);	/* Wait !BUSY */
     r = ide_read(status) & 0x01;	/* Error */
     ide_deselect();
-    return !!r
+    return !r
 }
 #endif
 
