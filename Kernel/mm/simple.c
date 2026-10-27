@@ -91,7 +91,7 @@ int swapout_new(register ptptr p, void *u)
 	int16_t map;
 
 #ifdef DEBUG
-	kprintf("Swapping out %p (%d)\n", p, p->p_pid);
+	kprintf("Swapping out %p (%d) %p\n", p, p->p_pid, u);
 #endif
 	if (!page)
 		panic(PANIC_ALREADYSWAP);
@@ -112,6 +112,12 @@ int swapout_new(register ptptr p, void *u)
 		  SWAPBASE, 1);
 #else
 #error "Not supported"
+#endif
+#ifdef CONFIG_SWAP_6502
+	/* Block after the main image */
+	blk += UDATA_BLKS + udata.u_nblock;
+	/* 6502 is weird and wonderful. Write out the ZP and S area */
+	swapwrite(SWAPDEV, blk, 512, 0, 0);
 #endif
 	p->p_page = 0;
 	p->p_page2 = map;
@@ -149,7 +155,8 @@ void swapin(ptptr p, uint16_t map)
 	((*dev_tab[major(SWAPDEV)].dev_read) (minor(SWAPDEV), 0, 0));
 	swapread(SWAPDEV, blk + UDATA_BLKS, SWAPTOP - SWAPBASE,
 		 SWAPBASE, 1);
-
+	/* For CONFIG_SWAP_6502 the target logic will handle ZP and S
+	   specially when we return */
 #ifdef DEBUG
 	kprintf("%p: swapin done %d\n", p, p->p_page2);
 #endif
