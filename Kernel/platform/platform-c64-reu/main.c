@@ -1,0 +1,89 @@
+#include <kernel.h>
+#include <timer.h>
+#include <kdata.h>
+#include <printf.h>
+#define _TINYDISK_PRIVATE
+/* Our swap hack has to stick its nose in places it shouldn't */
+#include <tinydisk.h>
+#include <tinyide.h>
+#include <devtty.h>
+
+uint8_t kernel_flag = 1;
+uint16_t swap_dev = 0xFFFF;
+uint16_t reu_size;
+
+void plt_idle(void)
+{
+    irqflags_t flags = di();
+    tty_poll();
+    irqrestore(flags);
+}
+
+void do_beep(void)
+{
+}
+
+void map_init(void)
+{
+}
+
+uint_fast8_t plt_param(char *p)
+{
+    return 0;
+}
+
+void device_init(void)
+{
+	if (reu_size == 0)
+		panic("REU required");
+	kprintf("REU: %uKib\n", reu_size << 6);
+#ifdef CONFIG_TD_IDE
+	ide_probe();
+#endif
+	if (swap_dev == 0xFFFF)
+		panic("swap required");
+}
+
+static uint8_t last_t = 0;
+
+void plt_interrupt(void)
+{
+	/* Oddly the 24 bit tick is big endian */
+	uint8_t t = *(volatile uint8_t *)0x00A2;
+	uint8_t delta;
+	/* Calc difference between 60th ticks and current ticks. Wrap as needed */
+	delta = t - last_t;
+	tty_poll();
+	/* Run our 10Hz internal processing */
+	if (delta >= 6) {
+		last_t = t;
+		timer_interrupt();
+	}
+}
+
+/* TODO: put these into the asm bits */
+unsigned strlen(const char *p)
+{
+	unsigned n = 0;
+	while(*p++)
+		n++;
+	return n;
+}
+
+void *memcpy(void *to, const void *from, unsigned len)
+{
+	const uint8_t *f = from;
+	uint8_t *t = to;
+	while(len--)
+		*t++ = *f++;
+	return to;
+}
+
+void *memset(void *to, int v, unsigned len)
+{
+	uint8_t *t = to;
+	while(len--)
+		*t++ = v;
+	return to;
+}
+
