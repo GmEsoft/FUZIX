@@ -1,13 +1,10 @@
 ;
 ;	6502 version
 ;
-;	TODO: convert for single process model
-;
         .export _plt_switchout
         .export _switchin
         .export _dofork
 	.export _ramtop
-	.export _create_init_common
 
 #include "kernel.def"
 #include "../../cpu-6502/kernel02.def"
@@ -18,7 +15,7 @@
 ; and its a constant for the others from before init forks so it'll be fine
 ; here
 _ramtop:
-	.word $FE00
+	.word 0xC000
 
 ; Switchout switches out the current process, finds another that is READY,
 ; possibly the same process, and switches it in.  When a process is
@@ -55,6 +52,10 @@ badswitchmsg:
 	.ascii	"_switchin: FAIL"
 	.byte	13, 10, 0
 
+;
+;	Any switch to another task is a swap. We should never be asked
+;	to switch to the task in memory (ie current).
+;
 _switchin:
 	sei
 	jsr	__pop
@@ -66,25 +67,114 @@ _switchin:
 	; CPU
 	sta	switch_proc_ptr
 	stx	switch_proc_ptr+1
+
 ;	jsr	outxa
+
+	;
+	;	We are going to read in memory over the C stack so we
+	;	need a private stack. The actual stack to use when loaded
+	;	is in the ZP we will restore in a bit. For now use the
+	;	scratch C stack
+	;
+	lda	#<swapstack
+	ldx	#>swapstack
+	sta	@sp
+	stx	@sp+1
+
+	; Check if we are the task in memory anyway
 	ldy	#P_TAB__P_PAGE_OFFSET
 	lda	(@tmp2),y
-;	jsr	outcharhex
-	sta	$FE78		; switches zero page, stack memory area
-	; ------- No valid stack, new ZP ----- stack must not be used
+	jne	not_swapped
 
-	; Set @tmp2 back up (the old @tmp2 was on the other ZP)
+	lda	switch_proc_ptr
+	ldx	switch_proc_ptr+1
+	jsr	__push
+	jsr	_swapinout
+	jmp	x2
+	nop
+x2:
+	.export XXX
+XXX:
+
+	;	We can swap ourself out on our own stack just
+	;	fine. What ends up on disk has the correct S area
+	;	and mostly correct ZP. We can wory about ZP on the return
+
+	; Now the hairy bit. We have a last sector to read in that
+	; holds ZP and S for the new task. We have to do this one inline.
+	;
+	; _swapper ends with the IDE done the block before the one we need
+	; so we need to do this last one in asm with no stack!
+
+	; Point at LBA holding S and ZP
+
+waitbusy:
+	lda	0xD507		; wait not busy
+	bmi	waitbusy
+
+	; Move LBA on one
+	inc	0xD503
+	bne	lbaset
+	inc	0xD504
+	bne	lbaset
+	inc	0xD505
+lbaset:
+	; One sector to read
+	lda	#1
+	sta	0xD502		; 1 sector
+
+waitbusy2:
+	lda	0xD502		; wait not busy
+	bmi	waitbusy2
+
+	lda	#0x20
+	sta	0x507		; READ
+waitdrq:
+	lda	0xD507
+	and	#0x08
+	beq	waitdrq
+
+	;
+	; We need to avoid using the stack or ZP at this point
+
+	; Discard the memory mapping register bits
+	lda	0xD500
+	lda	0xD500
+	; Copy ZP
+	ldx	#2
+load_zp:
+	lda	0xD500
+	sta	0x0000,x
+	inx
+	bne	load_zp
+load_s:
+	lda	0xD500
+	sta	0x0100,x
+	inx
+	bne	load_s
+
+waitbusy3:
+	lda	0x507
+	bmi	waitbusy3
+
+	lda	0xD507		; Status (TODO check & 1)
+
+	; We are now in the old tasks ZP and S but our S register
+	; points to the wrong place. Fix this so we have a usable stack
+
+	; We now have a valid ZP and S again
+
+not_swapped:
+	ldx	_udata + U_DATA__U_SP
+	txs
+
 	lda	switch_proc_ptr
 	sta	@tmp2
+	cmp	_udata + U_DATA__U_PTAB
+	bne	switchinfail
 	lda	switch_proc_ptr+1
 	sta	@tmp2+1
-
-        ; check u_data->u_ptab matches what we wanted
-	lda	_udata + U_DATA__U_PTAB
-	cmp	@tmp2
-	bne	switchinfail
-	lda	_udata + U_DATA__U_PTAB+1
-	cmp	@tmp2+1
+	cmp	_udata + U_DATA__U_PTAB+1
 	bne	switchinfail
 
 	lda	#P_RUNNING
@@ -95,20 +185,16 @@ _switchin:
 	sta	_runticks
 	sta	_runticks+1
 
-        ; restore machine state -- note we may be returning from either
-        ; _switchout or _dofork
-        ldx	_udata + U_DATA__U_SP
-	txs
-
-	; ------- Stack now valid again
-
+	;	Recover the saved stack state
 	pla
-	sta	sp+1
+	sta	@sp+1
 	pla
-	sta	sp
+	sta	@sp
 	lda	_udata + U_DATA__U_ININTERRUPT
         beq	swtchdone		; in ISR, leave interrupts off
 	cli
+	lda	#0x40
+	sta	0xD40E	; NMI back on too
 swtchdone:
 	pla		; Return code
 	tax
@@ -140,202 +226,125 @@ _dofork:
 	sta	fork_proc_ptr
 	stx	fork_proc_ptr+1
 
-	ldy	#P_TAB__P_PID_OFFSET
-	sta	@tmp2
-	stx	@tmp2+1
-
         ; Save the stack pointer and critical registers.
 	; 6502 at least doesn't have too many of those 8)
 
-        ; When this process (the parent) is switched back in, it will be as if
-        ; it returns with the value of the child's pid.
-	lda	(@tmp2),y
+        ; When this process (the child) is switched back in, it will be as if
+        ; it returns with the fork return of 0
+	; FIXME can we just drop these and ret 0 given doing parent first ?
+	lda	#0
 	pha
-	iny
-	lda	(@tmp2),y
 	pha
-
-        ; save kernel stack pointer -- when it comes back in the parent we'll be in
+        ; save kernel stack pointer -- when it comes back in the child we'll be in
         ; _switchin which will immediately return (appearing to be _dofork()
 	; returning) the child PID.
 	lda	@sp
 	pha
 	lda	@sp+1
 	pha
+	.export YYY
+YYY:
 	tsx
 	stx	_udata + U_DATA__U_SP
+
+	; Get a workspace for the childs udata and kstack
+
+	jsr	_tmpbuf
+	jmp	x4
+	nop
+x4:
+	sta	tmpbuf_ptr
+	stx	tmpbuf_ptr+1
+
+	; XA now points at a 512 byte workspace
+	sta	@tmp
+	stx	@tmp+1
+
+	lda	#<_udata
+	sta	@tmp1
+	lda	#>_udata
+	sta	@tmp1+1
+	ldy	#0
+	ldx	#2
+	; Copy the parent udata and kstack into the child
+udcopy:
+	lda	(@tmp1),y
+	sta	(@tmp),y
+	iny
+	bne	udcopy
+	inc	@tmp+1
+	inc	@tmp1+1
+	dex
+	bne	udcopy
+
+	; Ok we have the udata stashed in the tmpbuf
+
+	;  makeproc(proc, &newudata);
+	lda	tmpbuf_ptr
+	ldx	tmpbuf_ptr+1
+	jsr	__push
+	lda	fork_proc_ptr
+	ldx	fork_proc_ptr+1
+	jsr	__push
+
+	; Back into C to turn the tmpbuf into the child udata
+	jsr	_makeproc
+	jmp	x5
+	nop
+x5:
 
         ; now we're in a safe state for _switchin to return in the parent
 	; process.
 
-	;
-	;	Assumes @tmp2 still holds the new process ptr
-	;
-
-	jsr	fork_copy
-
-	; --------- we switch stack copies here -----------
-        lda	fork_proc_ptr
-	ldx	fork_proc_ptr+1
-	sta	@tmp2
-	stx	@tmp2+1
-	ldy	#P_TAB__P_PAGE_OFFSET
-	lda	(@tmp2),y
-	sta	$FE78			; switch to child and child stack
-					; and zero page etc
-	; We are now in the kernel child context
-
-        ; now the copy operation is complete we can get rid of the stuff
-	; _switchin will be expecting from our copy of the stack.
-	pla
-	pla
-	pla
-	pla
-
-	lda	#<_udata
-	ldx	#>_udata
+	lda	tmpbuf_ptr
+	ldx	tmpbuf_ptr+1
 	jsr	__push
 
-        lda	fork_proc_ptr
+	lda	fork_proc_ptr
 	ldx	fork_proc_ptr+1
 	jsr	__push
 
-        jsr	_makeproc
-	jmp	x2
+	; swapout_new(ptptr, &newudata)
+	jsr	_swapout_new
+	jmp	x6
 	nop
-x2:
+x6:
+	lda	tmpbuf_ptr
+	ldx	tmpbuf_ptr+1
+	jsr	__push
+	jsr	_tmpfree
+	jmp	x7
+	nop
+x7:
+	; Now swap is done clean up the stack
+	pla
+	pla
+	pla
+	pla
 
-	; any calls to map process will now map the childs memory
-
-        ; runticks = 0;
-	lda	#0
-	sta	_runticks
-	sta	_runticks+1
-
-        ; in the child process, fork() returns zero.
+	; Child is now on disk (yay)
+	lda	fork_proc_ptr
+	ldx	fork_proc_ptr+1
+	sta	@tmp
+	stx	@tmp+1
+	ldy	#P_TAB__P_PID_OFFSET+1
+	lda	(@tmp),y
 	tax
+	dey
+	lda	(@tmp),y
 
-	; And we exit, with the kernel mapped, the child now being deemed
-	; to be the live uarea. The parent is frozen in time and space as
-	; if it had done a switchout().
+	; XA is now the PID
+
         rts
 
-;
-;	On entry @tmp2 points to the process table of the child, and
-;	the U_DATA is still not fully modified so holds the parents bank
-;	number. This wants optimising to avoid copying all the unused
-;	space!
-;
-fork_copy:
-	ldy	#P_TAB__P_PAGE_OFFSET
-	lda	(@tmp2),y		; child->p_pag[0]
-	sta	$FE7A		; 8000
-	sta	@tmp
-	lda	_udata + U_DATA__U_PAGE
-	sta	$FE79		; 4000
-	sta	@tmp1
-
-	; Now use that window to copy 48K from 0000-FFFF
-
-	jsr	bank2bank		; copies 16K
-
-	inc	@tmp
-	inc	@tmp1
-	lda	@tmp
-	sta	$FE7A
-	lda	@tmp1
-	sta	$FE79
-	jsr	bank2bank		; second 16K
-
-	inc	@tmp
-	inc	@tmp1
-	lda	@tmp
-	sta	$FE7A
-	lda	@tmp1
-	sta	$FE79
-	jsr	bank2bank		; third 16K
-
-	inc	@tmp
-	inc	@tmp1
-	lda	@tmp
-	sta	$FE7A
-	lda	@tmp1
-	sta	$FE79
-	jsr	bank2bank		; final block
-
-	jmp	map_kernel		; put the kernel mapping back as it should be
-	
-bank2bank:			; copy 16K from the block mapped
-				; at 4000 to the block at 8000
-				; Interrupts need to be off right now
-				; For 6502 we can FIXME this as we fix fork
-				; and interrupts in the core by fixing the
-				; interrupt save/restore logic
-				; For 65C816 we'd need a 16bit mode IRQ
-				; wrapper which would be scary code
-	lda	_use_mvn
-	beq	bank2bank_6502
-
-
-	.65c816
-
-	clc
-	xce
-	rep	#$30
-	; Stack is now insane so good job interrupts are off
-	.a16
-	.i16
-	ldx	#$4000
-	ldy	#$8000
-	lda	#$4000
-	mvn	#0,#0		; Bank is irrelevant as A16-A23 are unwired
-	sep	#$30
-	.a8
-	.i8
-	sec
-	xce
-	rts
-
-	.6502
-
-bank2bank_6502:
-	lda	#$40
-	sta	@tmp3+1
-	lda	#$80
-	sta	@tmp4+1
-	lda	#0
-	sta	@tmp3
-	sta	@tmp4
-	tay
-	ldx	#$40		;	64 x 256 bytes  = 16K
-copy1:
-	lda	(@tmp3),y
-	sta	(@tmp4),y
-	iny
-	bne	copy1
-	inc	@tmp3+1
-	inc	@tmp4+1
-	dex
-	bne	copy1
-	rts
-
-_create_init_common:
-	lda	#32
-	sta	$FE79		;	set the map for 0x4000
-	lda	#36
-	sta	$FE7A		;	and 0x8000
-	jsr	bank2bank
-	jmp	map_kernel
-;
-;	The switch proc pointer cannot live anywhere in common as we switch
-;	common on process switch, and we need it to live about 0x4000
-;
-;	For now BSS will do but we ought to have a proper high space or
-;	something.
-;
 	.commondata
 
 switch_proc_ptr:
 	.word	0
 fork_proc_ptr:
 	.word	0 ; (C type is struct p_tab *) -- address of child process p_tab entry
+tmpbuf_ptr:
+	.word	0
+
+	.ds	256
+swapstack:

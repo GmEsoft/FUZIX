@@ -82,9 +82,15 @@ static void kbd_poll(void)
 void tty_poll(void)
 {
 	uint8_t r = POKEY[0x0E];
-	if (r & 0x80)
+	kprintf("Pokey %x %x\n", r, POKEY[0x0F]);
+	/* Disable the interrupts to clear them */
+	POKEY[0x0E] = r;
+
+	/* Check what we got */
+
+	if (!(r & 0x80))
 		vt_inproc(1, 3);	/* Map break to ^C */
-	if (r & 0x40)
+	if (!(r & 0x40))
 		kbd_poll();
 	else
 		kdown = 0;
@@ -93,5 +99,7 @@ void tty_poll(void)
 	r = POKEY[0x0F];
 	if (r & 0xE0)
 		POKEY[0x0A] = 1;
+	/* Interruptds back on */
+	POKEY[0x0E] = 0xC0;
 }
 

@@ -11,9 +11,7 @@ uint16_t swap_dev = 0xFFFF;
 
 void plt_idle(void)
 {
-    irqflags_t flags = di();
-    tty_poll();
-    irqrestore(flags);
+	/* Just spin */
 }
 
 void do_beep(void)
@@ -41,15 +39,12 @@ void device_init(void)
 
 void plt_interrupt(void)
 {
-	uint8_t dummy;
-
+	extern uint8_t nmival;
 	tty_poll();
-#if 0
-	if (via[13] & 0x40) {
-		dummy = via[4]; /* Reset interrupt */
+	if (nmival & 0x40) {
+		nmival = 0;
 		timer_interrupt();
 	}
-#endif
 }
 
 /* TODO: put these into the asm bits */

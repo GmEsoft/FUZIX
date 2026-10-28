@@ -93,6 +93,20 @@ irq_off:
 	sei
 	jmp	__add1sp
 
+;
+;	The Atari essentially uses NMI as a second vector with a
+;	mask register in the hardware not the CPU. We deal with that
+;	in our IRQ mask routines.
+;
+;	TODO: figure out how to use this usefully so we can get our VBI
+;	etc folded into the normal paths.
+;
+nmivec:
+	lda	0xD40F
+	; Should only see 0x40
+	sta	_nmival
+	rti
+
 	.code			; TODO can we get this into discard ?
 
 init_early:
@@ -110,7 +124,18 @@ init_hardware:
 	jsr	_vtinit
 	jmp	x0
 	nop
-x0:	rts
+x0:	lda	#0xC0		; Enable key and break interrupts
+	sta	0xD20E
+	lda	#0x03
+	sta	0xD20F
+	rts
+
+	.commondata
+
+	.export _nmival
+
+_nmival:
+	.byte	0
 
 	.literal
 
@@ -146,9 +171,9 @@ program_vectors_k:
 	sta	$FFFE
 	lda	#>vector
 	sta	$FFFF
-	lda	#<nmi_handler
+	lda	#<nmivec
 	sta	$FFFA
-	lda	#>nmi_handler
+	lda	#>nmivec
 	sta	$FFFB
 	rts
 
@@ -242,6 +267,7 @@ map_save_kernel:
 	lda	#MAIN
 	sta	0xD301
 	sta	0xD5E3		; Cartridge on
+	pla
 	rts
 
 old_kbank:
@@ -493,6 +519,9 @@ x2:
 	; Bankman will fix this up into a banked jump
 	jmp	x3
 	nop
+
+	; FIXME: we could switchout into a task with ints off
+	; but we then enable NMI wrongly. TODO
 x3:
 	;
 	; Now return to the old state having woken back up
@@ -987,6 +1016,7 @@ doline:
 	clc
 	adc	#40
 	sta	@tmp
+	lda	#' '
 	bcc	nline
 	inc	@tmp+1
 nline:	dec	@tmp2
@@ -994,9 +1024,34 @@ nline:	dec	@tmp2
 nowork:
 	jmp	__add2sp
 
+; Quick hack for now - we should rewrite the display lists not copy memory
 _scroll_up:
+	lda	#0x44
+	sta	@tmp+1
+	sta	@tmp2+1
+	lda	#0x00
+	sta	@tmp
+	lda	#0x28
+	sta	@tmp2
+	ldy	#0
+	ldx	#3
+cpup:	lda	(@tmp2),y
+	sta	(@tmp),y
+	iny
+	bne	cpup
+	inc	@tmp2+1
+	inc	@tmp+1
+	dex
+	bne	cpup
+cpup2:	lda	(@tmp2),y
+	sta	(@tmp),y
+	iny
+	cpy	#0xC0
+	bne	cpup2
+	rts
+; TODO
+
 _scroll_down:
-	; TODO
 	rts
 
 	; Can live in banked space
