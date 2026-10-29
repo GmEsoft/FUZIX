@@ -2,8 +2,6 @@
 #include <timer.h>
 #include <kdata.h>
 #include <printf.h>
-#define _TINYDISK_PRIVATE
-/* Our swap hack has to stick its nose in places it shouldn't */
 #include <tinydisk.h>
 #include <tinyide.h>
 #include <devtty.h>
@@ -21,27 +19,6 @@ void plt_idle(void)
 
 void do_beep(void)
 {
-}
-
-void map_init(void)
-{
-}
-
-uint_fast8_t plt_param(char *p)
-{
-    return 0;
-}
-
-void device_init(void)
-{
-	if (reu_size == 0)
-		panic("REU required");
-	kprintf("REU: %uKib\n", reu_size << 6);
-#ifdef CONFIG_TD_IDE
-	ide_probe();
-#endif
-	if (swap_dev == 0xFFFF)
-		panic("swap required");
 }
 
 static uint8_t last_t = 0;

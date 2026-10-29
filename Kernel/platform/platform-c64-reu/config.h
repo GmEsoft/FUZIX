@@ -15,23 +15,24 @@
 #define CONFIG_LARGE_IO_DIRECT(x)	0
 
 /*
- *	One process in memory only
+ *	REU behaves like multiple banks
  */
-#define CONFIG_SWAP_ONLY
+#define CONFIG_BANK_FIXED
+#define MAX_MAPS	32	/* Should be plenty */
+#define MAP_SIZE	0xC000
+/* Disable swap whilst we work on bank switching */
+#if 0
 #define CONFIG_DYNAMIC_SWAP
 #define SWAPBASE 0x4000		/* Special handling needed on the in part ! */
 #define SWAPTOP  0xFE00
 #define SWAP_SIZE 0x61		/* including the udata and S/ZP */
 #define CONFIG_SWAP_6502	/* need to handle S and ZP specially */
-#define CONFIG_PARENT_FIRST	/* We write the child to media */
 
 #define swap_map(x)	((uint8_t *)(x))
 
 #define MAX_SWAPS	14
 #define SWAPDEV		(swap_dev)
-/* We have one mapping from our working of memory */
-#define MAX_MAPS	1
-#define MAP_SIZE	0xBE00U
+#endif
 
 #define TICKSPERSEC	10	    /* Ticks per second */
 
@@ -39,12 +40,15 @@
 #define MAPBASE	    0x4000  /* We map from 4000 */
 #define PROGBASE    0x4000  /* also data base */
 #define PROGLOAD    0x4000
-#define PROGTOP     0xFE00
+#define PROGTOP     0xFE00  /* UDATA at 3E00-3FFF and asm changes needed
+                               to adjust this */
 
+#if 0
 /* Settings for swap only mode */
 #define CONFIG_SPLIT_UDATA
 #define UDATA_SIZE 0x200
 #define UDATA_BLKS 1
+#endif
 
 #define CONFIG_TD_NUM	2
 #define CONFIG_TD_IDE

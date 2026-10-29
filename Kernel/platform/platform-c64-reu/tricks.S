@@ -55,7 +55,6 @@ badswitchmsg:
 	.byte	13, 10, 0
 
 ;
-;	Any switch to another task is a swap. We should never be asked
 ;	to switch to the task in memory (ie current).
 ;
 _switchin:
@@ -71,7 +70,7 @@ _switchin:
 	stx	switch_proc_ptr+1
 
 ;	jsr	outxa
-
+#if 0
 	;
 	;	We are going to read in memory over the C stack so we
 	;	need a private stack. The actual stack to use when loaded
@@ -82,11 +81,14 @@ _switchin:
 	ldx	#>swapstack
 	sta	@sp
 	stx	@sp+1
-
-	; Check if we are the task in memory anyway
+#endif
+	; Check if we are atask in memory
 	ldy	#P_TAB__P_PAGE_OFFSET
 	lda	(@tmp2),y
 	jne	not_swapped
+
+	; Swap TODO via REU
+#if 0
 
 	lda	switch_proc_ptr
 	ldx	switch_proc_ptr+1
@@ -171,8 +173,27 @@ waitbusy3:
 	; points to the wrong place. Fix this so we have a usable stack
 
 	; We now have a valid ZP and S again
+#endif
 
 not_swapped:
+	tax
+	lda	_bank2reu - 1,x
+	cmp	#0xFF
+	beq	already_mapped
+
+	; Swap between in memory task and our new task
+	tay
+	jsr	taskswap
+
+	; At this pont ZP and S transfer has not been done but is
+	; primed. Now we are ready let it rip
+
+	sta	0xFF00
+
+	; We are now entirely in the new mapping
+	; Fix up the registers and the like
+
+already_mapped:
 	ldx	_udata + U_DATA__U_SP
 	txs
 
@@ -220,7 +241,9 @@ switchinfail:
 
 ;
 ;	Called from _fork. We are in a syscall, the uarea is live as the
-;	parent uarea. The kernel is the mapped object.
+;	parent uarea. The kernel is the mapped object. The child has a bank
+;	assigned but not set up and if that required swapping someone out
+;	they were already swapped
 ;
 _dofork:
 ;        ; always disconnect the vehicle battery before performing maintenance
@@ -235,12 +258,16 @@ _dofork:
         ; Save the stack pointer and critical registers.
 	; 6502 at least doesn't have too many of those 8)
 
-        ; When this process (the child) is switched back in, it will be as if
-        ; it returns with the fork return of 0
-	; FIXME can we just drop these and ret 0 given doing parent first ?
-	lda	#0
+	;	Start by pushing the child pid to be returned
+	sta	@tmp
+	stx	@tmp+1
+	ldy	#P_TAB__P_PID_OFFSET + 1
+	lda	(@tmp),y
 	pha
+	dey
+	lda	(@tmp),y
 	pha
+
         ; save kernel stack pointer -- when it comes back in the child we'll be in
         ; _switchin which will immediately return (appearing to be _dofork()
 	; returning) the child PID.
@@ -253,47 +280,21 @@ YYY:
 	tsx
 	stx	_udata + U_DATA__U_SP
 
-	; Get a workspace for the childs udata and kstack
+	; Now do the block copy into the child bank
+	ldy	#P_TAB__P_PAGE_OFFSET
+	lda	(@tmp),y
+	jsr	taskcopy
+	sta	0xFF00			; and copy S and ZP
 
-	jsr	_tmpbuf
-	jmp	x4
-	nop
-x4:
-	sta	tmpbuf_ptr
-	stx	tmpbuf_ptr+1
-
-	; XA now points at a 512 byte workspace
-	sta	@tmp
-	stx	@tmp+1
-
+	;  makeproc(proc, &udata);
 	lda	#<_udata
-	sta	@tmp1
-	lda	#>_udata
-	sta	@tmp1+1
-	ldy	#0
-	ldx	#2
-	; Copy the parent udata and kstack into the child
-udcopy:
-	lda	(@tmp1),y
-	sta	(@tmp),y
-	iny
-	bne	udcopy
-	inc	@tmp+1
-	inc	@tmp1+1
-	dex
-	bne	udcopy
-
-	; Ok we have the udata stashed in the tmpbuf
-
-	;  makeproc(proc, &newudata);
-	lda	tmpbuf_ptr
-	ldx	tmpbuf_ptr+1
+	ldx	#>_udata
 	jsr	__push
 	lda	fork_proc_ptr
 	ldx	fork_proc_ptr+1
 	jsr	__push
 
-	; Back into C to turn the tmpbuf into the child udata
+	; Back into C to turn the udata into the child udata
 	jsr	_makeproc
 	jmp	x5
 	nop
@@ -302,25 +303,6 @@ x5:
         ; now we're in a safe state for _switchin to return in the parent
 	; process.
 
-	lda	tmpbuf_ptr
-	ldx	tmpbuf_ptr+1
-	jsr	__push
-
-	lda	fork_proc_ptr
-	ldx	fork_proc_ptr+1
-	jsr	__push
-
-	; swapout_new(ptptr, &newudata)
-	jsr	_swapout_new
-	jmp	x6
-	nop
-x6:
-	lda	tmpbuf_ptr
-	ldx	tmpbuf_ptr+1
-	jsr	__push
-	jsr	_tmpfree
-	jmp	x7
-	nop
 x7:
 	; Now swap is done clean up the stack
 	pla
@@ -328,19 +310,11 @@ x7:
 	pla
 	pla
 
-	; Child is now on disk (yay)
-	lda	fork_proc_ptr
-	ldx	fork_proc_ptr+1
-	sta	@tmp
-	stx	@tmp+1
-	ldy	#P_TAB__P_PID_OFFSET+1
-	lda	(@tmp),y
+	lda	#0
 	tax
-	dey
-	lda	(@tmp),y
-
-	; XA is now the PID
-
+	sta	_runticks
+	stx	_runticks + 1
+	; Return 0 (child)
         rts
 
 	.commondata
@@ -349,8 +323,8 @@ switch_proc_ptr:
 	.word	0
 fork_proc_ptr:
 	.word	0 ; (C type is struct p_tab *) -- address of child process p_tab entry
-tmpbuf_ptr:
-	.word	0
 
+#if 0
 	.ds	256
 swapstack:
+#endif

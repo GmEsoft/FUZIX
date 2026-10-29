@@ -341,8 +341,26 @@ devide_write_data:
 
 ;
 ;	Task switching. Exchange current task with bank Y. We
-;	don't trigger the transfer as we want that to happen in the caller
-;	so our overwriting of the live stack underneath us works out nicely
+;	don't trigger the final transfer as we want that to happen in the
+;	caller so our overwriting of the live stack underneath us works
+;	out nicely
+;
+;	Our task banks are numbered 1-n and we use 0 to n-1 as actual. The
+;	actual REU banks keep changing as we swap tasks around so we keep
+;	an array bank2reu as a lookup table betwen the p_page values and
+;	where it currently maps
+;
+;	On a task swap
+;		bank2reu[old] = bank2reu[new]
+;		bank2reu[new] = 0xFF	; as old was always "in memory"
+;
+;	On a fork
+;		new proc gets allocated a slot and this will map to
+;		an unused REU bank which we stick in _livebank in the
+;		caller
+;
+;		basnk2reu[old] = allocated slot
+;		bank2reu[new] = 0xFF	; we run child first
 ;
 ;	Called with interrupts off
 ;
@@ -350,37 +368,70 @@ devide_write_data:
 ;	_bank2reu translates between bank numbers and current REU bank
 ;
 ;
+
+	.export taskcopy
+
+taskcopy:
+	lda	#0xA0			;	Copy to REU
+	bne	docopy
 	.export taskswap
 
 taskswap:
-	lda	_bank2reu,y		; 	Where is our bank on the REU ?
+	lda	#0xA2			;	Swap
+docopy:
+	pha
+	lda	_bank2reu-1,y		; 	Where is our bank on the REU ?
 	ldx	_livebank		;	Current live task
 	sta	0xDF06			;	REU bank
-	sta	_bank2reu,x		;	Our swap slot will become
+	sta	_bank2reu-1,x		;	Our swap slot will become
 					;	our predecessors
 	sty	_livebank		;	We are now the live bank code
 	lda	#0xFF
-	sta	_bank2reu,y		;	We are 0xFF (main memory)
+	sta	_bank2reu-1,y		;	We are 0xFF (main memory)
 
-	lda	#>PROGLOAD		;	User base
+	; Swap or copy 3E00-FE00 (3E00-3FFF is udata, 4000-FEFF process)
+	lda	#>REUSWITCH		;	User base
 	sta	0xDF03
 	sta	0xDF05
-	lda	#0xBF
+	lda	#>REUSWITCHSIZE
 	sta	0xDF08			;	Size FIXME hardcoded
 	lda	#0x00
 	sta	0xDF02
 	sta	0xDF04
 	sta	0xDF07
 	sta	0xDF0A
-	; Swap from 4000 to Bank:4000
-	lda	#0x82			;	Swap trigger on FF00
-	sta	0xDF01
+	pla
+	tay
+	; Set up the transfer
+	sty	0xDF01
+	jsr	map_proc_always
 	; FF00 reference will trigger swap
+	sta	0xFF00
+	jsr	map_kernel		;	map I/O back in
+	; Now set up for Z and S
+	lda	#0
+	sta	0xDF03
+	lda	#0x02			;	512 bytes from 0
+	sta	0xDF08
+	lda	#0x3E			;	store below the main copy
+	lda	#0xA2
+	sty	0xDF01			;	caller will trigger
 	rts
 
-	.bss
+	.data
 
+	.export _livebank
+	.export _bank2reu
+;
+;	Allow for up to 32 banks (2MB) 1 in memory
+;
 _livebank:
 	.byte	0
+;
+;	Start with a linear mapping. This will change as we exchange tasks
+;
 _bank2reu:
-	.ds	32			;	 FIXME don't hardcode
+	.byte	0,1,2,3,4,5,6,7
+	.byte	8,9,10,11,12,13,14,15
+	.byte	16,17,18,19,20,21,22,23
+	.byte	24,25,26,27,28,29,30,0xFF

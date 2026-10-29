@@ -2,8 +2,6 @@
 ;	We keep our common area right down low, with the ZP and stack
 ;
 ;
-	.commondata
-
         ; exported symbols
         .export _ub
         .export _udata
@@ -20,8 +18,14 @@
 ;
 ;	Declared as BSS so no non zero bytes here please
 ;
-;	Commondata exists per process in the switched space
+;	Commondata exists per process in the switched space from the REU
 ;
+	.abs
+
+	; Put in the 512 bytes before the process for simplicity
+
+	.org	0x3E00
+
 _ub:    ; first 512 bytes: starts with struct u_block, with the kernel stack working down from above
 _udata:
 kstack_base:
@@ -33,6 +37,7 @@ kstack_top:
 ;
 ; Swap space for the the C temporaries
 ;
+	.commondata
 CTemp:
 	.ds	STASHSIZE
 
