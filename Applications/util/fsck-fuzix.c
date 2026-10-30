@@ -264,6 +264,7 @@ int perform_fsck(char *name)
         if (rootfs) {
             error |= 2;
             puts("**** Root filesystem was modified, immediate reboot required.");
+            fflush(stdout);
             sleep(5);
             /* Sync it all out and reboot */
             uadmin(A_REBOOT, 0, 0);
