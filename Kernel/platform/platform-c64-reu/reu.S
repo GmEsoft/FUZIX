@@ -97,6 +97,8 @@ reuct:	.byte	0
 ;
 ;	REU display routines
 ;
+;	TODO: colour RAM
+;
 _scroll_down:
 	lda	#0
 	beq	scroll
@@ -124,6 +126,16 @@ scroll:
 	sta	0xDF02
 	ldx	#0xB1		; copy back offset
 	stx	0xDF01
+	ldx	#0xD8
+	stx	0xDF03		; from D800
+	eor	#0x28
+	sta	0xDF02		; set screen to D800 or D828
+	ldx	#0xB0
+	stx	0xDF01		; copy into scratch
+	eor	#0x28
+	sta	0xDF02
+	ldx	#0xB1
+	stx	0xDF01		; copy back
 	plp
 	rts
 
@@ -380,6 +392,7 @@ taskswap:
 	lda	#0xA2			;	Swap
 docopy:
 	pha
+	sei
 	lda	_bank2reu-1,y		; 	Where is our bank on the REU ?
 	ldx	_livebank		;	Current live task
 	sta	0xDF06			;	REU bank
@@ -409,15 +422,25 @@ docopy:
 	sta	0xFF00
 	jsr	map_kernel		;	map I/O back in
 	; Now set up for Z and S
+	; We save Z 0x0A-0x4F and the whole of S
 	lda	#0
-	sta	0xDF03			;	from 000A
-	lda	#0x0A
-	sta	0xDF02
-	lda	#<502
-	sta	0xDF07
-	lda	#>502			;	502 bytes from 0x0A
+	sta	0xDF03			;	clear high bytes
 	sta	0xDF08
+	lda	#0x0A			;	from 000A
+	sta	0xDF02
+	lda	#0x66			;	for 0x46 bytes (0A-6F)
+	sta	0xDF07
 	lda	#>REUZP			;	store below the main copy
+	sta	0xDF05
+	sty	0xDF01			;	transfer
+	sta	0xFF00			;	and trigger
+	lda	#0x00
+	sta	0xDF02			;	clear low
+	sta	0xDF07
+	lda	#0x01
+	sta	0xDF03			;	from 0100
+	sta	0xDF08			;	for 0100
+	lda	#>REUZP+256		;	store below the main copy
 	sta	0xDF05
 	sty	0xDF01			;	caller will trigger
 	rts

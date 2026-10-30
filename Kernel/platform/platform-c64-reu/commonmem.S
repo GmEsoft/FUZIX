@@ -29,17 +29,19 @@
 _ub:    ; first 512 bytes: starts with struct u_block, with the kernel stack working down from above
 _udata:
 kstack_base:
-	.ds 512
+	.ds 512 - STASHSIZE
 kstack_top:
+;
+;	Finally we tack the ZP save area for interrupts on the end. This
+;	has to be per task as we might stash the ZP of a task in an
+;	interrupt and then task switch and resume later
+;
+CTemp:
+	.ds	STASHSIZE
 
-;
-;	Finally we tack the ZP save area for interrupts on the end
-;
 ; Swap space for the the C temporaries
 ;
 	.commondata
-CTemp:
-	.ds	STASHSIZE
 
 istack_base:
 	.ds	256

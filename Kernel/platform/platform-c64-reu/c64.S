@@ -52,10 +52,12 @@
 
 	.export usp
 
-	; FIXME: need to figure out what is going on here - possibly
-	; a bankman bug confused by a ZP entry  ?
-	.ds	20
+	; We save 0x0A (sp) to 0x4F (should cover user space needs
+	; 0x50-0xFF are left for the firmware, 0x00/1 is the MMU
+	; 0x02-0x09 are globals we will use (and we might move it a
+	; bit further
 
+	; TODO: put a check on size correctly on user loads
 sp:	.word	0
 hireg:	.word	0
 tmp:	.word	0
@@ -90,13 +92,8 @@ ___hard_ei:
 ___hard_irqrestore:
 	ldy	#0
 	lda	(@sp),y
-	and	#4		; IRQ flag
-	bne	irq_off
-	cli
-	jmp	__add1sp
-
-irq_off:
-	sei
+	pha
+	plp
 	jmp	__add1sp
 
 	.code			; TODO can we get this into discard ?
@@ -116,14 +113,16 @@ init_hardware:
 	sta	oldvec
 	lda	0x0315
 	sta	oldvec+1
+	lda	#<brkvec
+	sta	0x0316
+	lda	#>brkvec
+	sta	0x0317
 	jsr	program_vectors_k
 	lda	#0xEA
 	sta	0xD012		; ???
 	sta	@0xCC		; Turn off ROM cursor flasher
-	lda	#0x05
+	lda	#0x1E		; native colur 14
 	sta	_vtink
-	lda	#0x1
-	sta	_vtpaper
 	jsr	_vtattr_notify
 	jmp	xa
 	nop
@@ -135,6 +134,15 @@ x0:	jsr	_size_reu
 	sta	_reu_size
 	stx	_reu_size + 1
 	rts
+
+	.common
+
+	; For now as a debug trap - eventually be smarter
+
+	.export	brkvec	; for debug
+brkvec:
+	sei
+	jmp	brkvec
 
 	.commondata
 
@@ -223,11 +231,14 @@ program_vectors_k:
 ;
 map_proc_always:
 	pha
+	php
+	sei
 	; HIRAM, LORAM off and CHAREN on
 	; Gives us a full RAM map with no I/O (except 0/1)
-	lda	@0x01
+	lda	@mmu
 	and	#0xFC
-	sta	@0x01
+	sta	@mmu
+	plp
 	pla
 	rts
 ;
@@ -250,14 +261,18 @@ map_proc:
 ;
 map_kernel:
 	pha
-	lda	@0x01		; Switch the banked cart into the map
+	php
+	sei
+	lda	@mmu		; Switch the banked cart into the map
 	ora	#7
-	sta	@0x01
+	sta	@mmu
+	plp
 	pla
 	rts
 
 ;
 ;	Restore the user or previous kernel mapping post IRQ
+;	Interrupts are off in this case
 ;
 map_restore:
 	pha
@@ -265,9 +280,9 @@ map_restore:
 	pha
 	; In case the kernel has I/O unmapped. We need to remap
 	; it to switch the cartridge bank correctly
-	lda	old_mmu
+	lda	@mmu
 	ora	#7
-	sta	old_mmu
+	sta	@mmu
 	ldx	old_kbank	; Restore any temporary saved bank
 	stx	old_kmap	; if we IRQ during a kernel user access
 	sta	CARTPORT,x
@@ -281,6 +296,7 @@ map_restore:
 
 ;
 ;	How do we want to force a given kernel map or do we ?
+;	Interrupts are off in this case
 ;
 map_save_kernel:
 	pha
@@ -528,6 +544,7 @@ outcharw:
 ;	This matches the routine in kernal for the cases where the kernal is
 ;	mapped. Both end up at vector2 with stuff stacked the same way.
 ;
+
 vector:
 	pha
 	txa
@@ -536,7 +553,7 @@ vector:
 	pha
 	tsx
 	lda	0x0104,x
-	and	0x10
+	and	#0x10
 	beq	vector_map
 	jmp	(0x0316)
 
@@ -553,7 +570,9 @@ vector2:
 	lda	@mmu
 	sta	old_mmu	; Remember existing MMU
 vector_do:
-#if 1
+	;
+	;	Run the KERNAL handlers
+	;
 	cld
 	lda	#>vector3
 	pha
@@ -565,7 +584,6 @@ vector_do:
 	pha
 	;	can't JSR this as RTI and RTS work differently (sigh)
 	jmp	(oldvec)
-#endif
 
 vector3:
 ;
@@ -599,13 +617,15 @@ vector3:
 
 ;	Check for kernel return path
 
-	lda	_kernel_flag
+	lda	_udata + U_DATA__U_INSYS
 	bne	kirqout
 ;
 ;	Pre-emption ?
 ;
 	lda	_need_resched
 	beq	no_preempt
+;	FIXME
+	bne	no_preempt
 
 	;
 	; Put this task to sleep and continue with the next one. As we
@@ -652,7 +672,7 @@ x3:
 	; Now return to the old state having woken back up
 	; Clear insys, move back onto the interrupt stack
 	;
-	lda	#0
+	lda	#0	; We know we pre-empted from user
 	sta	_udata+U_DATA__U_INSYS
 
 	;
@@ -712,6 +732,7 @@ kirqout:
 ;	Get back on the user stack, but do not use the user C stack
 ;	until we leave
 ;
+	jsr	map_restore
 	jsr	stash_zp			; recover 6502 zp bits
 
 irqout:
@@ -1310,22 +1331,20 @@ _vtattr_notify:
 	; TODO: map according to the full colour set including bright
 	; and native colouring
 	lda	_vtink
-	and	#7
+	and	#0x1F
 	tax
 	lda	coltab,x
 	sta	_c64ink
-; Should probably do this off VTPAPER as it's a single fixed colour
-	lda	_vtpaper
-	and	#7
+	lda	_vidpaper
+	and	#0x1F
 	tax
 	lda	coltab,x
 	sta	0xD021
-; TODO: add VTBORDER ioctl
-;	lda	_vtborder
-;	and	#7
-;	tax
-;	lda	coltab,x
-;	sta	0xD020
+	lda	_vtborder
+	and	#0x1F
+	tax
+	lda	coltab,x
+	sta	0xD020
 	rts
 
 coltab:
@@ -1337,8 +1356,21 @@ coltab:
 	.byte	3		; cyan
 	.byte	7		; yellow
 	.byte	1		; white
+	.byte	0		; black
+	.byte	6		; blue
+	.byte	2		; red
+	.byte	4		; magenta
+	.byte	5		; green
+	.byte	3		; cyan
+	.byte	7		; yellow
+	.byte	1		; white
+	; And native
+	.byte	0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
 	.data
+
+	.export	_vidpaper
+	.export	_vtborder
 
 cursorl:
 	.byte	0
@@ -1347,7 +1379,11 @@ cursorh:
 cursorc:
 	.byte	0
 _c64ink:
-	.byte	0
+	.byte	14		; native colour 14
+_vidpaper:
+	.byte	1		; blue
+_vtborder:
+	.byte	30		; native colour 14
 
 	.export _keydown
 	.export _keytab

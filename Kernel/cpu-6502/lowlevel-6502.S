@@ -36,12 +36,12 @@
 unix_syscall_entry:
 	jsr	map_kernel		; Ensure kernel is mapped (no-op in some cases)
 	lda	#1
-	sta	_kernel_flag	; In kernel mode
+	sta	_udata + U_DATA__U_INSYS ; In kernel mode
 	cli			; Interrupts now ok
 	jsr	_unix_syscall_i	; Enter C space via the __interrupt wrapper
 	sei			; Interrupts back off
 	lda	#0		; TODO 65C02 could stz ?
-	sta	_kernel_flag
+	sta	_udata + U_DATA__U_INSYS
 unix_sig_exit:
 	jmp	map_proc_always	; Map back process if we have common
 
@@ -58,10 +58,10 @@ unix_sig_exit:
 ;	TOS holds the target address.
 ;
 _doexec:
-	ldy	#0
-	sty	_kernel_flag
-	jsr	map_proc_always
 	sei
+	ldy	#0
+	sty	_udata + U_DATA__U_INSYS
+	jsr	map_proc_always
 	jmp	plt_doexec
 
 ;
@@ -89,7 +89,7 @@ interrupt_handler:
 ;
 	jsr	map_save_kernel
 	jsr	_plt_interrupt_i	; call via C int wrapper
-	lda	_kernel_flag
+	lda	_udata + U_DATA__U_INSYS
 	bne	interrupt_k
 	jmp	map_proc_always		; may have switched task
 interrupt_k:
@@ -121,7 +121,7 @@ interrupt_k:
 ;	not something we need to worry about.
 ;
 stash_zp:
-        ldy     #23
+        ldy     #STASHSIZE-1
 swap1:  ldx     CTemp,y
         lda     @sp,y
         sta     CTemp,y
