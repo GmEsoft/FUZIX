@@ -25,9 +25,8 @@
 _ub:    ; first 512 bytes: starts with struct u_block, with the kernel stack working down from above
 _udata:
 kstack_base:
-	.ds 512
+	.ds 512 - STASHSIZE
 kstack_top:
-
 ;
 ;	Finally we tack the ZP save area for interrupts on the end
 ;

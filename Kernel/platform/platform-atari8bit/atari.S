@@ -6,6 +6,7 @@
 	.export init_hardware
 	.export _program_vectors
 	.export map_kernel
+	.export map_buffers
 	.export map_proc
 	.export map_proc_always
 	.export map_save_kernel
@@ -68,6 +69,12 @@ usp:	.word	0
 
 _plt_monitor:
 _plt_reboot:
+stop:
+	sei
+	jmp	stop
+	; Won't work and we want to drop into monitor on monitor case!
+	; We need this code somewhere not Cxxx or to be smarter with maps
+
 	lda	#0x01
 	sta	0xD301		; ROM back in
 	jmp	($FFFC)		; reboot
@@ -232,6 +239,16 @@ map_proc:
 map_kernel:
 	pha
 	lda	old_kmap	; Back to the kernel bank we mapped from
+	sta	0xD301
+	sta	0xD5E3		; Cartridge on
+	pla
+	rts
+
+map_buffers:
+	pha
+	lda	0xD301
+	sta	old_kmap	; Current map save
+	lda	#MAIN		; Switch to buffers
 	sta	0xD301	
 	sta	0xD5E3		; Cartridge on
 	pla
@@ -440,6 +457,8 @@ vector:
 	pha
 	cld
 
+	jsr	map_save_kernel
+
 ;	Save our zero page bits (and thus the C stack etc). The save
 ;	area is task specific so if we task switch all is good
 ;
@@ -448,14 +467,6 @@ vector:
 ;	Q: do we want to spot BRK instructions and signal them ?
 ;
 ;
-;	Save the old stack ptr (do we need this - can it even get
-;	unbalanced ? Note that istack_switched_sp like the istack is
-;	in the commondata so per context not in fact as it looks global.
-;	Pre-emption relies on this.
-;
-	tsx				; and save the 6502 stack ptr
-	stx	istack_switched_sp	; in uarea/stacks
-
 ;
 ;	Configure the C stack to the i stack
 ;
@@ -468,7 +479,7 @@ vector:
 ;	the handler and then return restoring the mapped pages of either
 ;	the kernel or calling user process to the high space.
 ;
-	jsr	interrupt_handler
+	jsr	_plt_interrupt_i
 	; Bankman will fix this up into a banked jump
 	jmp	x1
 	nop
@@ -476,7 +487,7 @@ x1:
 
 ;	Check for kernel return path
 
-	lda	_kernel_flag
+	lda	_udata + U_DATA__U_INSYS
 	bne	kirqout
 ;
 ;	Pre-emption ?
@@ -493,10 +504,15 @@ x1:
 	lda	#0
 	sta	_need_resched
 
+	; Switch to the kernel stack (which is currently free as we are
+	; in user space. This stack unlike the istack is per process and
+	; will be saved to swap
 	;
-	; We need to keep on the kernel istack at this point because the
-	; user C stack may not be self-consistent.
-	;
+	lda	#<kstack_top
+	sta	@sp
+	lda	#>kstack_top
+	sta	@sp+1
+
 	lda	#1
 	sta	_udata+U_DATA__U_INSYS
 	jsr	_chksigs
@@ -520,8 +536,6 @@ x2:
 	jmp	x3
 	nop
 
-	; FIXME: we could switchout into a task with ints off
-	; but we then enable NMI wrongly. TODO
 x3:
 	;
 	; Now return to the old state having woken back up
@@ -545,9 +559,11 @@ no_preempt:
 ;	Get back on the user stack, but do not use the user C stack
 ;	between here and returning to user space
 ;
-	ldx	istack_switched_sp
-	txs					; recover 6502 stack
 	jsr	stash_zp			; recover 6502 zp bits
+
+	;	Put the user process back into visible memory
+	jsr	map_proc_always
+
 	lda	_udata+U_DATA__U_CURSIG
 	beq	irqout
 	tay
@@ -587,12 +603,8 @@ kirqout:
 ;	Get back on the user stack, but do not use the user C stack
 ;	until we leave
 ;
-	ldx	istack_switched_sp
-	txs					; recover 6502 stack
-; FIXME: check stashing is ok with user v kernel v irq and nothing is ever
-; lost  TODO
-	jsr	stash_zp			; recover 6502 zp bits
-
+	jsr	stash_zp	; recover 6502 zp bits
+	jsr	map_restore
 irqout:
 	pla
 	tay
@@ -823,9 +835,7 @@ x11:
 ;	part of the page away)	
 ;
 
-; Needs to live with buffers
-
-	.overlay4
+	.common
 
 	.export _devide_read_data
 	.export _devide_write_data
@@ -839,17 +849,18 @@ _devide_read_data:
 	;	We must flip banks before we play mmu pokery, or it will
 	; undo all our work. This means our variables must be commondata
 	;
+devide_do_read:
 	lda	_td_raw
 	beq	hd_kmap
 	jsr	map_proc_always
+	jmp	hd_do_read
 hd_kmap:
+	jsr	map_buffers
+hd_do_read:
 	ldy	#0
 	jsr	hd_read256
 	inc	@tmp3+1
 	jsr	hd_read256
-hd_unmap:
-	lda	_td_raw
-	beq	no_remap
 	jmp	map_kernel
 
 hd_read256:
@@ -871,12 +882,15 @@ _devide_write_data:
 	lda	_td_raw
 	beq	hd_kmapw
 	jsr	map_proc_always
+	jmp	hd_do_write
 hd_kmapw:
+	jsr	map_buffers
+hd_do_write:
 	ldy	#0
 	jsr	hd_write256
 	inc	@tmp3+1
 	jsr	hd_write256
-	jmp	hd_unmap
+	jmp	map_kernel
 
 ; This one is a shade more complicated. Write the bytes swapped in order
 ; TODO: would it be better to have a tmp4 thats tmp3 + 1 and avoid the

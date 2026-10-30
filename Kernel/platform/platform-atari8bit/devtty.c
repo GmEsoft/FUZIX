@@ -82,7 +82,7 @@ static void kbd_poll(void)
 void tty_poll(void)
 {
 	uint8_t r = POKEY[0x0E];
-	kprintf("Pokey %x %x\n", r, POKEY[0x0F]);
+//	kprintf("Pokey %x %x\n", r, POKEY[0x0F]);
 	/* Disable the interrupts to clear them */
 	POKEY[0x0E] = r;
 

@@ -32,7 +32,7 @@
 #define TICKSPERSEC 60	    /* Ticks per second */
 
 /* We've not yet made the rest of the code - eg tricks match this ! */
-#define MAPBASE	    0x0000  /* We map from 0 */
+#define MAPBASE	    0x0200  /* We map from 0200 */
 #define PROGBASE    0x0200  /* also data base */
 #define PROGLOAD    0x0200
 #define PROGTOP     0xC000
