@@ -12,7 +12,7 @@
 #define CONFIG_BANKS	1
 /* Permit large I/O requests to bypass cache and go direct to userspace */
 /* Needs work to do this alas */
-#define CONFIG_LARGE_IO_DIRECT(x)	0
+#define CONFIG_LARGE_IO_DIRECT(x)	1
 
 /*
  *	One process in memory only

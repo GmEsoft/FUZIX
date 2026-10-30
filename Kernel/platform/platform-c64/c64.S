@@ -239,9 +239,9 @@ map_proc:
 ;
 map_kernel:
 	pha
-	lda	@0x01		; Switch the banked cart into the map
+	lda	@mmu		; Switch the banked cart into the map
 	ora	#7
-	sta	@0x01
+	sta	@mmu
 	pla
 	rts
 
@@ -252,10 +252,18 @@ map_restore:
 	pha
 	txa
 	pha
+	; We might be interrupted in kernel space with a user mapping
+	; in which case the I/O space isn't present. Put it back to
+	; flip the cartridge bank, then restore it as it was when
+	; we interrupted
+	lda	@mmu
+	ora	#7
+	sta	@mmu
 	ldx	old_kbank	; Restore any temporary saved bank
 	stx	old_kmap	; if we IRQ during a kernel user access
 	sta	CARTPORT,x
 	lda	old_mmu
+	; Our I/O mappings might disappear at this point
 	sta	@mmu
 	pla
 	tax
@@ -272,7 +280,7 @@ map_save_kernel:
 	lda	old_kmap
 	sta	old_kbank
 	lda	@mmu
-	ora	#3		; Map in kernel
+	ora	#7		; Map in kernel
 	sta	@mmu		; which kernel bank doesn't matter
 	pla
 	rts
@@ -528,7 +536,7 @@ vector:
 vector_map:
 	lda	@mmu
 	sta	old_mmu
-	ora	#3
+	ora	#7
 	sta	@mmu		; Remember old MMU state, map in KERNAL
 	bne	vector_do
 
@@ -557,39 +565,25 @@ vector3:
 ;
 	lda	old_mmu
 	sta	@mmu
+;
+;	Map the kernel in, remmember our old state
+;
+	jsr	map_save_kernel
+
 ;	Save our zero page bits (and thus the C stack etc). The save
 ;	area is task specific so if we task switch all is good
 ;
 	jsr	stash_zp
-;
-;	Q: do we want to spot BRK instructions and signal them ?
-;
-;
-;	Save the old stack ptr (do we need this - can it even get
-;	unbalanced ? Note that istack_switched_sp like the istack is
-;	in the commondata so per context not in fact as it looks global.
-;	Pre-emption relies on this.
-;
-	tsx				; and save the 6502 stack ptr
-	stx	istack_switched_sp	; in uarea/stacks
 
 ;
 ;	Configure the C stack to the i stack
+;	stask_zp saved the old stack
 ;
 	lda	#<istack_top
 	sta	@sp
 	lda	#>istack_top
 	sta	@sp+1
-;
-;	This will map in the upper kernel pages via map_save_kernel, invoke
-;	the handler and then return restoring the mapped pages of either
-;	the kernel or calling user process to the high space.
-;
-	jsr	interrupt_handler
-	; Bankman will fix this up into a banked jump
-	jmp	x1
-	nop
-x1:
+	jsr	_plt_interrupt_i	; call via C int wrapper
 
 ;	Check for kernel return path
 
@@ -610,10 +604,15 @@ x1:
 	lda	#0
 	sta	_need_resched
 
+	; Switch to the kernel stack (which is currently free as we are
+	; in user space. This stack unlike the istack is per process and
+	; will be saved to swap
 	;
-	; We need to keep on the kernel istack at this point because the
-	; user C stack may not be self-consistent.
-	;
+	lda	#<kstack_top
+	sta	@sp
+	lda	#>kstack_top
+	sta	@sp+1
+
 	lda	#1
 	sta	_udata+U_DATA__U_INSYS
 	jsr	_chksigs
@@ -637,6 +636,8 @@ x2:
 	jmp	x3
 	nop
 x3:
+	; The switch back in has restored our 6502 stack. We don't
+	; care about the kstack at this point
 	;
 	; Now return to the old state having woken back up
 	; Clear insys, move back onto the interrupt stack
@@ -655,13 +656,13 @@ no_preempt:
 ;	app is expected to switch to a signal stack or similar, pop the
 ;	values, invoke the signal handler and then return.
 ;
+;	stash zp will restore our C stack not that it matters
 ;
-;	Get back on the user stack, but do not use the user C stack
-;	between here and returning to user space
-;
-	ldx	istack_switched_sp
-	txs					; recover 6502 stack
 	jsr	stash_zp			; recover 6502 zp bits
+
+	;	Put the user process back into visible memory
+	jsr	map_proc_always
+
 	lda	_udata+U_DATA__U_CURSIG
 	beq	irqout
 	tay
@@ -690,21 +691,19 @@ no_preempt:
 	lda	#<PROGLOAD + 16
 	pha
 	lda	#0
-	pha					; dummy flags, with irq enable
-	rti					; return on the fake frame
-						; if the handler returns
-						; rather than doing a longjmp
-						; we'll end up at irqout and pop the
-						; real frame
+	pha		; dummy flags, with irq enable
+	rti		; return on the fake frame
+			; if the handler returns
+			; rather than doing a longjmp
+			; we'll end up at irqout and pop the
+			; real frame
 kirqout:
 ;
 ;	Get back on the user stack, but do not use the user C stack
 ;	until we leave
 ;
-	ldx	istack_switched_sp
-	txs					; recover 6502 stack
-	jsr	stash_zp			; recover 6502 zp bits
-
+	jsr	stash_zp	; recover 6502 zp bits
+	jsr	map_restore
 irqout:
 	pla
 	tay

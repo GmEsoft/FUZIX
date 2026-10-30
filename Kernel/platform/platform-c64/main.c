@@ -33,7 +33,6 @@ uint_fast8_t plt_param(char *p)
 
 void device_init(void)
 {
-	uint8_t minor;
 #ifdef CONFIG_TD_IDE
 	ide_probe();
 #endif
