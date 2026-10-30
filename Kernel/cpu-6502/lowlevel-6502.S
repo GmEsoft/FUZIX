@@ -84,6 +84,9 @@ interrupt_handler:
 ; Our caller will deal with ZP via stash_sp and any platform magic
 ; This needs to be in the caller in case the target can flip zero page
 ; banks in hardware
+;
+;	FIXME this isn't usable by most setups - remove
+;
 	jsr	map_save_kernel
 	jsr	_plt_interrupt_i	; call via C int wrapper
 	lda	_kernel_flag
@@ -98,7 +101,7 @@ interrupt_k:
 ;	with an IRQ handler one. The commondata is per process and we depend
 ;	upon this to make it all work
 ;
-; Swap the C temporaries  (TODO we copy sp and also stack it)
+; Swap the C temporaries
 ;
 ;	We save
 ;	@sp
@@ -323,7 +326,7 @@ _relocator:
 	sta	@tmp1		; always page aligned
 	lda	@tmp3+1
 	sta	@tmp1+1		; upper byte of address
-	lda	#usp		; USP is always start of user stack
+	lda	#@usp		; USP is always start of user stack
 	sta	@tmp
 	ldy	#18		; offset of relocation offset
 	lda	(@tmp1),y
