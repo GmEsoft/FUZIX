@@ -527,7 +527,7 @@ vector:
 	pha
 	tsx
 	lda	0x0104,x
-	and	0x10
+	and	#0x10
 	beq	vector_map
 	jmp	(0x0316)
 
