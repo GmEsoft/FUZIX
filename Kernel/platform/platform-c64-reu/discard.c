@@ -7,6 +7,8 @@ extern uint16_t reu_size;
 
 void map_init(void)
 {
+	procmem = 48 * (reu_size + 1);
+	ramsize = 64 * (reu_size + 1);
 }
 
 /* Number our pages 1..n. They are actually indexes into an array

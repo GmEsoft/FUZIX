@@ -176,11 +176,10 @@ waitbusy3:
 #endif
 
 not_swapped:
-	tax
-	lda	_bank2reu - 1,x
-	cmp	#0xFF
+	cmp	_livebank
 	beq	already_mapped
 
+exchange:
 	; Swap between in memory task and our new task
 	tay
 	jsr	taskswap
@@ -209,6 +208,10 @@ already_mapped:
 	lda	#P_RUNNING
 	ldy	#P_TAB__P_STATUS_OFFSET
 	sta	(@tmp2),y
+
+	ldy	#P_TAB__P_PAGE_OFFSET
+	lda	(@tmp2),y
+	sta	_udata + U_DATA__U_PAGE
 
 	lda	#0
 	sta	_runticks
@@ -261,10 +264,10 @@ _dofork:
 	;	Start by pushing the child pid to be returned
 	sta	@tmp
 	stx	@tmp+1
-	ldy	#P_TAB__P_PID_OFFSET + 1
+	ldy	#P_TAB__P_PID_OFFSET
 	lda	(@tmp),y
 	pha
-	dey
+	iny
 	lda	(@tmp),y
 	pha
 
@@ -283,6 +286,7 @@ YYY:
 	; Now do the block copy into the child bank
 	ldy	#P_TAB__P_PAGE_OFFSET
 	lda	(@tmp),y
+	tay
 	jsr	taskcopy
 	sta	0xFF00			; and copy S and ZP
 

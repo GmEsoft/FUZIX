@@ -52,6 +52,10 @@
 
 	.export usp
 
+	; FIXME: need to figure out what is going on here - possibly
+	; a bankman bug confused by a ZP entry  ?
+	.ds	20
+
 sp:	.word	0
 hireg:	.word	0
 tmp:	.word	0
@@ -105,10 +109,6 @@ init_hardware:
 	sta	0xD020
 	lda	#0x06
 	sta	0xD021
-	lda	#64
-	sta	_ramsize
-	lda	#48
-	sta	_procmem
 	lda	#0
 	sta	_procmem+1
 	sta	_ramsize+1
@@ -120,6 +120,14 @@ init_hardware:
 	lda	#0xEA
 	sta	0xD012		; ???
 	sta	@0xCC		; Turn off ROM cursor flasher
+	lda	#0x05
+	sta	_vtink
+	lda	#0x1
+	sta	_vtpaper
+	jsr	_vtattr_notify
+	jmp	xa
+	nop
+xa:
 	jsr	_vtinit
 	jmp	x0
 	nop
@@ -255,10 +263,16 @@ map_restore:
 	pha
 	txa
 	pha
+	; In case the kernel has I/O unmapped. We need to remap
+	; it to switch the cartridge bank correctly
+	lda	old_mmu
+	ora	#7
+	sta	old_mmu
 	ldx	old_kbank	; Restore any temporary saved bank
 	stx	old_kmap	; if we IRQ during a kernel user access
 	sta	CARTPORT,x
 	lda	old_mmu
+	; Beyond this point I/O may vanish
 	sta	@mmu
 	pla
 	tax
@@ -275,7 +289,7 @@ map_save_kernel:
 	lda	old_kmap
 	sta	old_kbank
 	lda	@mmu
-	ora	#3		; Map in kernel
+	ora	#7		; Map in kernel
 	sta	@mmu		; which kernel bank doesn't matter
 	pla
 	rts
@@ -531,7 +545,7 @@ vector:
 vector_map:
 	lda	@mmu
 	sta	old_mmu
-	ora	#3
+	ora	#7
 	sta	@mmu		; Remember old MMU state, map in KERNAL
 	bne	vector_do
 
@@ -560,22 +574,15 @@ vector3:
 ;
 	lda	old_mmu
 	sta	@mmu
+;
+;	Map the kernel in, remmember our old state
+;
+	jsr	map_save_kernel
+
 ;	Save our zero page bits (and thus the C stack etc). The save
 ;	area is task specific so if we task switch all is good
-;
-	jsr	stash_zp
-;
-;	Q: do we want to spot BRK instructions and signal them ?
-;
-;
-;	Save the old stack ptr (do we need this - can it even get
-;	unbalanced ? Note that istack_switched_sp like the istack is
-;	in the commondata so per context not in fact as it looks global.
-;	Pre-emption relies on this.
-;
-	tsx				; and save the 6502 stack ptr
-	stx	istack_switched_sp	; in uarea/stacks
 
+	jsr	stash_zp
 ;
 ;	Configure the C stack to the i stack
 ;
@@ -588,11 +595,7 @@ vector3:
 ;	the handler and then return restoring the mapped pages of either
 ;	the kernel or calling user process to the high space.
 ;
-	jsr	interrupt_handler
-	; Bankman will fix this up into a banked jump
-	jmp	x1
-	nop
-x1:
+	jsr	_plt_interrupt_i
 
 ;	Check for kernel return path
 
@@ -613,10 +616,15 @@ x1:
 	lda	#0
 	sta	_need_resched
 
+	; Switch to the kernel stack (which is currently free as we are
+	; in user space. This stack unlike the istack is per process and
+	; will be saved to swap
 	;
-	; We need to keep on the kernel istack at this point because the
-	; user C stack may not be self-consistent.
-	;
+	lda	#<kstack_top
+	sta	@sp
+	lda	#>kstack_top
+	sta	@sp+1
+
 	lda	#1
 	sta	_udata+U_DATA__U_INSYS
 	jsr	_chksigs
@@ -658,13 +666,13 @@ no_preempt:
 ;	app is expected to switch to a signal stack or similar, pop the
 ;	values, invoke the signal handler and then return.
 ;
+;	stash zp will restore our C stack not that it matters
 ;
-;	Get back on the user stack, but do not use the user C stack
-;	between here and returning to user space
-;
-	ldx	istack_switched_sp
-	txs					; recover 6502 stack
 	jsr	stash_zp			; recover 6502 zp bits
+
+	;	Put the user process back into visible memory
+	jsr	map_proc_always
+
 	lda	_udata+U_DATA__U_CURSIG
 	beq	irqout
 	tay
@@ -704,8 +712,6 @@ kirqout:
 ;	Get back on the user stack, but do not use the user C stack
 ;	until we leave
 ;
-	ldx	istack_switched_sp
-	txs					; recover 6502 stack
 	jsr	stash_zp			; recover 6502 zp bits
 
 irqout:
@@ -952,8 +958,6 @@ _devide_read_data:
 	jsr	__pop
 	sta	@tmp3
 	stx	@tmp3+1		; Save the target
-	sta	@tmp3
-	stx	@tmp3+1		; Save the target
 	txa
 	and	#0xF0		; Check the 4K range is not I/O
 	cmp	#0xD0
@@ -1145,7 +1149,6 @@ gaddr:
 	dey
 	lda	(@sp),y
 _cursor_disable:
-_vtattr_notify:
 	rts
 
 addr:
@@ -1193,7 +1196,7 @@ _plot_char:
 	ldy	#0
 	and	#0x7F
 	sta	(@tmp),y
-	lda	#14
+	lda	_c64ink
 	sta	(@tmp3),y
 	jmp	__add4sp
 
@@ -1228,7 +1231,7 @@ _clear_across:
 clac:
 	lda	#' '
 	sta	(@tmp),y
-	lda	#14
+	lda	_c64ink
 	sta	(@tmp3),y
 	iny
 	dex
@@ -1248,7 +1251,7 @@ line:
 doline:
 	lda	#' '
 	sta	(@tmp),y
-	lda	#14
+	lda	_c64ink
 	sta	(@tmp3),y
 	dey
 	cpy	#0xFF
@@ -1302,6 +1305,39 @@ _scroll_down:
 
 #endif
 
+_vtattr_notify:
+	; Map colours
+	; TODO: map according to the full colour set including bright
+	; and native colouring
+	lda	_vtink
+	and	#7
+	tax
+	lda	coltab,x
+	sta	_c64ink
+; Should probably do this off VTPAPER as it's a single fixed colour
+	lda	_vtpaper
+	and	#7
+	tax
+	lda	coltab,x
+	sta	0xD021
+; TODO: add VTBORDER ioctl
+;	lda	_vtborder
+;	and	#7
+;	tax
+;	lda	coltab,x
+;	sta	0xD020
+	rts
+
+coltab:
+	.byte	0		; black
+	.byte	6		; blue
+	.byte	2		; red
+	.byte	4		; magenta
+	.byte	5		; green
+	.byte	3		; cyan
+	.byte	7		; yellow
+	.byte	1		; white
+
 	.data
 
 cursorl:
@@ -1309,6 +1345,8 @@ cursorl:
 cursorh:
 	.byte	0
 cursorc:
+	.byte	0
+_c64ink:
 	.byte	0
 
 	.export _keydown

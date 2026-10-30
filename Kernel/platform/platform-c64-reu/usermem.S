@@ -13,6 +13,7 @@
 
 #ifdef NO_REU
 		.export __uget
+		.export __uput
 
 	
 

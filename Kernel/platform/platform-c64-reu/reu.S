@@ -394,7 +394,7 @@ docopy:
 	sta	0xDF03
 	sta	0xDF05
 	lda	#>REUSWITCHSIZE
-	sta	0xDF08			;	Size FIXME hardcoded
+	sta	0xDF08			;	Size
 	lda	#0x00
 	sta	0xDF02
 	sta	0xDF04
@@ -410,11 +410,15 @@ docopy:
 	jsr	map_kernel		;	map I/O back in
 	; Now set up for Z and S
 	lda	#0
-	sta	0xDF03
-	lda	#0x02			;	512 bytes from 0
+	sta	0xDF03			;	from 000A
+	lda	#0x0A
+	sta	0xDF02
+	lda	#<502
+	sta	0xDF07
+	lda	#>502			;	502 bytes from 0x0A
 	sta	0xDF08
-	lda	#0x3E			;	store below the main copy
-	lda	#0xA2
+	lda	#>REUZP			;	store below the main copy
+	sta	0xDF05
 	sty	0xDF01			;	caller will trigger
 	rts
 
@@ -426,12 +430,12 @@ docopy:
 ;	Allow for up to 32 banks (2MB) 1 in memory
 ;
 _livebank:
-	.byte	0
+	.byte	1
 ;
 ;	Start with a linear mapping. This will change as we exchange tasks
 ;
 _bank2reu:
-	.byte	0,1,2,3,4,5,6,7
+	.byte	0xFF,0,1,2,3,4,5,6,7
 	.byte	8,9,10,11,12,13,14,15
 	.byte	16,17,18,19,20,21,22,23
-	.byte	24,25,26,27,28,29,30,0xFF
+	.byte	24,25,26,27,28,29,30,31

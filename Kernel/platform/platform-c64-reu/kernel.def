@@ -8,6 +8,7 @@ PROGLOAD		.equ	0x4000
 ; Must be 512 byte sized and page aligned
 REUSWITCH		.equ	0x3E00
 REUSWITCHSIZE		.equ	0xC000
+REUZP			.equ	0x3C00	; tucked under image
 
 ; Must match config.h
 NBUFS			.equ	5

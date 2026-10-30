@@ -1,15 +1,33 @@
 # Commodore 64 + IDE64 + REU
 
-Initial work on C64 with REU and IDE64. So far some basic stuff is done with
-the REU as a kind of proof of concept. It's used for some copies, screen
-scrolling and memory zeroing at this point.
+C64 with an REU. We keep the processes in REU space except the running
+one. We also use the REU for some copies and clears as well as screen
+scrolling.
 
 ## TODO
 
-- Start running in bank mode with REU task switching
+### Check versus other ports to see if this is a compiler/general issue
+- Signal handling bugs possibly related to memory base (shutdown fail,
+  crash ^C on zork)
+- Zork isn't happy (vocab broken) - need to cross check with rcbus-6502
+  looks like a general compiler bug
+
+### To Add
 - Check VICE CF emulation (seems broken)
 - Debug and test IDE64 with CF mode and REU to existing buffers
 - Switch to keeping all but tmpbuf buffers in the REU all the time
+- Use freed space to allow for full console and 2K character table
+- Set UDG and font symbols
+- Ink/paper/border
+- How to expose colour map for apps ?
+- Use REU space to allow for a second console and console switching
+- Better cursor - sprite maybe ?
+- Add back swap once REU disk I/O is working
+
+## Performance
+- Need to sort REU to get disk speed up
+- Possibly we need a 6502 native asm implementation of the console I/O driver
+
 
 ## Memory Map
 
@@ -28,7 +46,15 @@ E000-FFFF	Becomes kernal when cartridge paged in so icky mess
 		with vectors
 FF00-FFFF	REU trigger, vectors
 
-### Kernal
+## REU Memory Map
+000000		A zero byte used for fills
+000004-		Scratch buffer (used for copies, scrolling etc)
+XX3C00-XXFDFF	Saved copy of a user process including ZP/S and uarea
+
+We don't currently pack the process buffers for simplicity
+
+
+## Kernal
 
 We get the system ROM shoved in our face whether we like it or not. It's
 not a problem for user (all RAM mode it goes away) but does mean we take
